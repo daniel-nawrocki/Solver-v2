@@ -36,6 +36,8 @@ const WORKSPACE_TITLES = {
   diagramMaker: "Diagram Maker",
 };
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "stemHeight"];
+const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
+const PRINT_FIT_MARGINS = { marginTop: 130, marginRight: 80, marginBottom: 80, marginLeft: 80 };
 
 const appUi = { activeWorkspace: "home" };
 
@@ -90,6 +92,8 @@ function createDiagramState() {
       showOverlayText: false,
       coordView: "collar",
       showAngleLabels: true,
+      showBearingLabels: true,
+      showBearingArrows: false,
       showDepthLabels: true,
     },
     csvCache: null,
@@ -111,6 +115,7 @@ function createPrintState() {
       textScale: 1,
       orientation: "landscape",
       showAngleLabels: true,
+      showBearingLabels: true,
       showDepthLabels: true,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
@@ -192,6 +197,8 @@ const els = {
   diagramImportMappedBtn: document.getElementById("diagramImportMappedBtn"),
   diagramGridToggle: document.getElementById("diagramGridToggle"),
   diagramAngleLabelToggle: document.getElementById("diagramAngleLabelToggle"),
+  diagramBearingLabelToggle: document.getElementById("diagramBearingLabelToggle"),
+  diagramBearingArrowToggle: document.getElementById("diagramBearingArrowToggle"),
   diagramDepthLabelToggle: document.getElementById("diagramDepthLabelToggle"),
   diagramFitViewBtn: document.getElementById("diagramFitViewBtn"),
   diagramCoordViewSelect: document.getElementById("diagramCoordViewSelect"),
@@ -225,6 +232,8 @@ const els = {
   printRelationshipToggle: document.getElementById("printRelationshipToggle"),
   printAngleToggleWrap: document.getElementById("printAngleToggleWrap"),
   printAngleToggle: document.getElementById("printAngleToggle"),
+  printBearingToggleWrap: document.getElementById("printBearingToggleWrap"),
+  printBearingToggle: document.getElementById("printBearingToggle"),
   printDepthToggleWrap: document.getElementById("printDepthToggleWrap"),
   printDepthToggle: document.getElementById("printDepthToggle"),
   helpWorkspace: document.getElementById("helpWorkspace"),
@@ -375,9 +384,11 @@ function syncPrintControls() {
   els.printColorModeToggle.checked = !els.printPaperFrame.classList.contains("greyscale");
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
+  els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printRelationshipToggle.checked = printState.ui.showRelationships !== false;
   els.printAngleToggle.checked = printState.ui.showAngleLabels !== false;
+  els.printBearingToggle.checked = printState.ui.showBearingLabels !== false;
   els.printDepthToggle.checked = printState.ui.showDepthLabels !== false;
 }
 
@@ -418,6 +429,7 @@ function loadDiagramPrintState() {
   printState.ui.showRelationships = false;
   printState.ui.showOverlayText = false;
   printState.ui.showAngleLabels = diagramState.ui.showAngleLabels;
+  printState.ui.showBearingLabels = diagramState.ui.showBearingLabels;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   applyPrintOrientation();
@@ -447,7 +459,7 @@ function openPrintWorkspace() {
   requestAnimationFrame(() => {
     printRenderer.resize();
     printRenderer.rotationDeg = activeRenderer().rotationDeg;
-    printRenderer.fitToData();
+    printRenderer.fitToData(PRINT_FIT_MARGINS);
   });
 }
 
@@ -473,10 +485,31 @@ function applyPrintSettings() {
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   printState.ui.showRelationships = els.printRelationshipToggle.checked;
   printState.ui.showAngleLabels = els.printAngleToggle.checked;
+  printState.ui.showBearingLabels = els.printBearingToggle.checked;
   printState.ui.showDepthLabels = els.printDepthToggle.checked;
   els.printPaperFrame.classList.toggle("greyscale", !els.printColorModeToggle.checked);
   applyPrintOrientation();
   printRenderer.render();
+}
+
+function normalizeAngleValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric);
+  return ALLOWED_ANGLES.has(rounded) ? rounded : null;
+}
+
+function normalizeDiagramHoleFields(hole) {
+  ensureDiagramHoleFields(hole);
+  hole.angle = normalizeAngleValue(hole.angle);
+  if (hole.bearing !== null && hole.bearing !== undefined) {
+    const numericBearing = Number(hole.bearing);
+    hole.bearing = Number.isFinite(numericBearing) ? numericBearing : null;
+  }
+  if (hole.depth !== null && hole.depth !== undefined) {
+    const numericDepth = Number(hole.depth);
+    hole.depth = Number.isFinite(numericDepth) ? numericDepth : null;
+  }
 }
 
 function csvEscape(value) {
@@ -724,7 +757,7 @@ function setDiagramColumnOptions(headers) {
   const toeXGuess = inferHeaderByPriority(headers, [["toe", "easting"], ["end", "point", "easting"], ["toe", "longitude"], ["end", "point", "longitude"], ["toe", "x"]]);
   const toeYGuess = inferHeaderByPriority(headers, [["toe", "northing"], ["end", "point", "northing"], ["toe", "latitude"], ["end", "point", "latitude"], ["toe", "y"]]);
   const idGuess = inferHeaderByPriority(headers, [["hole"], ["id"]]);
-  const angleGuess = inferHeaderByPriority(headers, [["angle"], ["dip"]]);
+  const angleGuess = inferHeaderByPriority(headers, [["angle"], ["inclination"], ["dip"]]);
   const bearingGuess = inferHeaderByPriority(headers, [["bearing"], ["azimuth"], ["azi"]]);
   const depthGuess = inferHeaderByPriority(headers, [["depth"], ["length"]]);
 
@@ -1012,6 +1045,7 @@ function renderDiagramPropertiesPanel() {
     input.placeholder = !allSame && selected.length > 1 ? "Mixed values" : "";
     input.disabled = false;
   });
+  els.diagramAngleInput.placeholder = selected.length > 1 && !selected.every((hole) => hole.angle === selected[0].angle) ? "Mixed values (5,10,15,20,25,30)" : "5, 10, 15, 20, 25, or 30";
 
   els.diagramApplyPropertiesBtn.disabled = false;
   els.diagramClearSelectionBtn.disabled = false;
@@ -1035,7 +1069,7 @@ function applyDiagramImportedHoles(holes) {
   const defaultDiameter = Number(els.diagramDefaultDiameterInput.value);
   holes.forEach((hole) => {
     normalizeHoleCoordinateSets(hole);
-    ensureDiagramHoleFields(hole);
+    normalizeDiagramHoleFields(hole);
     if (Number.isFinite(defaultDiameter) && hole.diameter === null) hole.diameter = defaultDiameter;
   });
   diagramState.holes = holes;
@@ -1048,6 +1082,7 @@ function applyDiagramImportedHoles(holes) {
 
 function collectDiagramPropertyPatch() {
   const patch = {};
+  let invalidAngle = false;
   const fieldToInput = {
     burden: els.diagramBurdenInput,
     spacing: els.diagramSpacingInput,
@@ -1060,13 +1095,27 @@ function collectDiagramPropertyPatch() {
   Object.entries(fieldToInput).forEach(([field, input]) => {
     const raw = input.value.trim();
     if (!raw) return;
+    if (field === "angle") {
+      const angle = normalizeAngleValue(raw);
+      if (angle === null) {
+        invalidAngle = true;
+        return;
+      }
+      patch[field] = angle;
+      return;
+    }
     const value = Number(raw);
     if (Number.isFinite(value)) patch[field] = value;
   });
-  return patch;
+  return { patch, invalidAngle };
 }
 
-function applyDiagramPropertyPatchToSelection(patch) {
+function applyDiagramPropertyPatchToSelection(result) {
+  const { patch, invalidAngle } = result;
+  if (invalidAngle) {
+    window.alert("Angle must be one of: 5, 10, 15, 20, 25, 30.");
+    return;
+  }
   const selected = selectedDiagramHoles();
   if (!selected.length) {
     window.alert("Select one or more holes first.");
@@ -1187,7 +1236,7 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
   holes.forEach((hole) => {
     hole.collar = { x: hole.x, y: hole.y, original: hole.original };
     hole.toe = toeBySource.get(hole.sourceIndex) || null;
-    ensureDiagramHoleFields(hole);
+    normalizeDiagramHoleFields(hole);
   });
   uniqueHoleIds(holes, records, idColumn);
   applyDiagramImportedHoles(holes);
@@ -1221,6 +1270,14 @@ els.diagramGridToggle.addEventListener("change", () => {
 });
 els.diagramAngleLabelToggle.addEventListener("change", () => {
   diagramState.ui.showAngleLabels = els.diagramAngleLabelToggle.checked;
+  diagramRenderer.render();
+});
+els.diagramBearingLabelToggle.addEventListener("change", () => {
+  diagramState.ui.showBearingLabels = els.diagramBearingLabelToggle.checked;
+  diagramRenderer.render();
+});
+els.diagramBearingArrowToggle.addEventListener("change", () => {
+  diagramState.ui.showBearingArrows = els.diagramBearingArrowToggle.checked;
   diagramRenderer.render();
 });
 els.diagramDepthLabelToggle.addEventListener("change", () => {
@@ -1320,11 +1377,12 @@ els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
-els.printFitBtn.addEventListener("click", () => printRenderer.fitToData());
+els.printFitBtn.addEventListener("click", () => printRenderer.fitToData(PRINT_FIT_MARGINS));
 els.printTextScaleInput.addEventListener("input", () => applyPrintSettings());
 els.printColorModeToggle.addEventListener("change", () => applyPrintSettings());
 els.printRelationshipToggle.addEventListener("change", () => applyPrintSettings());
 els.printAngleToggle.addEventListener("change", () => applyPrintSettings());
+els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printActionBtn.addEventListener("click", () => {
   window.print();
@@ -1341,6 +1399,8 @@ els.coordViewSelect.value = solverState.ui.coordView;
 els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
+els.diagramBearingLabelToggle.checked = diagramState.ui.showBearingLabels;
+els.diagramBearingArrowToggle.checked = diagramState.ui.showBearingArrows;
 syncRelationshipVisibilityUi();
 renderOriginStatus();
 renderRelationshipList();

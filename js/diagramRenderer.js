@@ -24,6 +24,23 @@ function formatMetricValue(value, suffix) {
   return `${rounded}${suffix}`;
 }
 
+function formatWholeNumber(value, suffix = "") {
+  if (!Number.isFinite(value)) return null;
+  return `${Math.round(value)}${suffix}`;
+}
+
+function angleColor(value) {
+  switch (Math.round(value)) {
+    case 5: return "#f59e0b";
+    case 10: return "#22c55e";
+    case 15: return "#eab308";
+    case 20: return "#ef4444";
+    case 25: return "#3b82f6";
+    case 30: return "#ec4899";
+    default: return "#52657c";
+  }
+}
+
 export class DiagramRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -75,6 +92,8 @@ export class DiagramRenderer {
     const ui = this.stateRef?.ui || {};
     return {
       showAngleLabels: ui.showAngleLabels !== false,
+      showBearingLabels: ui.showBearingLabels !== false,
+      showBearingArrows: ui.showBearingArrows === true,
       showDepthLabels: ui.showDepthLabels !== false,
     };
   }
@@ -107,7 +126,7 @@ export class DiagramRenderer {
     return this.inverseRotatePoint(xr, yr);
   }
 
-  fitToData() {
+  fitToData(options = {}) {
     const holes = this.stateRef.holes;
     if (!holes.length) return;
     const rotated = holes.map((hole) => this.rotatePoint(hole.x, hole.y));
@@ -119,10 +138,19 @@ export class DiagramRenderer {
     const maxY = Math.max(...ys);
     const width = Math.max(1, maxX - minX);
     const height = Math.max(1, maxY - minY);
-    const margin = 80;
-    this.zoom = Math.max(0.02, Math.min((this.canvas.width - margin) / width, (this.canvas.height - margin) / height));
-    this.panX = -minX * this.zoom + margin / 2;
-    this.panY = -minY * this.zoom + margin / 2;
+    const marginTop = Number.isFinite(options.marginTop) ? options.marginTop : 40;
+    const marginRight = Number.isFinite(options.marginRight) ? options.marginRight : 40;
+    const marginBottom = Number.isFinite(options.marginBottom) ? options.marginBottom : 40;
+    const marginLeft = Number.isFinite(options.marginLeft) ? options.marginLeft : 40;
+    const availableWidth = Math.max(80, this.canvas.width - marginLeft - marginRight);
+    const availableHeight = Math.max(80, this.canvas.height - marginTop - marginBottom);
+    this.zoom = Math.max(0.02, Math.min(availableWidth / width, availableHeight / height));
+    const contentWidth = width * this.zoom;
+    const contentHeight = height * this.zoom;
+    const offsetX = marginLeft + ((availableWidth - contentWidth) / 2);
+    const offsetY = marginBottom + ((availableHeight - contentHeight) / 2);
+    this.panX = offsetX - (minX * this.zoom);
+    this.panY = offsetY - (minY * this.zoom);
     this.render();
   }
 
@@ -245,17 +273,56 @@ export class DiagramRenderer {
     const settings = this.diagramLabelSettings();
     const lines = [];
     if (settings.showAngleLabels) {
-      const angleText = formatMetricValue(hole.angle, "°");
-      const bearingText = formatMetricValue(hole.bearing, "°");
-      if (angleText || bearingText) {
-        lines.push([angleText ? `A ${angleText}` : null, bearingText ? `B ${bearingText}` : null].filter(Boolean).join(" | "));
-      }
+      const angleText = formatWholeNumber(hole.angle, "°");
+      if (angleText) lines.push({ text: angleText, color: angleColor(hole.angle) });
+    }
+    if (settings.showBearingLabels) {
+      const bearingText = formatWholeNumber(hole.bearing, "°");
+      if (bearingText) lines.push({ text: bearingText, color: "#52657c" });
     }
     if (settings.showDepthLabels) {
-      const depthText = formatMetricValue(hole.depth, "'");
-      if (depthText) lines.push(`D ${depthText}`);
+      const depthText = formatWholeNumber(hole.depth, "'");
+      if (depthText) lines.push({ text: depthText, color: "#52657c" });
     }
     return lines;
+  }
+
+  drawBearingArrows() {
+    if (!this.isDiagramMode()) return;
+    const settings = this.diagramLabelSettings();
+    if (!settings.showBearingArrows) return;
+
+    this.ctx.save();
+    this.ctx.strokeStyle = "rgba(61, 79, 102, 0.45)";
+    this.ctx.fillStyle = "rgba(61, 79, 102, 0.45)";
+    this.ctx.lineWidth = 1.2;
+
+    for (const hole of this.stateRef.holes) {
+      if (!Number.isFinite(hole.bearing)) continue;
+      const start = this.worldToScreen(hole.x, hole.y);
+      const length = 16;
+      const radians = ((Math.round(hole.bearing) - this.rotationDeg - 90) * Math.PI) / 180;
+      const end = {
+        x: start.x + (Math.cos(radians) * length),
+        y: start.y + (Math.sin(radians) * length),
+      };
+      const angle = Math.atan2(end.y - start.y, end.x - start.x);
+      const head = 4;
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(start.x, start.y);
+      this.ctx.lineTo(end.x, end.y);
+      this.ctx.stroke();
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(end.x, end.y);
+      this.ctx.lineTo(end.x - head * Math.cos(angle - Math.PI / 6), end.y - head * Math.sin(angle - Math.PI / 6));
+      this.ctx.lineTo(end.x - head * Math.cos(angle + Math.PI / 6), end.y - head * Math.sin(angle + Math.PI / 6));
+      this.ctx.closePath();
+      this.ctx.fill();
+    }
+
+    this.ctx.restore();
   }
 
   drawHoles(preview) {
@@ -295,10 +362,10 @@ export class DiagramRenderer {
       if (diagramMode) {
         const metadataLines = this.diagramMetadataLines(hole);
         if (metadataLines.length) {
-          this.ctx.fillStyle = "#52657c";
           this.ctx.font = `${Math.max(8, Math.round(10 * this.textScale()))}px Segoe UI`;
           metadataLines.forEach((line, index) => {
-            this.ctx.fillText(line, point.x + 8, point.y + 9 + (index * 12));
+            this.ctx.fillStyle = line.color || "#52657c";
+            this.ctx.fillText(line.text, point.x + 8, point.y + 9 + (index * 12));
           });
         }
       } else if (preview && Number.isFinite(time)) {
@@ -371,6 +438,7 @@ export class DiagramRenderer {
     this.drawGrid();
     this.drawRelationships();
     this.drawRelationshipDraft();
+    this.drawBearingArrows();
     this.drawHoles(preview);
     if (!this.isDiagramMode()) this.drawTimingVisualization(preview);
     this.drawNorthArrow();

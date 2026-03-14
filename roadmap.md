@@ -145,6 +145,36 @@ Diagram Maker print:
   - `Depth`
 - keeps rotation, fit, text size, and color controls
 
+### 8. Diagram Maker QoL Pass
+Implemented in code.
+
+What was added:
+- print `Fit Page` now uses reserved top-space margins so content can center vertically within the printable region instead of only centering horizontally
+- Diagram Maker now has separate canvas toggles for:
+  - `Angle`
+  - `Bearing`
+  - `Bearing Arrows`
+  - `Depth`
+- Diagram Maker print now has separate toggles for:
+  - `Angle`
+  - `Bearing`
+  - `Depth`
+- bearing arrows are intentionally low-profile and canvas-only
+- angle labels are color-coded by the supplied Word chart:
+  - `5` orange
+  - `10` green
+  - `15` yellow
+  - `20` red
+  - `25` blue
+  - `30` pink
+- `inclination` is now treated as an import alias for `angle`
+- diagram metadata labels no longer use `A`, `B`, or `D` prefixes
+- displayed `bearing` and `depth` values are rounded to whole numbers
+
+Current rule:
+- accepted angle values are only `5`, `10`, `15`, `20`, `25`, `30`
+- imported or edited angles outside that set normalize to `null` / unclassified
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -161,6 +191,8 @@ Important recent context:
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
 - Print preview behavior for both workspaces has been refactored and should be manually checked in both modes.
+- The new print-fit behavior is syntax-validated but still needs visual confirmation with real print preview usage.
+- Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -171,6 +203,10 @@ Important recent context:
   - print preview toggles
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
+  - new print-fit vertical centering under reserved header space
+  - separate Angle/Bearing toggles on canvas and print
+  - low-profile bearing arrows on dense diagrams
+  - angle color mapping and invalid-angle handling
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded
