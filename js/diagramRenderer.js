@@ -72,6 +72,10 @@ function printHeaderMetaFont(sizePx, weight = 600) {
   return `${weight} ${sizePx}px "Trebuchet MS", "Segoe UI", sans-serif`;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 export class DiagramRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -455,6 +459,148 @@ export class DiagramRenderer {
     });
   }
 
+  isDiagramPrintMode() {
+    return this.isPrintRenderer && this.isDiagramMode();
+  }
+
+  diagramPrintLabelLines(hole) {
+    if (!this.isDiagramPrintMode()) return [];
+    const settings = this.diagramLabelSettings();
+    const lines = [{ text: hole.holeNumber || hole.id, color: "#111827", weight: 700, size: Math.max(9, Math.round(11 * this.textScale())) }];
+    if (settings.showAngleLabels) {
+      const angleText = formatWholeNumber(hole.angle, "°");
+      if (angleText) lines.push({ text: angleText, color: angleColor(hole.angle), weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
+    }
+    if (settings.showBearingLabels) {
+      const bearingText = formatWholeNumber(hole.bearing, "°");
+      if (bearingText) lines.push({ text: bearingText, color: "#52657c", weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
+    }
+    if (settings.showDepthLabels) {
+      const depthText = formatWholeNumber(hole.depth, "'");
+      if (depthText) lines.push({ text: depthText, color: "#52657c", weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
+    }
+    return lines;
+  }
+
+  measureDiagramPrintLabel(lines) {
+    const paddingX = 7;
+    const paddingY = 6;
+    const gap = 2;
+    this.ctx.save();
+    let maxWidth = 0;
+    let totalHeight = paddingY * 2;
+    lines.forEach((line, index) => {
+      this.ctx.font = canvasUiFont(line.size, line.weight);
+      maxWidth = Math.max(maxWidth, this.ctx.measureText(line.text).width);
+      totalHeight += line.size;
+      if (index < lines.length - 1) totalHeight += gap;
+    });
+    this.ctx.restore();
+    return {
+      width: Math.ceil(maxWidth + paddingX * 2),
+      height: Math.ceil(totalHeight),
+      paddingX,
+      paddingY,
+      gap,
+    };
+  }
+
+  getDiagramPrintLabelLayout(hole, { ignoreOffset = false } = {}) {
+    const point = this.worldToScreen(hole.x, hole.y);
+    const lines = this.diagramPrintLabelLines(hole);
+    const metrics = this.measureDiagramPrintLabel(lines);
+    const defaultRect = {
+      left: point.x + 8,
+      top: point.y - (metrics.paddingY + Math.max(10, Math.round(11 * this.textScale())) + 2),
+      width: metrics.width,
+      height: metrics.height,
+    };
+    const offset = !ignoreOffset ? this.stateRef?.labelLayoutByHoleId?.get(hole.id) : null;
+    const rect = {
+      left: defaultRect.left + (offset?.offsetX || 0),
+      top: defaultRect.top + (offset?.offsetY || 0),
+      width: defaultRect.width,
+      height: defaultRect.height,
+    };
+    return {
+      hole,
+      point,
+      lines,
+      metrics,
+      defaultRect,
+      rect,
+    };
+  }
+
+  findDiagramPrintLabelAtScreen(x, y) {
+    if (!this.isDiagramPrintMode()) return null;
+    for (let index = this.stateRef.holes.length - 1; index >= 0; index -= 1) {
+      const hole = this.stateRef.holes[index];
+      const layout = this.getDiagramPrintLabelLayout(hole);
+      const { rect } = layout;
+      if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) return layout;
+    }
+    return null;
+  }
+
+  drawDiagramPrintLabelLeader(layout) {
+    const { point, rect } = layout;
+    const nearest = {
+      x: clamp(point.x, rect.left, rect.left + rect.width),
+      y: clamp(point.y, rect.top, rect.top + rect.height),
+    };
+    const distance = Math.hypot(point.x - nearest.x, point.y - nearest.y);
+    if (distance <= 26) return;
+    this.ctx.save();
+    this.ctx.strokeStyle = "rgba(82, 101, 124, 0.55)";
+    this.ctx.lineWidth = 1.1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(point.x, point.y);
+    this.ctx.lineTo(nearest.x, nearest.y);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  drawDiagramPrintLabelBox(layout) {
+    const { hole, rect, lines, metrics } = layout;
+    const isHovered = this.stateRef?.ui?.hoverLabelHoleId === hole.id;
+    const isDragging = this.stateRef?.dragLabelHoleId === hole.id;
+
+    this.drawDiagramPrintLabelLeader(layout);
+
+    this.ctx.save();
+    this.ctx.shadowColor = "rgba(15, 23, 42, 0.10)";
+    this.ctx.shadowBlur = isDragging ? 12 : 8;
+    this.ctx.shadowOffsetY = 2;
+    this.ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
+    this.ctx.strokeStyle = isDragging ? "rgba(47, 125, 246, 0.72)" : isHovered ? "rgba(71, 85, 105, 0.55)" : "rgba(203, 213, 225, 0.95)";
+    this.ctx.lineWidth = isDragging ? 1.8 : isHovered ? 1.4 : 1;
+    this.ctx.beginPath();
+    this.ctx.roundRect(rect.left, rect.top, rect.width, rect.height, 8);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    this.ctx.save();
+    let y = rect.top + metrics.paddingY;
+    lines.forEach((line, index) => {
+      this.ctx.fillStyle = line.color;
+      this.ctx.font = canvasUiFont(line.size, line.weight);
+      y += line.size;
+      this.ctx.fillText(line.text, rect.left + metrics.paddingX, y);
+      if (index < lines.length - 1) y += metrics.gap;
+    });
+    this.ctx.restore();
+  }
+
+  drawDiagramPrintLabels() {
+    if (!this.isDiagramPrintMode()) return;
+    this.stateRef.holes.forEach((hole) => {
+      const layout = this.getDiagramPrintLabelLayout(hole);
+      if (layout.lines.length) this.drawDiagramPrintLabelBox(layout);
+    });
+  }
+
   drawHoles(preview) {
     const times = preview ? this.stateRef.holes.map((hole) => preview.holeTimes.get(hole.id)).filter((v) => Number.isFinite(v)) : [];
     const minT = times.length ? Math.min(...times) : 0;
@@ -483,13 +629,15 @@ export class DiagramRenderer {
         this.ctx.stroke();
       }
 
-      const label = hole.holeNumber || hole.id;
-      this.ctx.fillStyle = "#111827";
-      const labelSize = Math.max(9, Math.round(11 * this.textScale()));
-      this.ctx.font = canvasUiFont(labelSize, selected || isOrigin ? 700 : 600);
-      this.ctx.fillText(label, point.x + 8, point.y - 6);
+      if (!this.isDiagramPrintMode()) {
+        const label = hole.holeNumber || hole.id;
+        this.ctx.fillStyle = "#111827";
+        const labelSize = Math.max(9, Math.round(11 * this.textScale()));
+        this.ctx.font = canvasUiFont(labelSize, selected || isOrigin ? 700 : 600);
+        this.ctx.fillText(label, point.x + 8, point.y - 6);
+      }
 
-      if (diagramMode) {
+      if (diagramMode && !this.isDiagramPrintMode()) {
         const metadataLines = this.diagramMetadataLines(hole);
         if (metadataLines.length) {
           this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 700);
@@ -498,7 +646,7 @@ export class DiagramRenderer {
             this.ctx.fillText(line.text, point.x + 8, point.y + 9 + (index * 12));
           });
         }
-      } else if (preview && Number.isFinite(time)) {
+      } else if (!diagramMode && preview && Number.isFinite(time)) {
         this.ctx.fillStyle = "#334155";
         this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 600);
         this.ctx.fillText(`${time.toFixed(0)}ms`, point.x + 8, point.y + 8);
@@ -609,6 +757,7 @@ export class DiagramRenderer {
     this.drawBearingArrows();
     this.drawHoles(preview);
     this.drawDiagramAnnotations();
+    this.drawDiagramPrintLabels();
     this.drawSelectionOverlays();
     if (!this.isDiagramMode()) this.drawTimingVisualization(preview);
     this.drawNorthArrow();

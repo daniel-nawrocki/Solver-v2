@@ -143,7 +143,12 @@ function createPrintState() {
       showBearingArrows: true,
       bearingArrowWeight: 1,
       showDepthLabels: true,
+      printEditMode: false,
+      hoverLabelHoleId: null,
     },
+    labelLayoutByHoleId: new Map(),
+    dragLabelHoleId: null,
+    dragPointerDelta: null,
     metadata: {
       shotNumber: "",
       location: "",
@@ -279,6 +284,8 @@ const els = {
   printBackBtn: document.getElementById("printBackBtn"),
   printActionBtn: document.getElementById("printActionBtn"),
   printFitBtn: document.getElementById("printFitBtn"),
+  printEditLabelsBtn: document.getElementById("printEditLabelsBtn"),
+  printResetLabelsBtn: document.getElementById("printResetLabelsBtn"),
   printTextScaleInput: document.getElementById("printTextScaleInput"),
   printColorModeToggle: document.getElementById("printColorModeToggle"),
   printRelationshipToggleWrap: document.getElementById("printRelationshipToggleWrap"),
@@ -320,7 +327,9 @@ const printRenderer = new DiagramRenderer(document.getElementById("printCanvas")
   isPrintRenderer: true,
   onHoleClick: () => {},
   onHoleHover: () => {},
-  onPointerUp: () => {},
+  onPointerUp: handlePrintPointerUp,
+  onPointerDown: handlePrintPointerDown,
+  onPointerMove: handlePrintPointerMove,
   onHoleContextMenu: () => {},
 });
 
@@ -483,6 +492,9 @@ function syncPrintControls() {
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
+  els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
+  els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !printState.ui.printEditMode);
+  els.printEditLabelsBtn.classList.toggle("active", diagramMode && printState.ui.printEditMode);
   els.printRelationshipToggle.checked = printState.ui.showRelationships !== false;
   els.printAngleToggle.checked = printState.ui.showAngleLabels !== false;
   els.printBearingToggle.checked = printState.ui.showBearingLabels !== false;
@@ -513,7 +525,12 @@ function loadSolverPrintState(selectedTiming) {
   printState.ui.showDepthLabels = false;
   printState.ui.showBearingArrows = false;
   printState.ui.bearingArrowWeight = 1;
+  printState.ui.printEditMode = false;
+  printState.ui.hoverLabelHoleId = null;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  printState.labelLayoutByHoleId = new Map();
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
   printState.metadata = cloneDiagramMetadata();
   printState.annotations = cloneDiagramAnnotations();
   applyPrintOrientation();
@@ -535,7 +552,12 @@ function loadDiagramPrintState() {
   printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
   printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
+  printState.ui.printEditMode = false;
+  printState.ui.hoverLabelHoleId = null;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  printState.labelLayoutByHoleId = new Map();
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
   printState.metadata = cloneDiagramMetadata(diagramState.metadata);
   printState.annotations = cloneDiagramAnnotations(diagramState.annotations);
   applyPrintOrientation();
@@ -570,6 +592,11 @@ function openPrintWorkspace() {
 }
 
 function closePrintWorkspace() {
+  printState.ui.printEditMode = false;
+  printState.ui.hoverLabelHoleId = null;
+  printState.labelLayoutByHoleId = new Map();
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
   document.body.classList.remove("print-preview-active");
   els.printWorkspace.classList.add("hidden");
 }
@@ -597,6 +624,69 @@ function applyPrintSettings() {
   els.printPaperFrame.classList.toggle("greyscale", !els.printColorModeToggle.checked);
   applyPrintOrientation();
   printRenderer.render();
+}
+
+function isDiagramPrintEditing() {
+  return printState.ui.workspaceMode === "diagram" && printState.ui.printEditMode;
+}
+
+function setPrintEditMode(enabled) {
+  printState.ui.printEditMode = enabled === true;
+  printState.ui.hoverLabelHoleId = null;
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
+  syncPrintControls();
+  printRenderer.render();
+}
+
+function resetPrintLabelLayouts() {
+  printState.labelLayoutByHoleId = new Map();
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
+  printState.ui.hoverLabelHoleId = null;
+  printRenderer.render();
+}
+
+function handlePrintPointerDown(payload) {
+  if (!isDiagramPrintEditing()) return false;
+  const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
+  if (!hit) return false;
+  printState.dragLabelHoleId = hit.hole.id;
+  printState.dragPointerDelta = {
+    x: payload.x - hit.rect.left,
+    y: payload.y - hit.rect.top,
+  };
+  printState.ui.hoverLabelHoleId = hit.hole.id;
+  printRenderer.render();
+  return true;
+}
+
+function handlePrintPointerMove(payload) {
+  if (printState.ui.workspaceMode !== "diagram") return false;
+  const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
+  const nextHover = isDiagramPrintEditing() && hit ? hit.hole.id : null;
+  if (printState.ui.hoverLabelHoleId !== nextHover) {
+    printState.ui.hoverLabelHoleId = nextHover;
+    printRenderer.render();
+  }
+  if (!isDiagramPrintEditing() || !printState.dragLabelHoleId || !printState.dragPointerDelta) return false;
+  const hole = printState.holesById.get(printState.dragLabelHoleId);
+  if (!hole) return false;
+  const defaultLayout = printRenderer.getDiagramPrintLabelLayout(hole, { ignoreOffset: true });
+  printState.labelLayoutByHoleId.set(hole.id, {
+    offsetX: payload.x - printState.dragPointerDelta.x - defaultLayout.rect.left,
+    offsetY: payload.y - printState.dragPointerDelta.y - defaultLayout.rect.top,
+  });
+  printRenderer.render();
+  return true;
+}
+
+function handlePrintPointerUp() {
+  if (!printState.dragLabelHoleId) return false;
+  printState.dragLabelHoleId = null;
+  printState.dragPointerDelta = null;
+  printRenderer.render();
+  return true;
 }
 
 function normalizeAngleValue(value) {
@@ -1758,6 +1848,8 @@ els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
 els.printFitBtn.addEventListener("click", () => printRenderer.fitToData(PRINT_FIT_MARGINS));
+els.printEditLabelsBtn.addEventListener("click", () => setPrintEditMode(!printState.ui.printEditMode));
+els.printResetLabelsBtn.addEventListener("click", () => resetPrintLabelLayouts());
 els.printTextScaleInput.addEventListener("input", () => applyPrintSettings());
 els.printColorModeToggle.addEventListener("change", () => applyPrintSettings());
 els.printRelationshipToggle.addEventListener("change", () => applyPrintSettings());

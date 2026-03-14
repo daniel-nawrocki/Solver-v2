@@ -50,6 +50,7 @@ Code-level status:
 - Diagram Maker now has a dedicated `Shot` menu between `Import` and `View` for shot metadata.
 - Diagram Maker print now includes shot metadata in the reserved top header area, with `Shot Number` as the large top-left title.
 - Diagram Maker annotations now render in both the main canvas and print preview.
+- Diagram Maker print now has a label-edit mode for manually repositioning per-hole print label boxes during the current print session.
 - `js/csvParser.js`, `js/diagramRenderer.js`, and `js/app.js` were syntax-parsed successfully in local checks.
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -59,6 +60,7 @@ What has not been fully verified yet:
 - whether any runtime behavior regressions remain in Delay Solver
 - whether Diagram Maker labels feel crowded with dense hole layouts
 - whether annotation readability and printed header spacing still feel balanced on dense real-world diagrams
+- whether print-label drag UX and leader thresholds feel right on dense layouts in real use
 
 ## Completed Work
 
@@ -259,6 +261,28 @@ Current v1 limits:
 - no per-annotation selection/edit/move/resize behavior yet
 - editing is intentionally limited to placing new annotations and clearing markup/text layers
 
+### 13. Diagram Maker Print Label Edit Mode
+Implemented in code.
+
+What was added:
+- Diagram Maker print preview now has:
+  - `Edit Labels`
+  - `Reset Labels`
+- hole print labels now render as compact draggable boxes in Diagram Maker print preview instead of fixed inline text
+- label boxes include:
+  - hole number
+  - whichever print metadata toggles are currently enabled for:
+    - angle
+    - bearing
+    - depth
+- labels can be dragged to reduce clutter during the active print session
+- leader lines appear once a label box moves far enough away from its hole
+- `Reset Labels` returns all print labels to their default auto positions
+
+Current rule:
+- label edits are print-session only
+- closing and reopening print preview resets the custom label layout
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -272,6 +296,7 @@ Important recent context:
 - Diagram Maker does not yet draw directional hole traces from angle/bearing/depth.
 - No dedicated export format exists yet for Diagram Maker metadata.
 - Diagram Maker shot metadata and annotations are in-memory only and are not persisted yet.
+- Diagram Maker print label edits are session-only and are not persisted yet.
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
@@ -297,6 +322,11 @@ Important recent context:
   - print preview toggles
   - printed shot metadata header
   - printed markup/text visibility
+  - print label edit mode
+  - drag behavior for label boxes
+  - leader line behavior when labels move away from holes
+  - `Reset Labels`
+  - label layout persistence only within the active print session
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
@@ -360,5 +390,6 @@ Most important current repo facts to preserve:
   - shared print preview with Diagram Maker-specific toggles
   - print header with shot metadata
   - markup/text annotations that also print
+  - print-preview label edit mode with draggable label boxes and leaders
 
 This file should stay short, practical, and current enough that a new chat can read it and continue work without reconstructing the whole project from memory.

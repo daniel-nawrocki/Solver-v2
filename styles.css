@@ -742,6 +742,12 @@ button:active {
   min-width: 110px;
 }
 
+.print-toolbar-group button.active {
+  border-color: rgba(47, 125, 246, 0.55);
+  background: linear-gradient(180deg, #f7fbff 0%, #deebff 100%);
+  color: #18446d;
+}
+
 .print-toolbar-controls label {
   display: flex;
   align-items: center;
