@@ -60,6 +60,18 @@ function formatDiameterLabel(value) {
   return `${numeric}"`;
 }
 
+function canvasUiFont(sizePx, weight = 600) {
+  return `${weight} ${sizePx}px "Trebuchet MS", "Segoe UI", sans-serif`;
+}
+
+function printHeaderTitleFont(sizePx) {
+  return `700 ${sizePx}px Cambria, Georgia, "Times New Roman", serif`;
+}
+
+function printHeaderMetaFont(sizePx, weight = 600) {
+  return `${weight} ${sizePx}px "Trebuchet MS", "Segoe UI", sans-serif`;
+}
+
 export class DiagramRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -201,7 +213,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = this.isPrintRenderer && this.isDiagramMode() ? 145 : 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? 118 : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);
@@ -225,7 +237,7 @@ export class DiagramRenderer {
     this.ctx.moveTo(tx, ty);
     this.ctx.lineTo(bx, by);
     this.ctx.stroke();
-    this.ctx.font = `bold ${Math.max(10, Math.round(13 * this.textScale()))}px Segoe UI`;
+    this.ctx.font = canvasUiFont(Math.max(10, Math.round(13 * this.textScale())), 700);
     this.ctx.fillText("N", nx - 5, ny - 8);
     this.ctx.restore();
   }
@@ -435,7 +447,7 @@ export class DiagramRenderer {
       const anchor = this.worldToScreen(item.anchor.x, item.anchor.y);
       this.ctx.save();
       this.ctx.fillStyle = item.color || "#000000";
-      this.ctx.font = `${Math.max(10, Math.round(size.textSize * this.textScale()))}px Segoe UI`;
+      this.ctx.font = canvasUiFont(Math.max(10, Math.round(size.textSize * this.textScale())), 700);
       this.ctx.textBaseline = "alphabetic";
       this.ctx.fillText(item.text, anchor.x, anchor.y);
       this.ctx.restore();
@@ -473,13 +485,13 @@ export class DiagramRenderer {
       const label = hole.holeNumber || hole.id;
       this.ctx.fillStyle = "#111827";
       const labelSize = Math.max(9, Math.round(11 * this.textScale()));
-      this.ctx.font = selected || isOrigin ? `bold ${labelSize}px Segoe UI` : `${labelSize}px Segoe UI`;
+      this.ctx.font = canvasUiFont(labelSize, selected || isOrigin ? 700 : 600);
       this.ctx.fillText(label, point.x + 8, point.y - 6);
 
       if (diagramMode) {
         const metadataLines = this.diagramMetadataLines(hole);
         if (metadataLines.length) {
-          this.ctx.font = `${Math.max(8, Math.round(10 * this.textScale()))}px Segoe UI`;
+          this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 700);
           metadataLines.forEach((line, index) => {
             this.ctx.fillStyle = line.color || "#52657c";
             this.ctx.fillText(line.text, point.x + 8, point.y + 9 + (index * 12));
@@ -487,7 +499,7 @@ export class DiagramRenderer {
         }
       } else if (preview && Number.isFinite(time)) {
         this.ctx.fillStyle = "#334155";
-        this.ctx.font = `${Math.max(8, Math.round(10 * this.textScale()))}px Segoe UI`;
+        this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 600);
         this.ctx.fillText(`${time.toFixed(0)}ms`, point.x + 8, point.y + 8);
       }
     }
@@ -556,35 +568,28 @@ export class DiagramRenderer {
     const leftLines = [
       metadata.location ? `Location: ${metadata.location}` : null,
       metadata.bench ? `Bench: ${metadata.bench}` : null,
-      Number.isFinite(Number(metadata.defaultDiameter)) ? `Hole Diameter: ${formatDiameterLabel(metadata.defaultDiameter)}` : null,
     ].filter(Boolean);
     const rightLines = [
+      Number.isFinite(Number(metadata.defaultDiameter)) ? `Hole Diameter: ${formatDiameterLabel(metadata.defaultDiameter)}` : null,
       metadata.facePattern ? `Face Pattern: ${metadata.facePattern}` : null,
       metadata.interiorPattern ? `Interior Pattern: ${metadata.interiorPattern}` : null,
     ].filter(Boolean);
 
     this.ctx.save();
     this.ctx.fillStyle = "#0f172a";
-    this.ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
-    this.ctx.lineWidth = 1;
-    this.ctx.font = `700 ${Math.max(26, Math.round(30 * this.textScale()))}px Segoe UI`;
-    this.ctx.fillText(shotNumber, 28, 42);
+    this.ctx.font = printHeaderTitleFont(34);
+    this.ctx.fillText(shotNumber, 28, 44);
 
-    this.ctx.font = `${Math.max(10, Math.round(12 * this.textScale()))}px Segoe UI`;
+    this.ctx.font = printHeaderMetaFont(13, 600);
     leftLines.forEach((line, index) => {
-      this.ctx.fillText(line, 30, 68 + (index * 18));
+      this.ctx.fillText(line, 30, 72 + (index * 19));
     });
 
     this.ctx.textAlign = "right";
     rightLines.forEach((line, index) => {
-      this.ctx.fillText(line, this.canvas.width - 30, 42 + (index * 18));
+      this.ctx.fillText(line, this.canvas.width - 30, 58 + (index * 19));
     });
     this.ctx.textAlign = "left";
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(24, 116);
-    this.ctx.lineTo(this.canvas.width - 24, 116);
-    this.ctx.stroke();
     this.ctx.restore();
   }
 

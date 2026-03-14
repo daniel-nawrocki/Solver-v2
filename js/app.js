@@ -612,6 +612,20 @@ function selectedDiagramDefaultDiameter() {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function applyShotDefaultDiameterToExistingHoles(nextDefaultDiameter) {
+  const previousDefaultDiameter = diagramState.metadata.defaultDiameter;
+  if (!Number.isFinite(nextDefaultDiameter)) return;
+  diagramState.holes.forEach((hole) => {
+    if (hole.diameter === null || hole.diameter === undefined) {
+      hole.diameter = nextDefaultDiameter;
+      return;
+    }
+    if (Number.isFinite(previousDefaultDiameter) && Number(hole.diameter) === previousDefaultDiameter) {
+      hole.diameter = nextDefaultDiameter;
+    }
+  });
+}
+
 function syncDiagramDefaultDiameterStatus() {
   const value = diagramState.metadata.defaultDiameter;
   els.diagramDefaultDiameterStatus.textContent = Number.isFinite(value)
@@ -1459,12 +1473,21 @@ function applyDefaultDiameterToDiagramSelection() {
 
 function applyDiagramMetadataPatch(field, value) {
   if (!Object.hasOwn(diagramState.metadata, field)) return;
-  diagramState.metadata[field] = field === "defaultDiameter" && value !== null
-    ? (Number.isFinite(Number(value)) ? Number(value) : null)
-    : value;
-  syncDiagramDefaultDiameterStatus();
+  if (field === "defaultDiameter") {
+    const normalizedValue = value !== null && Number.isFinite(Number(value)) ? Number(value) : null;
+    if (Number.isFinite(normalizedValue)) applyShotDefaultDiameterToExistingHoles(normalizedValue);
+    diagramState.metadata[field] = normalizedValue;
+    syncDiagramDefaultDiameterStatus();
+    renderDiagramPropertiesPanel();
+    diagramRenderer.render();
+  } else {
+    diagramState.metadata[field] = value;
+    syncDiagramDefaultDiameterStatus();
+  }
   if (!els.printWorkspace.classList.contains("hidden") && printState.ui.workspaceMode === "diagram") {
     printState.metadata = cloneDiagramMetadata(diagramState.metadata);
+    printState.holes = diagramState.holes.map(cloneHole);
+    printState.holesById = new Map(printState.holes.map((hole) => [hole.id, hole]));
     printRenderer.render();
   }
 }
