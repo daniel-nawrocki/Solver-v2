@@ -95,6 +95,9 @@ function createDiagramState() {
       showBearingLabels: true,
       showBearingArrows: false,
       showDepthLabels: true,
+      selectionToolMode: "single",
+      selectionBoxDraft: null,
+      selectionPolygonDraft: null,
     },
     csvCache: null,
   };
@@ -207,6 +210,9 @@ const els = {
   diagramRotateFineLeftBtn: document.getElementById("diagramRotateFineLeftBtn"),
   diagramRotateFineRightBtn: document.getElementById("diagramRotateFineRightBtn"),
   diagramRotateResetBtn: document.getElementById("diagramRotateResetBtn"),
+  diagramSingleSelectToolBtn: document.getElementById("diagramSingleSelectToolBtn"),
+  diagramBoxSelectToolBtn: document.getElementById("diagramBoxSelectToolBtn"),
+  diagramPolygonSelectToolBtn: document.getElementById("diagramPolygonSelectToolBtn"),
   diagramSelectionStatus: document.getElementById("diagramSelectionStatus"),
   diagramSelectionList: document.getElementById("diagramSelectionList"),
   diagramDefaultDiameterInput: document.getElementById("diagramDefaultDiameterInput"),
@@ -252,7 +258,10 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
   stateRef: diagramState,
   onHoleClick: handleDiagramHoleClick,
   onHoleHover: () => {},
-  onPointerUp: () => {},
+  onPointerUp: handleDiagramPointerUp,
+  onPointerDown: handleDiagramPointerDown,
+  onPointerMove: handleDiagramPointerMove,
+  onDoubleClick: handleDiagramDoubleClick,
   onHoleContextMenu: () => {},
 });
 
@@ -997,6 +1006,138 @@ function selectedDiagramHoles() {
   return [...diagramState.selection].map((id) => diagramState.holesById.get(id)).filter(Boolean);
 }
 
+function setDiagramSelectionToolMode(mode) {
+  diagramState.ui.selectionToolMode = mode;
+  diagramState.ui.selectionBoxDraft = null;
+  diagramState.ui.selectionPolygonDraft = null;
+  els.diagramSingleSelectToolBtn.classList.toggle("active", mode === "single");
+  els.diagramBoxSelectToolBtn.classList.toggle("active", mode === "box");
+  els.diagramPolygonSelectToolBtn.classList.toggle("active", mode === "polygon");
+  diagramRenderer.render();
+}
+
+function diagramScreenPoint(hole) {
+  return diagramRenderer.worldToScreen(hole.x, hole.y);
+}
+
+function pointInRect(point, rect) {
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const intersect = ((yi > point.y) !== (yj > point.y))
+      && (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-9) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function applyDiagramSelection(holeIds, { add = false } = {}) {
+  if (!add) {
+    diagramState.selection = new Set(holeIds);
+  } else {
+    const next = new Set(diagramState.selection);
+    holeIds.forEach((id) => next.add(id));
+    diagramState.selection = next;
+  }
+  renderDiagramPropertiesPanel();
+  diagramRenderer.render();
+}
+
+function finalizeDiagramBoxSelection(draft) {
+  if (!draft) return;
+  const rect = {
+    left: Math.min(draft.start.x, draft.current.x),
+    right: Math.max(draft.start.x, draft.current.x),
+    top: Math.min(draft.start.y, draft.current.y),
+    bottom: Math.max(draft.start.y, draft.current.y),
+  };
+  const holeIds = diagramState.holes
+    .filter((hole) => pointInRect(diagramScreenPoint(hole), rect))
+    .map((hole) => hole.id);
+  applyDiagramSelection(holeIds, { add: draft.addMode });
+}
+
+function finalizeDiagramPolygonSelection() {
+  const draft = diagramState.ui.selectionPolygonDraft;
+  if (!draft?.points?.length || draft.points.length < 3) return;
+  const holeIds = diagramState.holes
+    .filter((hole) => pointInPolygon(diagramScreenPoint(hole), draft.points))
+    .map((hole) => hole.id);
+  applyDiagramSelection(holeIds, { add: draft.addMode });
+  diagramState.ui.selectionPolygonDraft = null;
+  diagramRenderer.render();
+}
+
+function handleDiagramPointerDown(payload) {
+  const mode = diagramState.ui.selectionToolMode;
+  if (mode === "box") {
+    diagramState.ui.selectionBoxDraft = {
+      start: { x: payload.x, y: payload.y },
+      current: { x: payload.x, y: payload.y },
+      addMode: payload.event.shiftKey,
+    };
+    diagramRenderer.render();
+    return true;
+  }
+  if (mode === "polygon") {
+    const existing = diagramState.ui.selectionPolygonDraft;
+    if (!existing) {
+      diagramState.ui.selectionPolygonDraft = {
+        points: [{ x: payload.x, y: payload.y }],
+        hoverPoint: { x: payload.x, y: payload.y },
+        addMode: payload.event.shiftKey,
+      };
+    } else {
+      existing.points.push({ x: payload.x, y: payload.y });
+      existing.hoverPoint = { x: payload.x, y: payload.y };
+    }
+    diagramRenderer.render();
+    return true;
+  }
+  return false;
+}
+
+function handleDiagramPointerMove(payload) {
+  if (diagramState.ui.selectionToolMode === "box" && diagramState.ui.selectionBoxDraft) {
+    diagramState.ui.selectionBoxDraft.current = { x: payload.x, y: payload.y };
+    diagramRenderer.render();
+    return true;
+  }
+  if (diagramState.ui.selectionToolMode === "polygon") {
+    if (diagramState.ui.selectionPolygonDraft) {
+      diagramState.ui.selectionPolygonDraft.hoverPoint = { x: payload.x, y: payload.y };
+      diagramRenderer.render();
+    }
+    return true;
+  }
+  return false;
+}
+
+function handleDiagramPointerUp() {
+  if (diagramState.ui.selectionToolMode === "box" && diagramState.ui.selectionBoxDraft) {
+    const draft = diagramState.ui.selectionBoxDraft;
+    diagramState.ui.selectionBoxDraft = null;
+    finalizeDiagramBoxSelection(draft);
+    return true;
+  }
+  return false;
+}
+
+function handleDiagramDoubleClick() {
+  if (diagramState.ui.selectionToolMode === "polygon") {
+    finalizeDiagramPolygonSelection();
+    return true;
+  }
+  return false;
+}
+
 function renderDiagramPropertiesPanel() {
   const selected = selectedDiagramHoles();
   const inputs = [
@@ -1059,6 +1200,7 @@ function fullDiagramRefresh({ fit = false } = {}) {
 }
 
 function handleDiagramHoleClick(hole, event) {
+  if (diagramState.ui.selectionToolMode !== "single") return;
   if (!event.shiftKey) diagramState.selection = new Set([hole.id]);
   else if (diagramState.selection.has(hole.id)) diagramState.selection.delete(hole.id);
   else diagramState.selection.add(hole.id);
@@ -1291,6 +1433,9 @@ els.diagramRotateRightBtn.addEventListener("click", () => diagramRenderer.rotate
 els.diagramRotateFineLeftBtn.addEventListener("click", () => diagramRenderer.rotateBy(-1));
 els.diagramRotateFineRightBtn.addEventListener("click", () => diagramRenderer.rotateBy(1));
 els.diagramRotateResetBtn.addEventListener("click", () => diagramRenderer.resetRotation());
+els.diagramSingleSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("single"));
+els.diagramBoxSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("box"));
+els.diagramPolygonSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("polygon"));
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramApplyDefaultDiameterBtn.addEventListener("click", () => applyDefaultDiameterToDiagramSelection());
 els.diagramClearSelectionBtn.addEventListener("click", () => {
@@ -1390,6 +1535,18 @@ els.printActionBtn.addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (isDiagramWorkspaceActive() && diagramState.ui.selectionToolMode === "polygon" && event.key === "Enter") {
+    finalizeDiagramPolygonSelection();
+    return;
+  }
+  if (isDiagramWorkspaceActive() && event.key === "Escape") {
+    if (diagramState.ui.selectionPolygonDraft || diagramState.ui.selectionBoxDraft) {
+      diagramState.ui.selectionPolygonDraft = null;
+      diagramState.ui.selectionBoxDraft = null;
+      diagramRenderer.render();
+      return;
+    }
+  }
   if (event.key === "Escape" && !els.helpWorkspace.classList.contains("hidden")) closeHelpWorkspace();
 });
 
@@ -1399,6 +1556,7 @@ els.coordViewSelect.value = solverState.ui.coordView;
 els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
+setDiagramSelectionToolMode(diagramState.ui.selectionToolMode);
 els.diagramBearingLabelToggle.checked = diagramState.ui.showBearingLabels;
 els.diagramBearingArrowToggle.checked = diagramState.ui.showBearingArrows;
 syncRelationshipVisibilityUi();

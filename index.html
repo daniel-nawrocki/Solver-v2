@@ -347,6 +347,31 @@
 
       <canvas id="diagramMakerCanvas" width="1300" height="800"></canvas>
     </main>
+
+    <div class="floating-toolkit" aria-label="Diagram Maker Selection Tools">
+      <button id="diagramSingleSelectToolBtn" class="toolkit-btn" type="button" title="Select Tool" aria-label="Select Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 4l4 12 2-5 5-2-11-5z"></path>
+        </svg>
+        <span>Select</span>
+      </button>
+      <button id="diagramBoxSelectToolBtn" class="toolkit-btn" type="button" title="Box Select Tool" aria-label="Box Select Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="5" width="14" height="14" rx="1"></rect>
+        </svg>
+        <span>Box</span>
+      </button>
+      <button id="diagramPolygonSelectToolBtn" class="toolkit-btn" type="button" title="Polygon Select Tool" aria-label="Polygon Select Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 6l10 2-2 10-10-3z"></path>
+          <circle cx="7" cy="6" r="1.5"></circle>
+          <circle cx="17" cy="8" r="1.5"></circle>
+          <circle cx="15" cy="18" r="1.5"></circle>
+          <circle cx="5" cy="15" r="1.5"></circle>
+        </svg>
+        <span>Polygon</span>
+      </button>
+    </div>
   </section>
 
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">

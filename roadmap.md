@@ -12,6 +12,10 @@ When work is completed, this file should be updated with:
 The app is no longer intended to be just a timing tool.
 It is being expanded into a multi-tool blast planning program with a shared UI/UX style.
 
+Design consistency rule:
+- Diagram Maker should stay visually aligned with Delay Solver unless a future request explicitly changes that direction.
+- Reuse the same top bar, floating controls, panel style, spacing, glassy menu panels, and overall interaction tone wherever possible.
+
 Current top-level tool goals:
 - `Delay Solver`: existing timing workflow
 - `Diagram Maker`: layout and hole-property workflow
@@ -41,6 +45,7 @@ Code-level status:
 - `Diagram Maker` now exists in the DOM as a real workspace, not a placeholder.
 - `Diagram Maker` has its own state, renderer instance, import flow, selection flow, and property editor.
 - `Print Preview` is shared, but branches behavior based on whether the active workspace is `Delay Solver` or `Diagram Maker`.
+- Diagram Maker now has a bottom selection toolkit styled to match the Delay Solver bottom controls.
 - `js/csvParser.js`, `js/diagramRenderer.js`, and `js/app.js` were syntax-parsed successfully in local checks.
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -127,9 +132,11 @@ Current behavior:
 - Diagram Maker remains point/collar-based visually
 - no projected drill traces are drawn yet
 - labels can show:
-  - angle + bearing
+  - angle
+  - bearing
   - depth
 - view toggles control metadata visibility
+- bearing arrows exist as a low-profile overlay and are canvas-only
 
 ### 6. Print Preview
 Implemented as a shared print workspace with workspace-specific controls.
@@ -175,6 +182,35 @@ Current rule:
 - accepted angle values are only `5`, `10`, `15`, `20`, `25`, `30`
 - imported or edited angles outside that set normalize to `null` / unclassified
 
+### 9. Diagram Maker Selection Toolkit
+Implemented in code.
+
+What was added:
+- Diagram Maker now has a bottom toolkit matching the Delay Solver control style
+- toolkit modes:
+  - `Select`
+  - `Box`
+  - `Polygon`
+- `Select` keeps existing click / `Shift+click` behavior
+- `Box` drag-selects holes in screen space
+- `Polygon` click-places vertices and completes with double-click or `Enter`
+- shape selection replaces current selection by default
+- holding `Shift` while completing box/polygon selection adds to the existing selection
+- temporary selection drafts can be cancelled with `Escape`
+
+Important behavior:
+- selection operates in rendered screen space, so it respects rotation and current collar/toe view
+- box and polygon tools suppress canvas pan while active
+- selection drafts are cleared when switching selection tools
+
+### 10. Zero-Angle Bearing Arrow Rule
+Implemented in code.
+
+Current rule:
+- holes with angle `0` do not draw bearing arrows
+- holes with missing or invalid angle also do not draw bearing arrows
+- holes with missing or invalid bearing do not draw bearing arrows
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -193,6 +229,8 @@ Important recent context:
 - Print preview behavior for both workspaces has been refactored and should be manually checked in both modes.
 - The new print-fit behavior is syntax-validated but still needs visual confirmation with real print preview usage.
 - Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
+- Diagram Maker box/polygon selection is implemented in code but still needs manual interaction testing with real layouts.
+- Polygon selection UX may need polish if double-click introduces awkward final-vertex behavior on some datasets.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -207,6 +245,14 @@ Important recent context:
   - separate Angle/Bearing toggles on canvas and print
   - low-profile bearing arrows on dense diagrams
   - angle color mapping and invalid-angle handling
+  - selection toolkit behavior:
+    - select mode
+    - box mode
+    - polygon mode
+    - `Shift` add behavior
+    - `Escape` cancel behavior
+    - `Enter` polygon completion
+    - no unwanted panning while selection tools are active
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded
@@ -230,5 +276,26 @@ Whenever meaningful work is completed, append or revise:
 - `Completed Work`
 - `Current Known Limitations`
 - `High-Priority Next Steps`
+- `Current Snapshot` if the architecture or workflow meaningfully changes
+
+## Resume Notes
+If a new chat starts, it should read this file first.
+
+Most important current repo facts to preserve:
+- This is a single-page multi-workspace app.
+- Delay Solver is the established reference for UI style.
+- Diagram Maker should continue matching that style unless explicitly changed.
+- Shared renderer logic lives in `js/diagramRenderer.js`.
+- Shared app/workspace wiring lives in `js/app.js`.
+- Shared CSV parsing lives in `js/csvParser.js`.
+- Diagram Maker currently supports:
+  - import with collar/toe/id/angle/bearing/depth
+  - `inclination` alias for angle import guessing
+  - per-hole and multi-hole property editing
+  - discrete angle colors
+  - separate angle/bearing/depth visibility toggles
+  - low-profile bearing arrows
+  - bottom selection toolkit with select/box/polygon tools
+  - shared print preview with Diagram Maker-specific toggles
 
 This file should stay short, practical, and current enough that a new chat can read it and continue work without reconstructing the whole project from memory.

@@ -48,6 +48,9 @@ export class DiagramRenderer {
     this.onHoleClick = options.onHoleClick || (() => {});
     this.onHoleHover = options.onHoleHover || (() => {});
     this.onPointerUp = options.onPointerUp || (() => {});
+    this.onPointerDown = options.onPointerDown || (() => false);
+    this.onPointerMove = options.onPointerMove || (() => false);
+    this.onDoubleClick = options.onDoubleClick || (() => false);
     this.onHoleContextMenu = options.onHoleContextMenu || (() => {});
     this.stateRef = options.stateRef;
     this.zoom = 1;
@@ -299,6 +302,7 @@ export class DiagramRenderer {
 
     for (const hole of this.stateRef.holes) {
       if (!Number.isFinite(hole.bearing)) continue;
+      if (!Number.isFinite(hole.angle) || Number(hole.angle) === 0) continue;
       const start = this.worldToScreen(hole.x, hole.y);
       const length = 16;
       const radians = ((Math.round(hole.bearing) - this.rotationDeg - 90) * Math.PI) / 180;
@@ -323,6 +327,60 @@ export class DiagramRenderer {
     }
 
     this.ctx.restore();
+  }
+
+  drawSelectionOverlays() {
+    if (!this.isDiagramMode()) return;
+    const boxDraft = this.stateRef?.ui?.selectionBoxDraft;
+    const polygonDraft = this.stateRef?.ui?.selectionPolygonDraft;
+
+    if (boxDraft?.start && boxDraft?.current) {
+      const x = Math.min(boxDraft.start.x, boxDraft.current.x);
+      const y = Math.min(boxDraft.start.y, boxDraft.current.y);
+      const width = Math.abs(boxDraft.current.x - boxDraft.start.x);
+      const height = Math.abs(boxDraft.current.y - boxDraft.start.y);
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(47, 125, 246, 0.8)";
+      this.ctx.fillStyle = "rgba(47, 125, 246, 0.12)";
+      this.ctx.lineWidth = 1.5;
+      this.ctx.setLineDash([6, 4]);
+      this.ctx.fillRect(x, y, width, height);
+      this.ctx.strokeRect(x, y, width, height);
+      this.ctx.restore();
+    }
+
+    if (polygonDraft?.points?.length) {
+      const points = [...polygonDraft.points];
+      if (polygonDraft.hoverPoint) points.push(polygonDraft.hoverPoint);
+      this.ctx.save();
+      this.ctx.strokeStyle = "rgba(47, 125, 246, 0.8)";
+      this.ctx.fillStyle = "rgba(47, 125, 246, 0.10)";
+      this.ctx.lineWidth = 1.5;
+      this.ctx.setLineDash([6, 4]);
+      this.ctx.beginPath();
+      points.forEach((point, index) => {
+        if (index === 0) this.ctx.moveTo(point.x, point.y);
+        else this.ctx.lineTo(point.x, point.y);
+      });
+      this.ctx.stroke();
+      if (polygonDraft.points.length >= 3) {
+        this.ctx.beginPath();
+        polygonDraft.points.forEach((point, index) => {
+          if (index === 0) this.ctx.moveTo(point.x, point.y);
+          else this.ctx.lineTo(point.x, point.y);
+        });
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+      this.ctx.setLineDash([]);
+      polygonDraft.points.forEach((point) => {
+        this.ctx.beginPath();
+        this.ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+        this.ctx.fillStyle = "rgba(47, 125, 246, 0.95)";
+        this.ctx.fill();
+      });
+      this.ctx.restore();
+    }
   }
 
   drawHoles(preview) {
@@ -438,6 +496,7 @@ export class DiagramRenderer {
     this.drawGrid();
     this.drawRelationships();
     this.drawRelationshipDraft();
+    this.drawSelectionOverlays();
     this.drawBearingArrows();
     this.drawHoles(preview);
     if (!this.isDiagramMode()) this.drawTimingVisualization(preview);
@@ -486,6 +545,8 @@ export class DiagramRenderer {
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       this.pointerScreen = { x, y };
+      const downHandled = this.onPointerDown({ x, y, event, hole: this.findHoleAtScreen(x, y) });
+      if (downHandled) return;
       const hole = this.findHoleAtScreen(x, y);
       if (hole) {
         this.onHoleClick(hole, event);
@@ -498,6 +559,8 @@ export class DiagramRenderer {
     window.addEventListener("mousemove", (event) => {
       const rect = this.canvas.getBoundingClientRect();
       this.pointerScreen = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const moveHandled = this.onPointerMove({ x: this.pointerScreen.x, y: this.pointerScreen.y, event, hole: this.findHoleAtScreen(this.pointerScreen.x, this.pointerScreen.y) });
+      if (moveHandled) return;
       const hoverHole = this.findHoleAtScreen(this.pointerScreen.x, this.pointerScreen.y);
       if ((event.buttons & 1) === 1 && hoverHole) this.onHoleHover(hoverHole, event);
       if (!this.dragging || !this.lastMouse) {
@@ -519,7 +582,17 @@ export class DiagramRenderer {
       this.pointerScreen = { x, y };
       this.dragging = false;
       this.lastMouse = null;
-      this.onPointerUp({ hole: this.findHoleAtScreen(x, y), event });
+      const upHandled = this.onPointerUp({ hole: this.findHoleAtScreen(x, y), event, x, y });
+      if (upHandled) return;
+    });
+
+    this.canvas.addEventListener("dblclick", (event) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      this.pointerScreen = { x, y };
+      const handled = this.onDoubleClick({ x, y, event, hole: this.findHoleAtScreen(x, y) });
+      if (handled) event.preventDefault();
     });
 
     this.canvas.addEventListener("contextmenu", (event) => {
