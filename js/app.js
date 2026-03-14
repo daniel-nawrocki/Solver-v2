@@ -30,12 +30,18 @@ const TOOL_TO_SIGN = {
 
 const TIMING_VISUALIZATION_PULSE_WINDOW_MS = 120;
 const TIMING_VISUALIZATION_TAIL_MS = 1000;
+const WORKSPACE_TITLES = {
+  home: "Home",
+  delaySolver: "Delay Solver",
+  diagramMaker: "Diagram Maker",
+};
 
 const state = {
   holes: [],
   holesById: new Map(),
   selection: new Set(),
   ui: {
+    activeWorkspace: "home",
     showGrid: true,
     showRelationships: true,
     showOverlayText: true,
@@ -85,6 +91,13 @@ const printState = {
 };
 
 const els = {
+  homeWorkspace: document.getElementById("homeWorkspace"),
+  delaySolverWorkspace: document.getElementById("delaySolverWorkspace"),
+  diagramMakerWorkspace: document.getElementById("diagramMakerWorkspace"),
+  workspaceTitle: document.getElementById("workspaceTitle"),
+  homeNavBtn: document.getElementById("homeNavBtn"),
+  openDelaySolverBtn: document.getElementById("openDelaySolverBtn"),
+  openDiagramMakerBtn: document.getElementById("openDiagramMakerBtn"),
   csvInput: document.getElementById("csvInput"),
   mappingPanel: document.getElementById("mappingPanel"),
   coordTypeSelect: document.getElementById("coordTypeSelect"),
@@ -172,7 +185,51 @@ function closeAllMenus() {
   els.menuToggles.forEach((button) => button.classList.remove("active"));
 }
 
+function isSolverWorkspaceActive() {
+  return state.ui.activeWorkspace === "delaySolver";
+}
+
+function renderWorkspaceChrome() {
+  const activeWorkspace = state.ui.activeWorkspace;
+  const solverActive = activeWorkspace === "delaySolver";
+
+  els.homeWorkspace.classList.toggle("hidden", activeWorkspace !== "home");
+  els.delaySolverWorkspace.classList.toggle("hidden", activeWorkspace !== "delaySolver");
+  els.diagramMakerWorkspace.classList.toggle("hidden", activeWorkspace !== "diagramMaker");
+  els.homeNavBtn.classList.toggle("hidden", activeWorkspace === "home");
+  els.helpBtn.classList.toggle("hidden", !solverActive);
+  els.csvExportBtn.classList.toggle("hidden", !solverActive);
+  els.exportPdfBtn.classList.toggle("hidden", !solverActive);
+  els.workspaceTitle.textContent = WORKSPACE_TITLES[activeWorkspace] || "Workspace";
+
+  if (!solverActive) {
+    els.timingVisualizationControls.classList.add("hidden");
+  } else {
+    renderTimingVisualizationControls();
+  }
+}
+
+function setActiveWorkspace(workspaceId) {
+  if (!Object.hasOwn(WORKSPACE_TITLES, workspaceId)) return;
+
+  if (workspaceId !== "delaySolver") {
+    closeAllMenus();
+    closeHelpWorkspace();
+    closePrintWorkspace();
+  }
+
+  state.ui.activeWorkspace = workspaceId;
+  renderWorkspaceChrome();
+
+  if (workspaceId === "delaySolver") {
+    requestAnimationFrame(() => {
+      renderer.resize();
+    });
+  }
+}
+
 function toggleMenu(menuId) {
+  if (!isSolverWorkspaceActive()) return;
   const panel = document.getElementById(menuId);
   const button = els.menuToggles.find((item) => item.dataset.menuToggle === menuId);
   if (!panel || !button) return;
@@ -186,6 +243,7 @@ function toggleMenu(menuId) {
 function initMenuToggles() {
   els.menuToggles.forEach((button) => {
     button.addEventListener("click", (event) => {
+      if (!isSolverWorkspaceActive()) return;
       event.stopPropagation();
       toggleMenu(button.dataset.menuToggle);
     });
@@ -202,6 +260,7 @@ function initMenuToggles() {
 }
 
 function openMenu(menuId) {
+  if (!isSolverWorkspaceActive()) return;
   if (!menuId) return;
   const panel = document.getElementById(menuId);
   const button = els.menuToggles.find((item) => item.dataset.menuToggle === menuId);
@@ -249,6 +308,7 @@ function applyPrintOrientation() {
 }
 
 function openPrintWorkspace() {
+  if (!isSolverWorkspaceActive()) return;
   const selectedTiming = state.timingResults[state.ui.activeTimingPreviewIndex] || null;
   if (!selectedTiming) {
     window.alert("Select a timing result first, then open print preview.");
@@ -276,6 +336,7 @@ function closePrintWorkspace() {
 }
 
 function openHelpWorkspace() {
+  if (!isSolverWorkspaceActive()) return;
   closeAllMenus();
   closePrintWorkspace();
   document.body.classList.add("help-active");
@@ -379,11 +440,12 @@ function renderTimingVisualizationControls() {
   const hasResults = state.timingResults.length > 0;
   const playback = timingVisualizationState();
   const hasSelectedTiming = Boolean(selectedTimingResult());
+  const visible = hasResults && isSolverWorkspaceActive();
 
   if (els.timingVisualizationControls) {
-    els.timingVisualizationControls.classList.toggle("hidden", !hasResults);
+    els.timingVisualizationControls.classList.toggle("hidden", !visible);
   }
-  if (!hasResults) return;
+  if (!visible) return;
 
   els.timingVisualizationSpeed.value = String(playback.speedMultiplier);
   els.timingVisualizationBtn.disabled = !hasSelectedTiming || playback.isPlaying;
@@ -838,6 +900,9 @@ if (els.relationshipVisibilityToggleSecondary) {
 }
 
 els.fitViewBtn.addEventListener("click", () => renderer.fitToData());
+els.homeNavBtn.addEventListener("click", () => setActiveWorkspace("home"));
+els.openDelaySolverBtn.addEventListener("click", () => setActiveWorkspace("delaySolver"));
+els.openDiagramMakerBtn.addEventListener("click", () => setActiveWorkspace("diagramMaker"));
 els.coordViewSelect.addEventListener("change", () => applyCoordinateView(els.coordViewSelect.value, { fit: true }));
 els.rotateLeftBtn.addEventListener("click", () => renderer.rotateBy(-15));
 els.rotateRightBtn.addEventListener("click", () => renderer.rotateBy(15));
@@ -948,4 +1013,5 @@ renderOriginStatus();
 renderRelationshipList();
 renderTimingResults();
 initMenuToggles();
+renderWorkspaceChrome();
 renderer.render();

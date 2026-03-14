@@ -9,8 +9,15 @@
 </head>
 <body>
   <header class="topbar">
-    <img class="header-logo" src="assets/large-logo.png" alt="Delay Solver">
+    <div class="topbar-brand">
+      <img class="header-logo" src="assets/large-logo.png" alt="Delay Solver">
+      <div class="workspace-indicator">
+        <div class="workspace-eyebrow">Workspace</div>
+        <div id="workspaceTitle" class="workspace-title">Home</div>
+      </div>
+    </div>
     <div class="topbar-actions">
+      <button id="homeNavBtn" class="topbar-nav-btn hidden" type="button">Home</button>
       <div id="timingVisualizationControls" class="timing-visualization-controls hidden">
         <div class="timing-visualization-row">
           <button id="timingVisualizationBtn" type="button">Simulate</button>
@@ -31,175 +38,219 @@
     </div>
   </header>
 
-  <main class="canvas-wrap">
-    <div class="menu-bar" aria-label="Top Menus">
-      <div class="top-menu">
-        <button class="menu-toggle" type="button" data-menu-toggle="importMenu">Import</button>
-        <section id="importMenu" class="menu-panel panel hidden">
-          <h2>CSV Import</h2>
-          <label class="file-btn">Choose CSV
-            <input id="csvInput" type="file" accept=".csv,text/csv" hidden>
-          </label>
-          <div id="mappingPanel" class="mapping-panel hidden">
-            <label>Coordinate Type
-              <select id="coordTypeSelect">
-                <option value="stateplane">State Plane (X/Y)</option>
-                <option value="latlon">Latitude / Longitude</option>
-              </select>
-            </label>
-            <label>X Column
-              <select id="xColumnSelect"></select>
-            </label>
-            <label>Y Column
-              <select id="yColumnSelect"></select>
-            </label>
-            <label>Toe X Column (Optional)
-              <select id="toeXColumnSelect"></select>
-            </label>
-            <label>Toe Y Column (Optional)
-              <select id="toeYColumnSelect"></select>
-            </label>
-            <label>Hole ID Column
-              <select id="idColumnSelect"></select>
-            </label>
-            <button id="importMappedBtn">Import</button>
-          </div>
-        </section>
+  <main id="homeWorkspace" class="workspace workspace-home">
+    <section class="home-shell">
+      <div class="home-hero panel">
+        <div class="home-eyebrow">Blast Planning Suite</div>
+        <h1>Choose a workspace.</h1>
+        <p>Keep the same polished solver feel, but branch into dedicated tools as the program grows.</p>
       </div>
-
-      <div class="top-menu">
-        <button class="menu-toggle" type="button" data-menu-toggle="viewMenu">View</button>
-        <section id="viewMenu" class="menu-panel panel hidden">
-          <h2>View</h2>
-          <label><input id="gridToggle" type="checkbox" checked> Show Grid</label>
-          <label><input id="relationshipVisibilityToggle" type="checkbox" checked> Show Relationships</label>
-          <button id="fitViewBtn">Fit View</button>
-          <label>Coordinate View
-            <select id="coordViewSelect">
-              <option value="collar">Collar</option>
-              <option value="toe">Toe</option>
-            </select>
-          </label>
-          <div class="row-actions">
-            <button id="rotateLeftBtn">Rotate -15 deg</button>
-            <button id="rotateRightBtn">Rotate +15 deg</button>
-          </div>
-          <div class="row-actions">
-            <button id="rotateFineLeftBtn">Rotate -1 deg</button>
-            <button id="rotateFineRightBtn">Rotate +1 deg</button>
-          </div>
-          <button id="rotateResetBtn">Reset Rotation</button>
-        </section>
+      <div class="home-tool-grid">
+        <button id="openDelaySolverBtn" class="tool-card panel" type="button">
+          <span class="tool-card-kicker">Available Now</span>
+          <strong>Delay Solver</strong>
+          <span>Open the current timing solver with imports, pathing, timing ranges, previews, and exports.</span>
+        </button>
+        <button id="openDiagramMakerBtn" class="tool-card panel" type="button">
+          <span class="tool-card-kicker tool-card-kicker-soon">Workspace Shell</span>
+          <strong>Diagram Maker</strong>
+          <span>Enter the future diagram builder shell and reserve the space for expanded layout workflows.</span>
+        </button>
       </div>
-
-      <div class="top-menu">
-        <button class="menu-toggle" type="button" data-menu-toggle="relationshipMenu">Pathing</button>
-        <section id="relationshipMenu" class="menu-panel panel hidden">
-          <h2>Relationships</h2>
-          <div id="originStatus" class="status-chip">Origin: not set</div>
-          <div id="toolModeStatus" class="status-note">Tool: Select Origin</div>
-          <label><input id="relationshipVisibilityToggleSecondary" type="checkbox" checked> Show Relationship Arrows</label>
-          <div class="row-actions">
-            <button id="clearRelationshipsBtn">Clear Relationships</button>
-            <button id="clearOriginBtn">Clear Origin</button>
-          </div>
-          <div id="relationshipList" class="list"></div>
-        </section>
-      </div>
-
-      <div class="top-menu">
-        <button class="menu-toggle" type="button" data-menu-toggle="timingMenu">Timing Ranges</button>
-        <section id="timingMenu" class="menu-panel panel hidden">
-          <h2>Timing Ranges</h2>
-          <label>Hole-to-Hole Min (ms)
-            <input id="holeDelayMinInput" type="number" min="0" value="16">
-          </label>
-          <label>Hole-to-Hole Max (ms)
-            <input id="holeDelayMaxInput" type="number" min="0" value="34">
-          </label>
-          <label>Row-to-Row Min (ms)
-            <input id="rowDelayMinInput" type="number" min="0" value="84">
-          </label>
-          <label>Row-to-Row Max (ms)
-            <input id="rowDelayMaxInput" type="number" min="0" value="142">
-          </label>
-          <label>Offset Min (ms)
-            <input id="offsetDelayMinInput" type="number" min="0" value="17">
-          </label>
-          <label>Offset Max (ms)
-            <input id="offsetDelayMaxInput" type="number" min="0" value="42">
-          </label>
-        </section>
-      </div>
-
-      <div id="timingResultsMenuWrap" class="top-menu hidden">
-        <button class="menu-toggle" type="button" data-menu-toggle="timingResultsMenu">Timing Results</button>
-        <section id="timingResultsMenu" class="menu-panel panel hidden">
-          <h2>Timing Results</h2>
-          <div id="timingResults" class="list"></div>
-        </section>
-      </div>
-
-      <button id="solveTimingBtn" class="menu-action-btn" type="button">Run Timing Combinations</button>
-    </div>
-
-    <canvas id="diagramCanvas" width="1300" height="800"></canvas>
+    </section>
   </main>
 
-  <div class="floating-toolkit" aria-label="Tool Kit">
-    <button id="originToolBtn" class="toolkit-btn" type="button" title="Origin Tool" aria-label="Origin Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="7"></circle>
-        <circle cx="12" cy="12" r="2"></circle>
-      </svg>
-      <span>Origin</span>
-    </button>
-    <button id="holeRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Positive Tool" aria-label="Hole-to-Hole Positive Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="5" cy="12" r="2"></circle>
-        <circle cx="19" cy="12" r="2"></circle>
-        <path d="M7 12h10"></path>
-        <path d="M14 9l3 3-3 3"></path>
-      </svg>
-      <span>H-H +</span>
-    </button>
-    <button id="holeRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Negative Tool" aria-label="Hole-to-Hole Negative Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="5" cy="12" r="2"></circle>
-        <circle cx="19" cy="12" r="2"></circle>
-        <path d="M7 12h10"></path>
-        <path d="M10 9l-3 3 3 3"></path>
-      </svg>
-      <span>H-H -</span>
-    </button>
-    <button id="rowRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Positive Tool" aria-label="Row-to-Row Positive Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="5" r="2"></circle>
-        <circle cx="12" cy="19" r="2"></circle>
-        <path d="M12 7v10"></path>
-        <path d="M9 14l3 3 3-3"></path>
-      </svg>
-      <span>R-R +</span>
-    </button>
-    <button id="rowRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Negative Tool" aria-label="Row-to-Row Negative Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="5" r="2"></circle>
-        <circle cx="12" cy="19" r="2"></circle>
-        <path d="M12 7v10"></path>
-        <path d="M9 10l3-3 3 3"></path>
-      </svg>
-      <span>R-R -</span>
-    </button>
-    <button id="offsetRelationToolBtn" class="toolkit-btn" type="button" title="Offset Tool" aria-label="Offset Tool">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="5" cy="12" r="2"></circle>
-        <circle cx="19" cy="12" r="2"></circle>
-        <path d="M7 12h10"></path>
-        <path d="M12 8l4 4-4 4"></path>
-      </svg>
-      <span>Offset</span>
-    </button>
-  </div>
+  <section id="delaySolverWorkspace" class="workspace workspace-solver hidden" aria-label="Delay Solver">
+    <main class="canvas-wrap">
+      <div class="menu-bar" aria-label="Top Menus">
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="importMenu">Import</button>
+          <section id="importMenu" class="menu-panel panel hidden">
+            <h2>CSV Import</h2>
+            <label class="file-btn">Choose CSV
+              <input id="csvInput" type="file" accept=".csv,text/csv" hidden>
+            </label>
+            <div id="mappingPanel" class="mapping-panel hidden">
+              <label>Coordinate Type
+                <select id="coordTypeSelect">
+                  <option value="stateplane">State Plane (X/Y)</option>
+                  <option value="latlon">Latitude / Longitude</option>
+                </select>
+              </label>
+              <label>X Column
+                <select id="xColumnSelect"></select>
+              </label>
+              <label>Y Column
+                <select id="yColumnSelect"></select>
+              </label>
+              <label>Toe X Column (Optional)
+                <select id="toeXColumnSelect"></select>
+              </label>
+              <label>Toe Y Column (Optional)
+                <select id="toeYColumnSelect"></select>
+              </label>
+              <label>Hole ID Column
+                <select id="idColumnSelect"></select>
+              </label>
+              <button id="importMappedBtn">Import</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="viewMenu">View</button>
+          <section id="viewMenu" class="menu-panel panel hidden">
+            <h2>View</h2>
+            <label><input id="gridToggle" type="checkbox" checked> Show Grid</label>
+            <label><input id="relationshipVisibilityToggle" type="checkbox" checked> Show Relationships</label>
+            <button id="fitViewBtn">Fit View</button>
+            <label>Coordinate View
+              <select id="coordViewSelect">
+                <option value="collar">Collar</option>
+                <option value="toe">Toe</option>
+              </select>
+            </label>
+            <div class="row-actions">
+              <button id="rotateLeftBtn">Rotate -15 deg</button>
+              <button id="rotateRightBtn">Rotate +15 deg</button>
+            </div>
+            <div class="row-actions">
+              <button id="rotateFineLeftBtn">Rotate -1 deg</button>
+              <button id="rotateFineRightBtn">Rotate +1 deg</button>
+            </div>
+            <button id="rotateResetBtn">Reset Rotation</button>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="relationshipMenu">Pathing</button>
+          <section id="relationshipMenu" class="menu-panel panel hidden">
+            <h2>Relationships</h2>
+            <div id="originStatus" class="status-chip">Origin: not set</div>
+            <div id="toolModeStatus" class="status-note">Tool: Select Origin</div>
+            <label><input id="relationshipVisibilityToggleSecondary" type="checkbox" checked> Show Relationship Arrows</label>
+            <div class="row-actions">
+              <button id="clearRelationshipsBtn">Clear Relationships</button>
+              <button id="clearOriginBtn">Clear Origin</button>
+            </div>
+            <div id="relationshipList" class="list"></div>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="timingMenu">Timing Ranges</button>
+          <section id="timingMenu" class="menu-panel panel hidden">
+            <h2>Timing Ranges</h2>
+            <label>Hole-to-Hole Min (ms)
+              <input id="holeDelayMinInput" type="number" min="0" value="16">
+            </label>
+            <label>Hole-to-Hole Max (ms)
+              <input id="holeDelayMaxInput" type="number" min="0" value="34">
+            </label>
+            <label>Row-to-Row Min (ms)
+              <input id="rowDelayMinInput" type="number" min="0" value="84">
+            </label>
+            <label>Row-to-Row Max (ms)
+              <input id="rowDelayMaxInput" type="number" min="0" value="142">
+            </label>
+            <label>Offset Min (ms)
+              <input id="offsetDelayMinInput" type="number" min="0" value="17">
+            </label>
+            <label>Offset Max (ms)
+              <input id="offsetDelayMaxInput" type="number" min="0" value="42">
+            </label>
+          </section>
+        </div>
+
+        <div id="timingResultsMenuWrap" class="top-menu hidden">
+          <button class="menu-toggle" type="button" data-menu-toggle="timingResultsMenu">Timing Results</button>
+          <section id="timingResultsMenu" class="menu-panel panel hidden">
+            <h2>Timing Results</h2>
+            <div id="timingResults" class="list"></div>
+          </section>
+        </div>
+
+        <button id="solveTimingBtn" class="menu-action-btn" type="button">Run Timing Combinations</button>
+      </div>
+
+      <canvas id="diagramCanvas" width="1300" height="800"></canvas>
+    </main>
+
+    <div class="floating-toolkit" aria-label="Tool Kit">
+      <button id="originToolBtn" class="toolkit-btn" type="button" title="Origin Tool" aria-label="Origin Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="7"></circle>
+          <circle cx="12" cy="12" r="2"></circle>
+        </svg>
+        <span>Origin</span>
+      </button>
+      <button id="holeRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Positive Tool" aria-label="Hole-to-Hole Positive Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+          <path d="M7 12h10"></path>
+          <path d="M14 9l3 3-3 3"></path>
+        </svg>
+        <span>H-H +</span>
+      </button>
+      <button id="holeRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Negative Tool" aria-label="Hole-to-Hole Negative Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+          <path d="M7 12h10"></path>
+          <path d="M10 9l-3 3 3 3"></path>
+        </svg>
+        <span>H-H -</span>
+      </button>
+      <button id="rowRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Positive Tool" aria-label="Row-to-Row Positive Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+          <path d="M12 7v10"></path>
+          <path d="M9 14l3 3 3-3"></path>
+        </svg>
+        <span>R-R +</span>
+      </button>
+      <button id="rowRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Negative Tool" aria-label="Row-to-Row Negative Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="5" r="2"></circle>
+          <circle cx="12" cy="19" r="2"></circle>
+          <path d="M12 7v10"></path>
+          <path d="M9 10l3-3 3 3"></path>
+        </svg>
+        <span>R-R -</span>
+      </button>
+      <button id="offsetRelationToolBtn" class="toolkit-btn" type="button" title="Offset Tool" aria-label="Offset Tool">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="5" cy="12" r="2"></circle>
+          <circle cx="19" cy="12" r="2"></circle>
+          <path d="M7 12h10"></path>
+          <path d="M12 8l4 4-4 4"></path>
+        </svg>
+        <span>Offset</span>
+      </button>
+    </div>
+  </section>
+
+  <main id="diagramMakerWorkspace" class="workspace workspace-diagram hidden" aria-label="Diagram Maker">
+    <section class="diagram-shell">
+      <div class="diagram-hero panel">
+        <div class="home-eyebrow">Diagram Maker</div>
+        <h1>Workspace shell ready.</h1>
+        <p>This is the placeholder home for a dedicated diagram workflow, built with the same chrome and layout language as the solver.</p>
+      </div>
+      <div class="diagram-grid">
+        <section class="panel diagram-card">
+          <h2>Coming Soon</h2>
+          <p>Future diagram tools can live here without changing the top-level navigation model.</p>
+        </section>
+        <section class="panel diagram-card">
+          <h2>Planned Direction</h2>
+          <p>Layout drafting, annotation workflows, export presets, and reusable project views can be added into this shell later.</p>
+        </section>
+      </div>
+    </section>
+  </main>
 
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">
     <div class="print-toolbar">
@@ -366,4 +417,3 @@
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
-
