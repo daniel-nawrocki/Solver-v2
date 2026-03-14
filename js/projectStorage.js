@@ -1,3 +1,22 @@
+function toPlainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+function sanitizeProject(project) {
+  const safeProject = toPlainObject(project);
+  const timing = toPlainObject(safeProject.timing);
+  const offset = toPlainObject(timing.offset);
+  return {
+    holes: Array.isArray(safeProject.holes) ? safeProject.holes : [],
+    rows: toPlainObject(safeProject.rows),
+    timing: {
+      ...timing,
+      offset,
+    },
+    centerPull: safeProject.centerPull,
+  };
+}
+
 export function saveProject(state) {
   const snapshot = {
     holes: state.holes,
@@ -17,21 +36,28 @@ export function saveProject(state) {
 
 export async function loadProjectFile(file) {
   const text = await file.text();
-  return JSON.parse(text);
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("Invalid project file.");
+  }
+  return sanitizeProject(parsed);
 }
 
 export function hydrateStateFromProject(state, project) {
-  state.holes = Array.isArray(project.holes) ? project.holes : [];
+  const safeProject = sanitizeProject(project);
+  state.holes = safeProject.holes;
   state.holesById = new Map(state.holes.map((h) => [h.id, h]));
-  state.rows = project.rows || {};
+  state.rows = safeProject.rows;
   state.timing = {
     ...state.timing,
-    ...(project.timing || {}),
+    ...safeProject.timing,
     offset: {
       ...state.timing.offset,
-      ...((project.timing && project.timing.offset) || {}),
+      ...(safeProject.timing.offset || {}),
     },
   };
-  state.centerPull = project.centerPull || state.centerPull;
+  state.centerPull = safeProject.centerPull || state.centerPull;
   state.selection = new Set();
 }

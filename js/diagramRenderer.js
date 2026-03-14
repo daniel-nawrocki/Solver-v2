@@ -41,6 +41,25 @@ function angleColor(value) {
   }
 }
 
+function diagramAnnotationSizeConfig(size) {
+  switch (size) {
+    case "small":
+      return { strokeWidth: 2, textSize: 14 };
+    case "large":
+      return { strokeWidth: 6, textSize: 28 };
+    default:
+      return { strokeWidth: 4, textSize: 20 };
+  }
+}
+
+function formatDiameterLabel(value) {
+  if (!Number.isFinite(Number(value))) return null;
+  const numeric = Number(value);
+  const whole = Math.trunc(numeric);
+  if (Math.abs(numeric - whole) >= 0.49 && Math.abs(numeric - whole) <= 0.51) return `${whole} 1/2"`;
+  return `${numeric}"`;
+}
+
 export class DiagramRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -54,6 +73,7 @@ export class DiagramRenderer {
     this.onHoleContextMenu = options.onHoleContextMenu || (() => {});
     this.onCanvasContextMenu = options.onCanvasContextMenu || (() => false);
     this.stateRef = options.stateRef;
+    this.isPrintRenderer = options.isPrintRenderer === true;
     this.zoom = 1;
     this.panX = 0;
     this.panY = 0;
@@ -181,7 +201,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? 145 : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);
@@ -384,6 +404,44 @@ export class DiagramRenderer {
     }
   }
 
+  drawDiagramAnnotations() {
+    if (!this.isDiagramMode()) return;
+
+    const strokes = this.stateRef.annotations?.strokes || [];
+    const draft = this.stateRef.ui?.currentStrokeDraft || null;
+    const strokeItems = draft ? [...strokes, draft] : strokes;
+
+    strokeItems.forEach((stroke) => {
+      if (!stroke?.points?.length || stroke.points.length < 2) return;
+      const size = diagramAnnotationSizeConfig(stroke.size);
+      this.ctx.save();
+      this.ctx.strokeStyle = stroke.color || "#000000";
+      this.ctx.lineWidth = size.strokeWidth;
+      this.ctx.lineCap = "round";
+      this.ctx.lineJoin = "round";
+      this.ctx.beginPath();
+      stroke.points.forEach((point, index) => {
+        const screenPoint = this.worldToScreen(point.x, point.y);
+        if (index === 0) this.ctx.moveTo(screenPoint.x, screenPoint.y);
+        else this.ctx.lineTo(screenPoint.x, screenPoint.y);
+      });
+      this.ctx.stroke();
+      this.ctx.restore();
+    });
+
+    (this.stateRef.annotations?.texts || []).forEach((item) => {
+      if (!item?.text || !item.anchor) return;
+      const size = diagramAnnotationSizeConfig(item.size);
+      const anchor = this.worldToScreen(item.anchor.x, item.anchor.y);
+      this.ctx.save();
+      this.ctx.fillStyle = item.color || "#000000";
+      this.ctx.font = `${Math.max(10, Math.round(size.textSize * this.textScale()))}px Segoe UI`;
+      this.ctx.textBaseline = "alphabetic";
+      this.ctx.fillText(item.text, anchor.x, anchor.y);
+      this.ctx.restore();
+    });
+  }
+
   drawHoles(preview) {
     const times = preview ? this.stateRef.holes.map((hole) => preview.holeTimes.get(hole.id)).filter((v) => Number.isFinite(v)) : [];
     const minT = times.length ? Math.min(...times) : 0;
@@ -491,17 +549,58 @@ export class DiagramRenderer {
     this.ctx.restore();
   }
 
+  drawDiagramPrintHeader() {
+    if (!this.isPrintRenderer || !this.isDiagramMode()) return;
+    const metadata = this.stateRef.metadata || {};
+    const shotNumber = metadata.shotNumber || "Shot Number";
+    const leftLines = [
+      metadata.location ? `Location: ${metadata.location}` : null,
+      metadata.bench ? `Bench: ${metadata.bench}` : null,
+      Number.isFinite(Number(metadata.defaultDiameter)) ? `Hole Diameter: ${formatDiameterLabel(metadata.defaultDiameter)}` : null,
+    ].filter(Boolean);
+    const rightLines = [
+      metadata.facePattern ? `Face Pattern: ${metadata.facePattern}` : null,
+      metadata.interiorPattern ? `Interior Pattern: ${metadata.interiorPattern}` : null,
+    ].filter(Boolean);
+
+    this.ctx.save();
+    this.ctx.fillStyle = "#0f172a";
+    this.ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
+    this.ctx.lineWidth = 1;
+    this.ctx.font = `700 ${Math.max(26, Math.round(30 * this.textScale()))}px Segoe UI`;
+    this.ctx.fillText(shotNumber, 28, 42);
+
+    this.ctx.font = `${Math.max(10, Math.round(12 * this.textScale()))}px Segoe UI`;
+    leftLines.forEach((line, index) => {
+      this.ctx.fillText(line, 30, 68 + (index * 18));
+    });
+
+    this.ctx.textAlign = "right";
+    rightLines.forEach((line, index) => {
+      this.ctx.fillText(line, this.canvas.width - 30, 42 + (index * 18));
+    });
+    this.ctx.textAlign = "left";
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(24, 116);
+    this.ctx.lineTo(this.canvas.width - 24, 116);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
   render() {
     const preview = this.activeTimingPreview();
     this.clear();
     this.drawGrid();
     this.drawRelationships();
     this.drawRelationshipDraft();
-    this.drawSelectionOverlays();
     this.drawBearingArrows();
     this.drawHoles(preview);
+    this.drawDiagramAnnotations();
+    this.drawSelectionOverlays();
     if (!this.isDiagramMode()) this.drawTimingVisualization(preview);
     this.drawNorthArrow();
+    this.drawDiagramPrintHeader();
     if (this.stateRef.ui.showOverlayText !== false) this.drawTimingPreviewInfo(preview);
   }
 

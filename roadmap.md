@@ -46,6 +46,10 @@ Code-level status:
 - `Diagram Maker` has its own state, renderer instance, import flow, selection flow, and property editor.
 - `Print Preview` is shared, but branches behavior based on whether the active workspace is `Delay Solver` or `Diagram Maker`.
 - Diagram Maker now has a bottom selection toolkit styled to match the Delay Solver bottom controls.
+- Diagram Maker now also has a bottom annotation toolkit with `Markup` and `Text` tools, plus shared color/size controls.
+- Diagram Maker now has a dedicated `Shot` menu between `Import` and `View` for shot metadata.
+- Diagram Maker print now includes shot metadata in the reserved top header area, with `Shot Number` as the large top-left title.
+- Diagram Maker annotations now render in both the main canvas and print preview.
 - `js/csvParser.js`, `js/diagramRenderer.js`, and `js/app.js` were syntax-parsed successfully in local checks.
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -54,6 +58,7 @@ What has not been fully verified yet:
 - visual polish under real imported datasets
 - whether any runtime behavior regressions remain in Delay Solver
 - whether Diagram Maker labels feel crowded with dense hole layouts
+- whether annotation readability and printed header spacing still feel balanced on dense real-world diagrams
 
 ## Completed Work
 
@@ -214,6 +219,46 @@ Current rule:
 - holes with missing or invalid angle also do not draw bearing arrows
 - holes with missing or invalid bearing do not draw bearing arrows
 
+### 11. Diagram Maker Shot Metadata
+Implemented in code.
+
+What was added:
+- new `Shot` menu between `Import` and `View`
+- metadata fields:
+  - `Shot Number`
+  - `Location`
+  - `Bench`
+  - `Hole Diameter`
+  - `Face Pattern`
+  - `Interior Pattern`
+- `Hole Diameter` now acts as the default shot-level diameter source for Diagram Maker imports and default-diameter application
+- diameter display uses fraction-style labels in UI/print for the supported half-inch values
+
+Print behavior:
+- Diagram Maker print now draws a structured header in the reserved top area
+- `Shot Number` is the large top-left print header
+- the remaining shot metadata prints as smaller supporting lines
+
+### 12. Diagram Maker Markup + Text Tools
+Implemented in code.
+
+What was added:
+- bottom toolbar now includes:
+  - `Markup`
+  - `Text`
+  - color picker
+  - size selector
+  - `Clear Markup`
+  - `Clear Text`
+- `Markup` supports freehand drawing directly on the diagram
+- `Text` supports click-to-place text annotations
+- annotations are stored in diagram world coordinates so they follow pan/zoom/rotation and print layout
+- annotations render in both the main Diagram Maker canvas and print preview
+
+Current v1 limits:
+- no per-annotation selection/edit/move/resize behavior yet
+- editing is intentionally limited to placing new annotations and clearing markup/text layers
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -226,6 +271,7 @@ Important recent context:
 - There is no profile/login system.
 - Diagram Maker does not yet draw directional hole traces from angle/bearing/depth.
 - No dedicated export format exists yet for Diagram Maker metadata.
+- Diagram Maker shot metadata and annotations are in-memory only and are not persisted yet.
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
@@ -234,14 +280,23 @@ Important recent context:
 - Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
 - Diagram Maker box/polygon selection is implemented in code but still needs manual interaction testing with real layouts.
 - Polygon selection UX may still need polish, but completion now uses right-click instead of double-click.
+- Diagram Maker annotation tools still need manual testing for drag feel, clutter, and print readability with real datasets.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
   - Home navigation
   - Delay Solver still works
   - Diagram Maker import
+  - Diagram Maker shot metadata entry
+  - default shot diameter behavior during import and `Apply Default Diameter`
   - single-select and multi-select property edits
+  - markup drawing tool
+  - text placement tool
+  - color and size controls for annotations
+  - `Clear Markup` and `Clear Text`
   - print preview toggles
+  - printed shot metadata header
+  - printed markup/text visibility
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
@@ -295,11 +350,15 @@ Most important current repo facts to preserve:
 - Diagram Maker currently supports:
   - import with collar/toe/id/angle/bearing/depth
   - `inclination` alias for angle import guessing
+  - shot metadata entry for print/header context
   - per-hole and multi-hole property editing
   - discrete angle colors
   - separate angle/bearing/depth visibility toggles
   - low-profile bearing arrows
   - bottom selection toolkit with select/box/polygon tools
+  - bottom annotation toolkit with markup/text plus color/size controls
   - shared print preview with Diagram Maker-specific toggles
+  - print header with shot metadata
+  - markup/text annotations that also print
 
 This file should stay short, practical, and current enough that a new chat can read it and continue work without reconstructing the whole project from memory.

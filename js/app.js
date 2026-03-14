@@ -37,7 +37,13 @@ const WORKSPACE_TITLES = {
 };
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
-const PRINT_FIT_MARGINS = { marginTop: 130, marginRight: 80, marginBottom: 80, marginLeft: 80 };
+const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
+const DIAGRAM_TOOL_MODES = new Set(["single", "box", "polygon", "markup", "text"]);
+const DIAGRAM_ANNOTATION_SIZE_MAP = {
+  small: { strokeWidth: 2, textSize: 14 },
+  medium: { strokeWidth: 4, textSize: 20 },
+  large: { strokeWidth: 6, textSize: 28 },
+};
 
 const appUi = { activeWorkspace: "home" };
 
@@ -92,12 +98,27 @@ function createDiagramState() {
       showOverlayText: false,
       coordView: "collar",
       showAngleLabels: true,
-      showBearingLabels: true,
-      showBearingArrows: false,
+      showBearingLabels: false,
+      showBearingArrows: true,
       showDepthLabels: true,
-      selectionToolMode: "single",
+      activeTool: "single",
       selectionBoxDraft: null,
       selectionPolygonDraft: null,
+      annotationColor: "#000000",
+      annotationSize: "medium",
+      currentStrokeDraft: null,
+    },
+    metadata: {
+      shotNumber: "",
+      location: "",
+      bench: "",
+      defaultDiameter: null,
+      facePattern: "",
+      interiorPattern: "",
+    },
+    annotations: {
+      strokes: [],
+      texts: [],
     },
     csvCache: null,
   };
@@ -118,9 +139,21 @@ function createPrintState() {
       textScale: 1,
       orientation: "landscape",
       showAngleLabels: true,
-      showBearingLabels: true,
-      showBearingArrows: false,
+      showBearingLabels: false,
+      showBearingArrows: true,
       showDepthLabels: true,
+    },
+    metadata: {
+      shotNumber: "",
+      location: "",
+      bench: "",
+      defaultDiameter: null,
+      facePattern: "",
+      interiorPattern: "",
+    },
+    annotations: {
+      strokes: [],
+      texts: [],
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
@@ -199,6 +232,12 @@ const els = {
   diagramBearingColumnSelect: document.getElementById("diagramBearingColumnSelect"),
   diagramDepthColumnSelect: document.getElementById("diagramDepthColumnSelect"),
   diagramImportMappedBtn: document.getElementById("diagramImportMappedBtn"),
+  diagramShotNumberInput: document.getElementById("diagramShotNumberInput"),
+  diagramShotLocationSelect: document.getElementById("diagramShotLocationSelect"),
+  diagramBenchInput: document.getElementById("diagramBenchInput"),
+  diagramShotDefaultDiameterSelect: document.getElementById("diagramShotDefaultDiameterSelect"),
+  diagramFacePatternInput: document.getElementById("diagramFacePatternInput"),
+  diagramInteriorPatternInput: document.getElementById("diagramInteriorPatternInput"),
   diagramGridToggle: document.getElementById("diagramGridToggle"),
   diagramAngleLabelToggle: document.getElementById("diagramAngleLabelToggle"),
   diagramBearingLabelToggle: document.getElementById("diagramBearingLabelToggle"),
@@ -214,9 +253,15 @@ const els = {
   diagramSingleSelectToolBtn: document.getElementById("diagramSingleSelectToolBtn"),
   diagramBoxSelectToolBtn: document.getElementById("diagramBoxSelectToolBtn"),
   diagramPolygonSelectToolBtn: document.getElementById("diagramPolygonSelectToolBtn"),
+  diagramMarkupToolBtn: document.getElementById("diagramMarkupToolBtn"),
+  diagramTextToolBtn: document.getElementById("diagramTextToolBtn"),
+  diagramAnnotationColorInput: document.getElementById("diagramAnnotationColorInput"),
+  diagramAnnotationSizeSelect: document.getElementById("diagramAnnotationSizeSelect"),
+  diagramClearMarkupBtn: document.getElementById("diagramClearMarkupBtn"),
+  diagramClearTextBtn: document.getElementById("diagramClearTextBtn"),
   diagramSelectionStatus: document.getElementById("diagramSelectionStatus"),
   diagramSelectionList: document.getElementById("diagramSelectionList"),
-  diagramDefaultDiameterInput: document.getElementById("diagramDefaultDiameterInput"),
+  diagramDefaultDiameterStatus: document.getElementById("diagramDefaultDiameterStatus"),
   diagramApplyDefaultDiameterBtn: document.getElementById("diagramApplyDefaultDiameterBtn"),
   diagramBurdenInput: document.getElementById("diagramBurdenInput"),
   diagramSpacingInput: document.getElementById("diagramSpacingInput"),
@@ -269,6 +314,7 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
 
 const printRenderer = new DiagramRenderer(document.getElementById("printCanvas"), {
   stateRef: printState,
+  isPrintRenderer: true,
   onHoleClick: () => {},
   onHoleHover: () => {},
   onPointerUp: () => {},
@@ -389,6 +435,42 @@ function cloneHole(hole) {
   };
 }
 
+function cloneDiagramMetadata(metadata = {}) {
+  return {
+    shotNumber: metadata.shotNumber || "",
+    location: metadata.location || "",
+    bench: metadata.bench || "",
+    defaultDiameter: Number.isFinite(Number(metadata.defaultDiameter)) ? Number(metadata.defaultDiameter) : null,
+    facePattern: metadata.facePattern || "",
+    interiorPattern: metadata.interiorPattern || "",
+  };
+}
+
+function cloneDiagramAnnotations(annotations = {}) {
+  return {
+    strokes: (annotations.strokes || []).map((stroke) => ({
+      color: stroke.color || "#000000",
+      size: stroke.size || "medium",
+      points: (stroke.points || []).map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0 })),
+    })),
+    texts: (annotations.texts || []).map((item) => ({
+      text: item.text || "",
+      color: item.color || "#000000",
+      size: item.size || "medium",
+      anchor: item.anchor ? { x: Number(item.anchor.x) || 0, y: Number(item.anchor.y) || 0 } : { x: 0, y: 0 },
+    })),
+  };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function syncPrintControls() {
   const diagramMode = printState.ui.workspaceMode === "diagram";
   els.printTextScaleInput.value = String(printState.ui.textScale || 1);
@@ -426,6 +508,8 @@ function loadSolverPrintState(selectedTiming) {
   printState.ui.showDepthLabels = false;
   printState.ui.showBearingArrows = false;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  printState.metadata = cloneDiagramMetadata();
+  printState.annotations = cloneDiagramAnnotations();
   applyPrintOrientation();
 }
 
@@ -445,6 +529,8 @@ function loadDiagramPrintState() {
   printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  printState.metadata = cloneDiagramMetadata(diagramState.metadata);
+  printState.annotations = cloneDiagramAnnotations(diagramState.annotations);
   applyPrintOrientation();
 }
 
@@ -510,6 +596,39 @@ function normalizeAngleValue(value) {
   if (!Number.isFinite(numeric)) return null;
   const rounded = Math.round(numeric);
   return ALLOWED_ANGLES.has(rounded) ? rounded : null;
+}
+
+function formatDiagramDiameterLabel(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "";
+  const whole = Math.trunc(numeric);
+  const fraction = Math.abs(numeric - whole) >= 0.49 && Math.abs(numeric - whole) <= 0.51 ? " 1/2" : "";
+  if (fraction) return `${whole}${fraction}"`;
+  return `${numeric}"`;
+}
+
+function selectedDiagramDefaultDiameter() {
+  const numeric = Number(els.diagramShotDefaultDiameterSelect.value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function syncDiagramDefaultDiameterStatus() {
+  const value = diagramState.metadata.defaultDiameter;
+  els.diagramDefaultDiameterStatus.textContent = Number.isFinite(value)
+    ? `Default Hole Diameter: ${formatDiagramDiameterLabel(value)}`
+    : "Default Hole Diameter: not set";
+}
+
+function annotationSizeConfig(size) {
+  return DIAGRAM_ANNOTATION_SIZE_MAP[size] || DIAGRAM_ANNOTATION_SIZE_MAP.medium;
+}
+
+function normalizeAnnotationTool(tool) {
+  return DIAGRAM_TOOL_MODES.has(tool) ? tool : "single";
+}
+
+function pointToWorld(renderer, point) {
+  return renderer.screenToWorld(point.x, point.y);
 }
 
 function normalizeDiagramHoleFields(hole) {
@@ -832,7 +951,7 @@ function renderRelationshipList() {
     return;
   }
   els.relationshipList.innerHTML = solverState.relationships.edges.map((edge) => {
-    const description = describeRelationship(edge, solverState.holesById);
+    const description = escapeHtml(describeRelationship(edge, solverState.holesById));
     const actions = edge.type === "offset"
       ? `<button data-rel-action="delete" data-rel-id="${edge.id}">Delete</button>`
       : `<button data-rel-action="edit" data-rel-id="${edge.id}">Edit</button><button data-rel-action="delete" data-rel-id="${edge.id}">Delete</button>`;
@@ -854,13 +973,13 @@ function renderTimingResults() {
     resultsButton?.classList.remove("active");
   }
   if (!solverState.timingResults.length) {
-    els.timingResults.innerHTML = `<div>${solverState.solverMessage || "Run solver to see best delay combinations."}</div>`;
+    els.timingResults.innerHTML = `<div>${escapeHtml(solverState.solverMessage || "Run solver to see best delay combinations.")}</div>`;
     renderTimingVisualizationControls();
     return;
   }
   els.timingResults.innerHTML = solverState.timingResults.map((result, index) => {
     const active = index === solverState.ui.activeTimingPreviewIndex ? "active" : "";
-    return `<button class="timing-item ${active}" data-timing-index="${index}">${formatTimingResult(result, index)}</button>`;
+    return `<button class="timing-item ${active}" data-timing-index="${index}">${escapeHtml(formatTimingResult(result, index))}</button>`;
   }).join("");
   renderTimingVisualizationControls();
 }
@@ -1010,13 +1129,17 @@ function selectedDiagramHoles() {
   return [...diagramState.selection].map((id) => diagramState.holesById.get(id)).filter(Boolean);
 }
 
-function setDiagramSelectionToolMode(mode) {
-  diagramState.ui.selectionToolMode = mode;
+function setDiagramToolMode(mode) {
+  const nextMode = normalizeAnnotationTool(mode);
+  diagramState.ui.activeTool = nextMode;
   diagramState.ui.selectionBoxDraft = null;
   diagramState.ui.selectionPolygonDraft = null;
-  els.diagramSingleSelectToolBtn.classList.toggle("active", mode === "single");
-  els.diagramBoxSelectToolBtn.classList.toggle("active", mode === "box");
-  els.diagramPolygonSelectToolBtn.classList.toggle("active", mode === "polygon");
+  if (nextMode !== "markup") diagramState.ui.currentStrokeDraft = null;
+  els.diagramSingleSelectToolBtn.classList.toggle("active", nextMode === "single");
+  els.diagramBoxSelectToolBtn.classList.toggle("active", nextMode === "box");
+  els.diagramPolygonSelectToolBtn.classList.toggle("active", nextMode === "polygon");
+  els.diagramMarkupToolBtn.classList.toggle("active", nextMode === "markup");
+  els.diagramTextToolBtn.classList.toggle("active", nextMode === "text");
   diagramRenderer.render();
 }
 
@@ -1080,7 +1203,7 @@ function finalizeDiagramPolygonSelection() {
 }
 
 function handleDiagramPointerDown(payload) {
-  const mode = diagramState.ui.selectionToolMode;
+  const mode = diagramState.ui.activeTool;
   if (mode === "box") {
     diagramState.ui.selectionBoxDraft = {
       start: { x: payload.x, y: payload.y },
@@ -1105,37 +1228,74 @@ function handleDiagramPointerDown(payload) {
     diagramRenderer.render();
     return true;
   }
+  if (mode === "markup") {
+    const worldPoint = pointToWorld(diagramRenderer, payload);
+    diagramState.ui.currentStrokeDraft = {
+      color: diagramState.ui.annotationColor,
+      size: diagramState.ui.annotationSize,
+      points: [worldPoint],
+    };
+    diagramRenderer.render();
+    return true;
+  }
+  if (mode === "text") {
+    const text = window.prompt("Enter text for the diagram.");
+    if (text === null || !text.trim()) {
+      diagramRenderer.render();
+      return true;
+    }
+    diagramState.annotations.texts.push({
+      text: text.trim(),
+      color: diagramState.ui.annotationColor,
+      size: diagramState.ui.annotationSize,
+      anchor: pointToWorld(diagramRenderer, payload),
+    });
+    diagramRenderer.render();
+    return true;
+  }
   return false;
 }
 
 function handleDiagramPointerMove(payload) {
-  if (diagramState.ui.selectionToolMode === "box" && diagramState.ui.selectionBoxDraft) {
+  if (diagramState.ui.activeTool === "box" && diagramState.ui.selectionBoxDraft) {
     diagramState.ui.selectionBoxDraft.current = { x: payload.x, y: payload.y };
     diagramRenderer.render();
     return true;
   }
-  if (diagramState.ui.selectionToolMode === "polygon") {
+  if (diagramState.ui.activeTool === "polygon") {
     if (diagramState.ui.selectionPolygonDraft) {
       diagramState.ui.selectionPolygonDraft.hoverPoint = { x: payload.x, y: payload.y };
       diagramRenderer.render();
     }
     return true;
   }
+  if (diagramState.ui.activeTool === "markup" && diagramState.ui.currentStrokeDraft) {
+    diagramState.ui.currentStrokeDraft.points.push(pointToWorld(diagramRenderer, payload));
+    diagramRenderer.render();
+    return true;
+  }
   return false;
 }
 
 function handleDiagramPointerUp() {
-  if (diagramState.ui.selectionToolMode === "box" && diagramState.ui.selectionBoxDraft) {
+  if (diagramState.ui.activeTool === "box" && diagramState.ui.selectionBoxDraft) {
     const draft = diagramState.ui.selectionBoxDraft;
     diagramState.ui.selectionBoxDraft = null;
     finalizeDiagramBoxSelection(draft);
+    return true;
+  }
+  if (diagramState.ui.activeTool === "markup" && diagramState.ui.currentStrokeDraft) {
+    const draft = diagramState.ui.currentStrokeDraft;
+    diagramState.ui.currentStrokeDraft = null;
+    if (draft.points.length > 1) diagramState.annotations.strokes.push(draft);
+    diagramRenderer.render();
     return true;
   }
   return false;
 }
 
 function handleDiagramCanvasContextMenu() {
-  if (diagramState.ui.selectionToolMode === "polygon" && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
+  if (diagramState.ui.activeTool === "polygon" && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
     finalizeDiagramPolygonSelection();
     return true;
   }
@@ -1164,13 +1324,14 @@ function renderDiagramPropertiesPanel() {
     els.diagramApplyPropertiesBtn.disabled = true;
     els.diagramClearSelectionBtn.disabled = true;
     els.diagramApplyDefaultDiameterBtn.disabled = !diagramState.holes.length;
+    syncDiagramDefaultDiameterStatus();
     return;
   }
 
   els.diagramSelectionStatus.textContent = selected.length === 1
     ? `Selection: ${selected[0].holeNumber || selected[0].id}`
     : `Selection: ${selected.length} holes selected`;
-  els.diagramSelectionList.innerHTML = selected.slice(0, 8).map((hole) => `<div>${hole.holeNumber || hole.id}</div>`).join("")
+  els.diagramSelectionList.innerHTML = selected.slice(0, 8).map((hole) => `<div>${escapeHtml(hole.holeNumber || hole.id)}</div>`).join("")
     + (selected.length > 8 ? `<div>+${selected.length - 8} more</div>` : "");
 
   const fieldToInput = {
@@ -1195,6 +1356,7 @@ function renderDiagramPropertiesPanel() {
   els.diagramApplyPropertiesBtn.disabled = false;
   els.diagramClearSelectionBtn.disabled = false;
   els.diagramApplyDefaultDiameterBtn.disabled = !diagramState.holes.length;
+  syncDiagramDefaultDiameterStatus();
 }
 
 function fullDiagramRefresh({ fit = false } = {}) {
@@ -1204,7 +1366,7 @@ function fullDiagramRefresh({ fit = false } = {}) {
 }
 
 function handleDiagramHoleClick(hole, event) {
-  if (diagramState.ui.selectionToolMode !== "single") return;
+  if (diagramState.ui.activeTool !== "single") return;
   if (!event.shiftKey) diagramState.selection = new Set([hole.id]);
   else if (diagramState.selection.has(hole.id)) diagramState.selection.delete(hole.id);
   else diagramState.selection.add(hole.id);
@@ -1212,7 +1374,7 @@ function handleDiagramHoleClick(hole, event) {
 }
 
 function applyDiagramImportedHoles(holes) {
-  const defaultDiameter = Number(els.diagramDefaultDiameterInput.value);
+  const defaultDiameter = diagramState.metadata.defaultDiameter;
   holes.forEach((hole) => {
     normalizeHoleCoordinateSets(hole);
     normalizeDiagramHoleFields(hole);
@@ -1277,9 +1439,9 @@ function applyDiagramPropertyPatchToSelection(result) {
 }
 
 function applyDefaultDiameterToDiagramSelection() {
-  const defaultDiameter = Number(els.diagramDefaultDiameterInput.value);
+  const defaultDiameter = diagramState.metadata.defaultDiameter;
   if (!Number.isFinite(defaultDiameter)) {
-    window.alert("Enter a default diameter first.");
+    window.alert("Select a default hole diameter in the Shot menu first.");
     return;
   }
   const selected = selectedDiagramHoles();
@@ -1293,6 +1455,18 @@ function applyDefaultDiameterToDiagramSelection() {
   });
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
+}
+
+function applyDiagramMetadataPatch(field, value) {
+  if (!Object.hasOwn(diagramState.metadata, field)) return;
+  diagramState.metadata[field] = field === "defaultDiameter" && value !== null
+    ? (Number.isFinite(Number(value)) ? Number(value) : null)
+    : value;
+  syncDiagramDefaultDiameterStatus();
+  if (!els.printWorkspace.classList.contains("hidden") && printState.ui.workspaceMode === "diagram") {
+    printState.metadata = cloneDiagramMetadata(diagramState.metadata);
+    printRenderer.render();
+  }
 }
 
 function buildToeMap(records, coordType, xColumn, yColumn, idColumn) {
@@ -1388,6 +1562,13 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
   applyDiagramImportedHoles(holes);
 });
 
+els.diagramShotNumberInput.addEventListener("input", () => applyDiagramMetadataPatch("shotNumber", els.diagramShotNumberInput.value.trim()));
+els.diagramShotLocationSelect.addEventListener("change", () => applyDiagramMetadataPatch("location", els.diagramShotLocationSelect.value));
+els.diagramBenchInput.addEventListener("input", () => applyDiagramMetadataPatch("bench", els.diagramBenchInput.value.trim()));
+els.diagramShotDefaultDiameterSelect.addEventListener("change", () => applyDiagramMetadataPatch("defaultDiameter", selectedDiagramDefaultDiameter()));
+els.diagramFacePatternInput.addEventListener("input", () => applyDiagramMetadataPatch("facePattern", els.diagramFacePatternInput.value.trim()));
+els.diagramInteriorPatternInput.addEventListener("input", () => applyDiagramMetadataPatch("interiorPattern", els.diagramInteriorPatternInput.value.trim()));
+
 els.gridToggle.addEventListener("change", () => {
   solverState.ui.showGrid = els.gridToggle.checked;
   solverRenderer.render();
@@ -1437,9 +1618,28 @@ els.diagramRotateRightBtn.addEventListener("click", () => diagramRenderer.rotate
 els.diagramRotateFineLeftBtn.addEventListener("click", () => diagramRenderer.rotateBy(-1));
 els.diagramRotateFineRightBtn.addEventListener("click", () => diagramRenderer.rotateBy(1));
 els.diagramRotateResetBtn.addEventListener("click", () => diagramRenderer.resetRotation());
-els.diagramSingleSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("single"));
-els.diagramBoxSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("box"));
-els.diagramPolygonSelectToolBtn.addEventListener("click", () => setDiagramSelectionToolMode("polygon"));
+els.diagramSingleSelectToolBtn.addEventListener("click", () => setDiagramToolMode("single"));
+els.diagramBoxSelectToolBtn.addEventListener("click", () => setDiagramToolMode("box"));
+els.diagramPolygonSelectToolBtn.addEventListener("click", () => setDiagramToolMode("polygon"));
+els.diagramMarkupToolBtn.addEventListener("click", () => setDiagramToolMode("markup"));
+els.diagramTextToolBtn.addEventListener("click", () => setDiagramToolMode("text"));
+els.diagramAnnotationColorInput.addEventListener("input", () => {
+  diagramState.ui.annotationColor = els.diagramAnnotationColorInput.value || "#000000";
+  diagramRenderer.render();
+});
+els.diagramAnnotationSizeSelect.addEventListener("change", () => {
+  diagramState.ui.annotationSize = els.diagramAnnotationSizeSelect.value || "medium";
+  diagramRenderer.render();
+});
+els.diagramClearMarkupBtn.addEventListener("click", () => {
+  diagramState.annotations.strokes = [];
+  diagramState.ui.currentStrokeDraft = null;
+  diagramRenderer.render();
+});
+els.diagramClearTextBtn.addEventListener("click", () => {
+  diagramState.annotations.texts = [];
+  diagramRenderer.render();
+});
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramApplyDefaultDiameterBtn.addEventListener("click", () => applyDefaultDiameterToDiagramSelection());
 els.diagramClearSelectionBtn.addEventListener("click", () => {
@@ -1539,14 +1739,15 @@ els.printActionBtn.addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (isDiagramWorkspaceActive() && diagramState.ui.selectionToolMode === "polygon" && event.key === "Enter") {
+  if (isDiagramWorkspaceActive() && diagramState.ui.activeTool === "polygon" && event.key === "Enter") {
     finalizeDiagramPolygonSelection();
     return;
   }
   if (isDiagramWorkspaceActive() && event.key === "Escape") {
-    if (diagramState.ui.selectionPolygonDraft || diagramState.ui.selectionBoxDraft) {
+    if (diagramState.ui.selectionPolygonDraft || diagramState.ui.selectionBoxDraft || diagramState.ui.currentStrokeDraft) {
       diagramState.ui.selectionPolygonDraft = null;
       diagramState.ui.selectionBoxDraft = null;
+      diagramState.ui.currentStrokeDraft = null;
       diagramRenderer.render();
       return;
     }
@@ -1560,13 +1761,22 @@ els.coordViewSelect.value = solverState.ui.coordView;
 els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
-setDiagramSelectionToolMode(diagramState.ui.selectionToolMode);
+els.diagramShotNumberInput.value = diagramState.metadata.shotNumber;
+els.diagramShotLocationSelect.value = diagramState.metadata.location;
+els.diagramBenchInput.value = diagramState.metadata.bench;
+els.diagramShotDefaultDiameterSelect.value = Number.isFinite(diagramState.metadata.defaultDiameter) ? String(diagramState.metadata.defaultDiameter) : "";
+els.diagramFacePatternInput.value = diagramState.metadata.facePattern;
+els.diagramInteriorPatternInput.value = diagramState.metadata.interiorPattern;
+els.diagramAnnotationColorInput.value = diagramState.ui.annotationColor;
+els.diagramAnnotationSizeSelect.value = diagramState.ui.annotationSize;
+setDiagramToolMode(diagramState.ui.activeTool);
 els.diagramBearingLabelToggle.checked = diagramState.ui.showBearingLabels;
 els.diagramBearingArrowToggle.checked = diagramState.ui.showBearingArrows;
 syncRelationshipVisibilityUi();
 renderOriginStatus();
 renderRelationshipList();
 renderTimingResults();
+syncDiagramDefaultDiameterStatus();
 renderDiagramPropertiesPanel();
 initMenuToggles();
 renderWorkspaceChrome();
