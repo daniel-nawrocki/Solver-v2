@@ -213,7 +213,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = this.isPrintRenderer && this.isDiagramMode() ? 118 : 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? 146 : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);
@@ -327,11 +327,12 @@ export class DiagramRenderer {
     if (!this.isDiagramMode()) return;
     const settings = this.diagramLabelSettings();
     if (!settings.showBearingArrows) return;
+    const weightScale = this.isPrintRenderer ? Math.max(1, Math.min(3, Number(this.stateRef?.ui?.bearingArrowWeight) || 1)) : 1;
 
     this.ctx.save();
     this.ctx.strokeStyle = "rgba(61, 79, 102, 0.45)";
     this.ctx.fillStyle = "rgba(61, 79, 102, 0.45)";
-    this.ctx.lineWidth = 1.2;
+    this.ctx.lineWidth = 1.2 * weightScale;
 
     for (const hole of this.stateRef.holes) {
       if (!Number.isFinite(hole.bearing)) continue;
@@ -344,7 +345,7 @@ export class DiagramRenderer {
         y: start.y + (Math.sin(radians) * length),
       };
       const angle = Math.atan2(end.y - start.y, end.x - start.x);
-      const head = 4;
+      const head = 4 * weightScale;
 
       this.ctx.beginPath();
       this.ctx.moveTo(start.x, start.y);
@@ -579,6 +580,12 @@ export class DiagramRenderer {
     this.ctx.fillStyle = "#0f172a";
     this.ctx.font = printHeaderTitleFont(34);
     this.ctx.fillText(shotNumber, 28, 44);
+    this.ctx.strokeStyle = "rgba(51, 65, 85, 0.30)";
+    this.ctx.lineWidth = 1.5;
+    this.ctx.beginPath();
+    this.ctx.moveTo(28, 54);
+    this.ctx.lineTo(170, 54);
+    this.ctx.stroke();
 
     this.ctx.font = printHeaderMetaFont(13, 600);
     leftLines.forEach((line, index) => {

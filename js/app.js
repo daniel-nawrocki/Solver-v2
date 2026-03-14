@@ -141,6 +141,7 @@ function createPrintState() {
       showAngleLabels: true,
       showBearingLabels: false,
       showBearingArrows: true,
+      bearingArrowWeight: 1,
       showDepthLabels: true,
     },
     metadata: {
@@ -286,6 +287,8 @@ const els = {
   printAngleToggle: document.getElementById("printAngleToggle"),
   printBearingToggleWrap: document.getElementById("printBearingToggleWrap"),
   printBearingToggle: document.getElementById("printBearingToggle"),
+  printBearingArrowWeightWrap: document.getElementById("printBearingArrowWeightWrap"),
+  printBearingArrowWeightInput: document.getElementById("printBearingArrowWeightInput"),
   printDepthToggleWrap: document.getElementById("printDepthToggleWrap"),
   printDepthToggle: document.getElementById("printDepthToggle"),
   helpWorkspace: document.getElementById("helpWorkspace"),
@@ -478,10 +481,12 @@ function syncPrintControls() {
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
+  els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printRelationshipToggle.checked = printState.ui.showRelationships !== false;
   els.printAngleToggle.checked = printState.ui.showAngleLabels !== false;
   els.printBearingToggle.checked = printState.ui.showBearingLabels !== false;
+  els.printBearingArrowWeightInput.value = String(printState.ui.bearingArrowWeight || 1);
   els.printDepthToggle.checked = printState.ui.showDepthLabels !== false;
 }
 
@@ -507,6 +512,7 @@ function loadSolverPrintState(selectedTiming) {
   printState.ui.showAngleLabels = false;
   printState.ui.showDepthLabels = false;
   printState.ui.showBearingArrows = false;
+  printState.ui.bearingArrowWeight = 1;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   printState.metadata = cloneDiagramMetadata();
   printState.annotations = cloneDiagramAnnotations();
@@ -527,6 +533,7 @@ function loadDiagramPrintState() {
   printState.ui.showAngleLabels = diagramState.ui.showAngleLabels;
   printState.ui.showBearingLabels = diagramState.ui.showBearingLabels;
   printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
+  printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   printState.metadata = cloneDiagramMetadata(diagramState.metadata);
@@ -585,6 +592,7 @@ function applyPrintSettings() {
   printState.ui.showRelationships = els.printRelationshipToggle.checked;
   printState.ui.showAngleLabels = els.printAngleToggle.checked;
   printState.ui.showBearingLabels = els.printBearingToggle.checked;
+  printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   printState.ui.showDepthLabels = els.printDepthToggle.checked;
   els.printPaperFrame.classList.toggle("greyscale", !els.printColorModeToggle.checked);
   applyPrintOrientation();
@@ -1755,6 +1763,7 @@ els.printColorModeToggle.addEventListener("change", () => applyPrintSettings());
 els.printRelationshipToggle.addEventListener("change", () => applyPrintSettings());
 els.printAngleToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
+els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printActionBtn.addEventListener("click", () => {
   window.print();
