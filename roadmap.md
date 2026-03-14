@@ -136,7 +136,7 @@ Current behavior:
   - bearing
   - depth
 - view toggles control metadata visibility
-- bearing arrows exist as a low-profile overlay and are canvas-only
+- bearing arrows exist as a low-profile overlay
 
 ### 6. Print Preview
 Implemented as a shared print workspace with workspace-specific controls.
@@ -148,9 +148,11 @@ Delay Solver print:
 Diagram Maker print:
 - hides relationship controls
 - adds separate toggles for:
-  - `Angle + Bearing`
+  - `Angle`
+  - `Bearing`
   - `Depth`
 - keeps rotation, fit, text size, and color controls
+- print/export now inherits the current Diagram Maker bearing-arrow visibility setting
 
 ### 8. Diagram Maker QoL Pass
 Implemented in code.

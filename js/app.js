@@ -119,6 +119,7 @@ function createPrintState() {
       orientation: "landscape",
       showAngleLabels: true,
       showBearingLabels: true,
+      showBearingArrows: false,
       showDepthLabels: true,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
@@ -422,6 +423,7 @@ function loadSolverPrintState(selectedTiming) {
   printState.ui.showOverlayText = true;
   printState.ui.showAngleLabels = false;
   printState.ui.showDepthLabels = false;
+  printState.ui.showBearingArrows = false;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   applyPrintOrientation();
 }
@@ -439,6 +441,7 @@ function loadDiagramPrintState() {
   printState.ui.showOverlayText = false;
   printState.ui.showAngleLabels = diagramState.ui.showAngleLabels;
   printState.ui.showBearingLabels = diagramState.ui.showBearingLabels;
+  printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   applyPrintOrientation();
