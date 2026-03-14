@@ -143,6 +143,7 @@ function createPrintState() {
       showBearingArrows: true,
       bearingArrowWeight: 1,
       showDepthLabels: true,
+      showPrintLabelBoxes: true,
       printEditMode: false,
       hoverLabelHoleId: null,
     },
@@ -298,6 +299,8 @@ const els = {
   printBearingArrowWeightInput: document.getElementById("printBearingArrowWeightInput"),
   printDepthToggleWrap: document.getElementById("printDepthToggleWrap"),
   printDepthToggle: document.getElementById("printDepthToggle"),
+  printLabelBoxesToggleWrap: document.getElementById("printLabelBoxesToggleWrap"),
+  printLabelBoxesToggle: document.getElementById("printLabelBoxesToggle"),
   helpWorkspace: document.getElementById("helpWorkspace"),
   helpBackBtn: document.getElementById("helpBackBtn"),
 };
@@ -492,6 +495,7 @@ function syncPrintControls() {
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
+  els.printLabelBoxesToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
   els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !printState.ui.printEditMode);
   els.printEditLabelsBtn.classList.toggle("active", diagramMode && printState.ui.printEditMode);
@@ -500,6 +504,7 @@ function syncPrintControls() {
   els.printBearingToggle.checked = printState.ui.showBearingLabels !== false;
   els.printBearingArrowWeightInput.value = String(printState.ui.bearingArrowWeight || 1);
   els.printDepthToggle.checked = printState.ui.showDepthLabels !== false;
+  els.printLabelBoxesToggle.checked = printState.ui.showPrintLabelBoxes !== false;
 }
 
 function applyPrintOrientation() {
@@ -525,6 +530,7 @@ function loadSolverPrintState(selectedTiming) {
   printState.ui.showDepthLabels = false;
   printState.ui.showBearingArrows = false;
   printState.ui.bearingArrowWeight = 1;
+  printState.ui.showPrintLabelBoxes = true;
   printState.ui.printEditMode = false;
   printState.ui.hoverLabelHoleId = null;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
@@ -552,6 +558,7 @@ function loadDiagramPrintState() {
   printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
   printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
+  printState.ui.showPrintLabelBoxes = true;
   printState.ui.printEditMode = false;
   printState.ui.hoverLabelHoleId = null;
   printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
@@ -594,6 +601,7 @@ function openPrintWorkspace() {
 function closePrintWorkspace() {
   printState.ui.printEditMode = false;
   printState.ui.hoverLabelHoleId = null;
+  printState.ui.showPrintLabelBoxes = true;
   printState.labelLayoutByHoleId = new Map();
   printState.dragLabelHoleId = null;
   printState.dragPointerDelta = null;
@@ -621,6 +629,7 @@ function applyPrintSettings() {
   printState.ui.showBearingLabels = els.printBearingToggle.checked;
   printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   printState.ui.showDepthLabels = els.printDepthToggle.checked;
+  printState.ui.showPrintLabelBoxes = els.printLabelBoxesToggle.checked;
   els.printPaperFrame.classList.toggle("greyscale", !els.printColorModeToggle.checked);
   applyPrintOrientation();
   printRenderer.render();
@@ -649,6 +658,7 @@ function resetPrintLabelLayouts() {
 
 function handlePrintPointerDown(payload) {
   if (!isDiagramPrintEditing()) return false;
+  if (printState.ui.showPrintLabelBoxes === false) return false;
   const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   if (!hit) return false;
   printState.dragLabelHoleId = hit.hole.id;
@@ -663,7 +673,7 @@ function handlePrintPointerDown(payload) {
 
 function handlePrintPointerMove(payload) {
   if (printState.ui.workspaceMode !== "diagram") return false;
-  const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
+  const hit = printState.ui.showPrintLabelBoxes === false ? null : printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   const nextHover = isDiagramPrintEditing() && hit ? hit.hole.id : null;
   if (printState.ui.hoverLabelHoleId !== nextHover) {
     printState.ui.hoverLabelHoleId = nextHover;
@@ -1857,6 +1867,7 @@ els.printAngleToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
+els.printLabelBoxesToggle.addEventListener("change", () => applyPrintSettings());
 els.printActionBtn.addEventListener("click", () => {
   window.print();
   closePrintWorkspace();

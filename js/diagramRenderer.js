@@ -565,21 +565,22 @@ export class DiagramRenderer {
     const { hole, rect, lines, metrics } = layout;
     const isHovered = this.stateRef?.ui?.hoverLabelHoleId === hole.id;
     const isDragging = this.stateRef?.dragLabelHoleId === hole.id;
+    if (this.stateRef?.ui?.showPrintLabelBoxes !== false) {
+      this.ctx.save();
+      this.ctx.shadowColor = "rgba(15, 23, 42, 0.10)";
+      this.ctx.shadowBlur = isDragging ? 12 : 8;
+      this.ctx.shadowOffsetY = 2;
+      this.ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
+      this.ctx.strokeStyle = isDragging ? "rgba(47, 125, 246, 0.72)" : isHovered ? "rgba(71, 85, 105, 0.55)" : "rgba(203, 213, 225, 0.95)";
+      this.ctx.lineWidth = isDragging ? 1.8 : isHovered ? 1.4 : 1;
+      this.ctx.beginPath();
+      this.ctx.roundRect(rect.left, rect.top, rect.width, rect.height, 8);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
 
     this.drawDiagramPrintLabelLeader(layout);
-
-    this.ctx.save();
-    this.ctx.shadowColor = "rgba(15, 23, 42, 0.10)";
-    this.ctx.shadowBlur = isDragging ? 12 : 8;
-    this.ctx.shadowOffsetY = 2;
-    this.ctx.fillStyle = "rgba(255, 255, 255, 0.96)";
-    this.ctx.strokeStyle = isDragging ? "rgba(47, 125, 246, 0.72)" : isHovered ? "rgba(71, 85, 105, 0.55)" : "rgba(203, 213, 225, 0.95)";
-    this.ctx.lineWidth = isDragging ? 1.8 : isHovered ? 1.4 : 1;
-    this.ctx.beginPath();
-    this.ctx.roundRect(rect.left, rect.top, rect.width, rect.height, 8);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
 
     this.ctx.save();
     let y = rect.top + metrics.paddingY;
