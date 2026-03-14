@@ -232,25 +232,120 @@
     </div>
   </section>
 
-  <main id="diagramMakerWorkspace" class="workspace workspace-diagram hidden" aria-label="Diagram Maker">
-    <section class="diagram-shell">
-      <div class="diagram-hero panel">
-        <div class="home-eyebrow">Diagram Maker</div>
-        <h1>Workspace shell ready.</h1>
-        <p>This is the placeholder home for a dedicated diagram workflow, built with the same chrome and layout language as the solver.</p>
+  <section id="diagramMakerWorkspace" class="workspace workspace-solver hidden" aria-label="Diagram Maker">
+    <main class="canvas-wrap">
+      <div class="menu-bar" aria-label="Diagram Maker Menus">
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramImportMenu">Import</button>
+          <section id="diagramImportMenu" class="menu-panel panel hidden">
+            <h2>CSV Import</h2>
+            <label class="file-btn">Choose CSV
+              <input id="diagramCsvInput" type="file" accept=".csv,text/csv" hidden>
+            </label>
+            <div id="diagramMappingPanel" class="mapping-panel hidden">
+              <label>Coordinate Type
+                <select id="diagramCoordTypeSelect">
+                  <option value="stateplane">State Plane (X/Y)</option>
+                  <option value="latlon">Latitude / Longitude</option>
+                </select>
+              </label>
+              <label>X Column
+                <select id="diagramXColumnSelect"></select>
+              </label>
+              <label>Y Column
+                <select id="diagramYColumnSelect"></select>
+              </label>
+              <label>Toe X Column (Optional)
+                <select id="diagramToeXColumnSelect"></select>
+              </label>
+              <label>Toe Y Column (Optional)
+                <select id="diagramToeYColumnSelect"></select>
+              </label>
+              <label>Hole ID Column
+                <select id="diagramIdColumnSelect"></select>
+              </label>
+              <label>Angle Column (Optional)
+                <select id="diagramAngleColumnSelect"></select>
+              </label>
+              <label>Bearing Column (Optional)
+                <select id="diagramBearingColumnSelect"></select>
+              </label>
+              <label>Depth / Length Column (Optional)
+                <select id="diagramDepthColumnSelect"></select>
+              </label>
+              <button id="diagramImportMappedBtn" type="button">Import</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramViewMenu">View</button>
+          <section id="diagramViewMenu" class="menu-panel panel hidden">
+            <h2>View</h2>
+            <label><input id="diagramGridToggle" type="checkbox" checked> Show Grid</label>
+            <label><input id="diagramAngleLabelToggle" type="checkbox" checked> Show Angle + Bearing</label>
+            <label><input id="diagramDepthLabelToggle" type="checkbox" checked> Show Depth</label>
+            <button id="diagramFitViewBtn" type="button">Fit View</button>
+            <label>Coordinate View
+              <select id="diagramCoordViewSelect">
+                <option value="collar">Collar</option>
+                <option value="toe">Toe</option>
+              </select>
+            </label>
+            <div class="row-actions">
+              <button id="diagramRotateLeftBtn" type="button">Rotate -15 deg</button>
+              <button id="diagramRotateRightBtn" type="button">Rotate +15 deg</button>
+            </div>
+            <div class="row-actions">
+              <button id="diagramRotateFineLeftBtn" type="button">Rotate -1 deg</button>
+              <button id="diagramRotateFineRightBtn" type="button">Rotate +1 deg</button>
+            </div>
+            <button id="diagramRotateResetBtn" type="button">Reset Rotation</button>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramPropertiesMenu">Properties</button>
+          <section id="diagramPropertiesMenu" class="menu-panel panel hidden">
+            <h2>Hole Properties</h2>
+            <div id="diagramSelectionStatus" class="status-chip">Selection: no holes selected</div>
+            <div id="diagramSelectionList" class="list">Select a hole to edit its properties, or shift-select multiple holes.</div>
+            <label>Default Hole Diameter
+              <input id="diagramDefaultDiameterInput" type="number" min="0" step="0.01" placeholder="Set a default diameter">
+            </label>
+            <button id="diagramApplyDefaultDiameterBtn" type="button">Apply Default Diameter</button>
+            <label>Burden
+              <input id="diagramBurdenInput" type="number" step="0.01">
+            </label>
+            <label>Spacing
+              <input id="diagramSpacingInput" type="number" step="0.01">
+            </label>
+            <label>Diameter
+              <input id="diagramDiameterInput" type="number" step="0.01">
+            </label>
+            <label>Angle
+              <input id="diagramAngleInput" type="number" step="0.01">
+            </label>
+            <label>Bearing
+              <input id="diagramBearingInput" type="number" step="0.01">
+            </label>
+            <label>Depth
+              <input id="diagramDepthInput" type="number" step="0.01">
+            </label>
+            <label>Stem Height
+              <input id="diagramStemHeightInput" type="number" step="0.01">
+            </label>
+            <div class="row-actions">
+              <button id="diagramApplyPropertiesBtn" type="button">Apply to Selection</button>
+              <button id="diagramClearSelectionBtn" type="button">Clear Selection</button>
+            </div>
+          </section>
+        </div>
       </div>
-      <div class="diagram-grid">
-        <section class="panel diagram-card">
-          <h2>Coming Soon</h2>
-          <p>Future diagram tools can live here without changing the top-level navigation model.</p>
-        </section>
-        <section class="panel diagram-card">
-          <h2>Planned Direction</h2>
-          <p>Layout drafting, annotation workflows, export presets, and reusable project views can be added into this shell later.</p>
-        </section>
-      </div>
-    </section>
-  </main>
+
+      <canvas id="diagramMakerCanvas" width="1300" height="800"></canvas>
+    </main>
+  </section>
 
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">
     <div class="print-toolbar">
@@ -264,7 +359,9 @@
           <input id="printTextScaleInput" type="range" min="0.7" max="1.8" step="0.1" value="1">
         </label>
         <label><input id="printColorModeToggle" type="checkbox" checked> Color</label>
-        <label><input id="printRelationshipToggle" type="checkbox" checked> Show Relationships</label>
+        <label id="printRelationshipToggleWrap"><input id="printRelationshipToggle" type="checkbox" checked> Show Relationships</label>
+        <label id="printAngleToggleWrap" class="hidden"><input id="printAngleToggle" type="checkbox" checked> Show Angle + Bearing</label>
+        <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show Depth</label>
       </div>
     </div>
     <div class="print-stage" id="printStage">

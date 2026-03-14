@@ -59,7 +59,19 @@ function inferId(record, idColumn, fallbackIndex) {
   return `H-${fallbackIndex + 1}`;
 }
 
-function latLonToLocal(records, xColumn, yColumn, idColumn) {
+function mapExtraFields(record, fieldColumns) {
+  if (!fieldColumns || typeof fieldColumns !== "object") return {};
+  return Object.entries(fieldColumns).reduce((acc, [fieldName, columnName]) => {
+    if (!columnName) {
+      acc[fieldName] = null;
+      return acc;
+    }
+    acc[fieldName] = toNumber(record[columnName]);
+    return acc;
+  }, {});
+}
+
+function latLonToLocal(records, xColumn, yColumn, idColumn, fieldColumns = null) {
   const points = records.map((record, idx) => {
     const lon = toNumber(record[xColumn]);
     const lat = toNumber(record[yColumn]);
@@ -69,6 +81,7 @@ function latLonToLocal(records, xColumn, yColumn, idColumn) {
       lat,
       lon,
       sourceIndex: idx,
+      extraFields: mapExtraFields(record, fieldColumns),
     };
   }).filter((p) => p.lat !== null && p.lon !== null);
 
@@ -91,11 +104,12 @@ function latLonToLocal(records, xColumn, yColumn, idColumn) {
       rowId: null,
       orderInRow: null,
       sourceIndex: p.sourceIndex,
+      ...p.extraFields,
     };
   });
 }
 
-function statePlaneToLocal(records, xColumn, yColumn, idColumn) {
+function statePlaneToLocal(records, xColumn, yColumn, idColumn, fieldColumns = null) {
   const points = records.map((record, idx) => {
     const x = toNumber(record[xColumn]);
     const y = toNumber(record[yColumn]);
@@ -105,6 +119,7 @@ function statePlaneToLocal(records, xColumn, yColumn, idColumn) {
       x,
       y,
       sourceIndex: idx,
+      extraFields: mapExtraFields(record, fieldColumns),
     };
   }).filter((p) => p.x !== null && p.y !== null);
 
@@ -122,15 +137,16 @@ function statePlaneToLocal(records, xColumn, yColumn, idColumn) {
     rowId: null,
     orderInRow: null,
     sourceIndex: p.sourceIndex,
+    ...p.extraFields,
   }));
 }
 
-export function buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn }) {
+export function buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn, fieldColumns = null }) {
   if (!records?.length) return [];
   if (!xColumn || !yColumn) return [];
 
   if (coordType === "latlon") {
-    return latLonToLocal(records, xColumn, yColumn, idColumn);
+    return latLonToLocal(records, xColumn, yColumn, idColumn, fieldColumns);
   }
-  return statePlaneToLocal(records, xColumn, yColumn, idColumn);
+  return statePlaneToLocal(records, xColumn, yColumn, idColumn, fieldColumns);
 }

@@ -18,6 +18,12 @@ function pointToSegmentDistance(point, start, end) {
   return Math.hypot(point.x - px, point.y - py);
 }
 
+function formatMetricValue(value, suffix) {
+  if (!Number.isFinite(value)) return null;
+  const rounded = Math.round(value * 100) / 100;
+  return `${rounded}${suffix}`;
+}
+
 export class DiagramRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -52,12 +58,25 @@ export class DiagramRenderer {
     return Number(this.stateRef?.ui?.textScale) || 1;
   }
 
+  isDiagramMode() {
+    return this.stateRef?.ui?.workspaceMode === "diagram";
+  }
+
   activeTimingPreview() {
+    if (this.isDiagramMode()) return null;
     return this.stateRef.timingResults?.[this.stateRef.ui.activeTimingPreviewIndex] || null;
   }
 
   timingVisualization() {
     return this.stateRef?.ui?.timingVisualization || null;
+  }
+
+  diagramLabelSettings() {
+    const ui = this.stateRef?.ui || {};
+    return {
+      showAngleLabels: ui.showAngleLabels !== false,
+      showDepthLabels: ui.showDepthLabels !== false,
+    };
   }
 
   rotatePoint(x, y) {
@@ -182,6 +201,7 @@ export class DiagramRenderer {
   }
 
   drawRelationships() {
+    if (this.isDiagramMode()) return;
     if (this.stateRef.ui.showRelationships === false) return;
     const edges = this.stateRef.relationships?.edges || [];
     edges.forEach((edge) => {
@@ -190,12 +210,12 @@ export class DiagramRenderer {
       if (!fromHole || !toHole) return;
       const start = this.worldToScreen(fromHole.x, fromHole.y);
       const end = this.worldToScreen(toHole.x, toHole.y);
-      const color = relationshipColor(edge.type);
-      this.drawArrow(start, end, color);
+      this.drawArrow(start, end, relationshipColor(edge.type));
     });
   }
 
   drawRelationshipDraft() {
+    if (this.isDiagramMode()) return;
     if (this.stateRef.ui.showRelationships === false) return;
     const draft = this.stateRef.ui.relationshipDraft;
     if (!draft?.holeIds?.length) return;
@@ -221,20 +241,38 @@ export class DiagramRenderer {
     this.ctx.restore();
   }
 
-  drawHoles(preview, showLabels = true, showTiming = true) {
+  diagramMetadataLines(hole) {
+    const settings = this.diagramLabelSettings();
+    const lines = [];
+    if (settings.showAngleLabels) {
+      const angleText = formatMetricValue(hole.angle, "°");
+      const bearingText = formatMetricValue(hole.bearing, "°");
+      if (angleText || bearingText) {
+        lines.push([angleText ? `A ${angleText}` : null, bearingText ? `B ${bearingText}` : null].filter(Boolean).join(" | "));
+      }
+    }
+    if (settings.showDepthLabels) {
+      const depthText = formatMetricValue(hole.depth, "'");
+      if (depthText) lines.push(`D ${depthText}`);
+    }
+    return lines;
+  }
+
+  drawHoles(preview) {
     const times = preview ? this.stateRef.holes.map((hole) => preview.holeTimes.get(hole.id)).filter((v) => Number.isFinite(v)) : [];
     const minT = times.length ? Math.min(...times) : 0;
     const maxT = times.length ? Math.max(...times) : 0;
     const originHoleId = this.stateRef.relationships?.originHoleId || null;
+    const diagramMode = this.isDiagramMode();
 
     for (const hole of this.stateRef.holes) {
       const point = this.worldToScreen(hole.x, hole.y);
       const selected = this.stateRef.selection.has(hole.id);
-      const isOrigin = hole.id === originHoleId;
+      const isOrigin = !diagramMode && hole.id === originHoleId;
       const time = preview ? preview.holeTimes.get(hole.id) : null;
       this.ctx.beginPath();
       this.ctx.arc(point.x, point.y, this.holeRadius, 0, Math.PI * 2);
-      this.ctx.fillStyle = preview ? timingColor(time, minT, maxT) : "#475569";
+      this.ctx.fillStyle = preview ? timingColor(time, minT, maxT) : diagramMode ? "#3c4f66" : "#475569";
       this.ctx.fill();
       this.ctx.lineWidth = isOrigin ? 4 : selected ? 3 : 1;
       this.ctx.strokeStyle = isOrigin ? "#f59e0b" : selected ? "#0f172a" : "#dbe4ee";
@@ -248,15 +286,22 @@ export class DiagramRenderer {
         this.ctx.stroke();
       }
 
-      if (showLabels) {
-        const label = hole.holeNumber || hole.id;
-        this.ctx.fillStyle = "#111827";
-        const labelSize = Math.max(9, Math.round(11 * this.textScale()));
-        this.ctx.font = selected || isOrigin ? `bold ${labelSize}px Segoe UI` : `${labelSize}px Segoe UI`;
-        this.ctx.fillText(label, point.x + 8, point.y - 6);
-      }
+      const label = hole.holeNumber || hole.id;
+      this.ctx.fillStyle = "#111827";
+      const labelSize = Math.max(9, Math.round(11 * this.textScale()));
+      this.ctx.font = selected || isOrigin ? `bold ${labelSize}px Segoe UI` : `${labelSize}px Segoe UI`;
+      this.ctx.fillText(label, point.x + 8, point.y - 6);
 
-      if (showTiming && preview && Number.isFinite(time)) {
+      if (diagramMode) {
+        const metadataLines = this.diagramMetadataLines(hole);
+        if (metadataLines.length) {
+          this.ctx.fillStyle = "#52657c";
+          this.ctx.font = `${Math.max(8, Math.round(10 * this.textScale()))}px Segoe UI`;
+          metadataLines.forEach((line, index) => {
+            this.ctx.fillText(line, point.x + 8, point.y + 9 + (index * 12));
+          });
+        }
+      } else if (preview && Number.isFinite(time)) {
         this.ctx.fillStyle = "#334155";
         this.ctx.font = `${Math.max(8, Math.round(10 * this.textScale()))}px Segoe UI`;
         this.ctx.fillText(`${time.toFixed(0)}ms`, point.x + 8, point.y + 8);
@@ -307,7 +352,7 @@ export class DiagramRenderer {
   }
 
   drawTimingPreviewInfo(preview) {
-    if (!preview) return;
+    if (!preview || this.isDiagramMode()) return;
     const topOverlayOffset = 92;
     this.ctx.save();
     this.ctx.fillStyle = "#0f172a";
@@ -327,7 +372,7 @@ export class DiagramRenderer {
     this.drawRelationships();
     this.drawRelationshipDraft();
     this.drawHoles(preview);
-    this.drawTimingVisualization(preview);
+    if (!this.isDiagramMode()) this.drawTimingVisualization(preview);
     this.drawNorthArrow();
     if (this.stateRef.ui.showOverlayText !== false) this.drawTimingPreviewInfo(preview);
   }
