@@ -196,6 +196,7 @@ What was added:
 - `Select` keeps existing click / `Shift+click` behavior
 - `Box` drag-selects holes in screen space
 - `Polygon` click-places vertices and completes with double-click or `Enter`
+- `Polygon` click-places vertices and completes with right-click or `Enter`
 - shape selection replaces current selection by default
 - holding `Shift` while completing box/polygon selection adds to the existing selection
 - temporary selection drafts can be cancelled with `Escape`
@@ -232,7 +233,7 @@ Important recent context:
 - The new print-fit behavior is syntax-validated but still needs visual confirmation with real print preview usage.
 - Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
 - Diagram Maker box/polygon selection is implemented in code but still needs manual interaction testing with real layouts.
-- Polygon selection UX may need polish if double-click introduces awkward final-vertex behavior on some datasets.
+- Polygon selection UX may still need polish, but completion now uses right-click instead of double-click.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -253,6 +254,7 @@ Important recent context:
     - polygon mode
     - `Shift` add behavior
     - `Escape` cancel behavior
+    - right-click polygon completion
     - `Enter` polygon completion
     - no unwanted panning while selection tools are active
 - add Diagram Maker save/load support

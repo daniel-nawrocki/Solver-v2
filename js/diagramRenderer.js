@@ -52,6 +52,7 @@ export class DiagramRenderer {
     this.onPointerMove = options.onPointerMove || (() => false);
     this.onDoubleClick = options.onDoubleClick || (() => false);
     this.onHoleContextMenu = options.onHoleContextMenu || (() => {});
+    this.onCanvasContextMenu = options.onCanvasContextMenu || (() => false);
     this.stateRef = options.stateRef;
     this.zoom = 1;
     this.panX = 0;
@@ -541,6 +542,7 @@ export class DiagramRenderer {
 
   attachEvents() {
     this.canvas.addEventListener("mousedown", (event) => {
+      if (event.button !== 0) return;
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -601,8 +603,13 @@ export class DiagramRenderer {
       const y = event.clientY - rect.top;
       const hole = this.findHoleAtScreen(x, y);
       if (hole) {
+        const handled = this.onHoleContextMenu(hole, event, { x, y });
+        if (handled !== false) event.preventDefault();
+        return;
+      }
+      const canvasHandled = this.onCanvasContextMenu({ x, y, event, hole: null });
+      if (canvasHandled) {
         event.preventDefault();
-        this.onHoleContextMenu(hole, event);
         return;
       }
       const relationship = this.findRelationshipAtScreen(x, y);

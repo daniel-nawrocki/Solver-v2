@@ -262,8 +262,9 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
   onPointerUp: handleDiagramPointerUp,
   onPointerDown: handleDiagramPointerDown,
   onPointerMove: handleDiagramPointerMove,
-  onDoubleClick: handleDiagramDoubleClick,
+  onDoubleClick: () => false,
   onHoleContextMenu: () => {},
+  onCanvasContextMenu: handleDiagramCanvasContextMenu,
 });
 
 const printRenderer = new DiagramRenderer(document.getElementById("printCanvas"), {
@@ -1133,8 +1134,8 @@ function handleDiagramPointerUp() {
   return false;
 }
 
-function handleDiagramDoubleClick() {
-  if (diagramState.ui.selectionToolMode === "polygon") {
+function handleDiagramCanvasContextMenu() {
+  if (diagramState.ui.selectionToolMode === "polygon" && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
     finalizeDiagramPolygonSelection();
     return true;
   }
