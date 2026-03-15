@@ -2027,7 +2027,7 @@ function finalizeDiagramPolygonSelection() {
 }
 
 function handleDiagramPointerDown(payload) {
-  const mode = diagramState.ui.activeTool;
+  const mode = diagramState.ui.pendingFaceDesignation ? "polygon" : diagramState.ui.activeTool;
   if (mode === "box") {
     diagramState.ui.selectionBoxDraft = {
       start: { x: payload.x, y: payload.y },
@@ -2086,7 +2086,7 @@ function handleDiagramPointerMove(payload) {
     diagramRenderer.render();
     return true;
   }
-  if (diagramState.ui.activeTool === "polygon") {
+  if (diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") {
     if (diagramState.ui.selectionPolygonDraft) {
       diagramState.ui.selectionPolygonDraft.hoverPoint = { x: payload.x, y: payload.y };
       diagramRenderer.render();
@@ -2119,7 +2119,7 @@ function handleDiagramPointerUp() {
 }
 
 function handleDiagramCanvasContextMenu() {
-  if (diagramState.ui.activeTool === "polygon" && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
+  if ((diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
     finalizeDiagramPolygonSelection();
     return true;
   }
@@ -2303,7 +2303,7 @@ function startFaceDesignation() {
   diagramState.ui.pendingFaceDesignation = true;
   diagramState.ui.faceDesignationReturnTool = diagramState.ui.activeTool || "single";
   openMenu("diagramShotMenu");
-  setDiagramToolMode("polygon");
+  setDiagramToolMode("single");
   renderDiagramShotPanel();
 }
 
@@ -2687,7 +2687,7 @@ window.addEventListener("beforeprint", () => {
 });
 
 document.addEventListener("keydown", (event) => {
-  if (isDiagramWorkspaceActive() && diagramState.ui.activeTool === "polygon" && event.key === "Enter") {
+  if (isDiagramWorkspaceActive() && (diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") && event.key === "Enter") {
     finalizeDiagramPolygonSelection();
     return;
   }
