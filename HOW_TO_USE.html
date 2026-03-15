@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daniel Fire - How to Use</title>
+  <style>
+    :root {
+      --ink: #153a68;
+      --ink-soft: #355a88;
+      --muted: #5d7191;
+      --line: #d6e2f2;
+      --panel: #ffffff;
+      --panel-soft: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.98));
+      --accent: #2c78ff;
+      --accent-soft: rgba(44, 120, 255, 0.12);
+      --surface: #eef4fb;
+      --shadow: 0 18px 50px rgba(21, 58, 104, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Aptos", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(44, 120, 255, 0.10), transparent 34%),
+        linear-gradient(180deg, #f7fbff, #edf4fb 50%, #f6f9fd 100%);
+      line-height: 1.55;
+    }
+
+    .page-shell {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 40px 32px 56px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 34px 36px;
+      border: 1px solid rgba(44, 120, 255, 0.24);
+      border-radius: 26px;
+      background: var(--panel-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -48px;
+      top: -48px;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(44, 120, 255, 0.16), rgba(44, 120, 255, 0));
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 0.8fr;
+      gap: 28px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-bottom: 12px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--ink-soft);
+      font-size: 15px;
+    }
+
+    .hero-copy p {
+      font-size: 18px;
+      max-width: 58ch;
+    }
+
+    .hero-logo-card {
+      position: relative;
+      padding: 22px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      text-align: center;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-logo-card img {
+      max-width: 100%;
+      max-height: 160px;
+      object-fit: contain;
+    }
+
+    .section {
+      margin-top: 30px;
+      padding: 26px 28px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 10px 34px rgba(21, 58, 104, 0.06);
+      page-break-inside: avoid;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .section-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card,
+    .callout,
+    .step-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      padding: 18px;
+    }
+
+    .callout {
+      background: linear-gradient(180deg, rgba(44, 120, 255, 0.06), rgba(255, 255, 255, 1));
+    }
+
+    .step-card {
+      position: relative;
+      padding-top: 48px;
+    }
+
+    .step-number {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .workflow {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mini-note {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .formula {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: #f4f8fd;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .screenshot-frame {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      overflow: hidden;
+    }
+
+    .screenshot-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .screenshot-caption {
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(244, 248, 253, 0.9);
+    }
+
+    .reference-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .reference-table th,
+    .reference-table td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    .reference-table th {
+      color: var(--ink);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eef5ff;
+      color: var(--accent);
+      border: 1px solid rgba(44, 120, 255, 0.18);
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    @media print {
+      @page {
+        size: Letter;
+        margin: 0.45in;
+      }
+
+      body {
+        background: #ffffff;
+      }
+
+      .page-shell {
+        max-width: none;
+        padding: 0;
+      }
+
+      .hero,
+      .section {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="eyebrow">Field Guide</div>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>Daniel Fire</h1>
+          <p>How to use the full planner, from import and pattern assignment through timing, print tabs, and whole-shot
+            volume checks.</p>
+          <div style="margin-top:18px">
+            <span class="tag">Diagram Mode</span>
+            <span class="tag">Timing Mode</span>
+            <span class="tag">Print Preview</span>
+            <span class="tag">Volume Totals</span>
+          </div>
+        </div>
+        <div class="hero-logo-card">
+          <img src="assets/large-logo.png" alt="Daniel Fire logo">
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Quick Start</div>
+          <h2>Use the planner in this order</h2>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="workflow">
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Start in Diagram</h3>
+            <p>Import the CSV, set shot metadata, and clean up the layout before moving into timing.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Assign patterns</h3>
+            <p>Use the Shot menu to designate face holes, then apply face and interior burden x spacing values.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>Check totals</h3>
+            <p>Use the Volume menu to confirm included holes, cubic yards, and estimated tons.</p>
+          </div>
+        </div>
+        <div class="workflow">
+          <div class="step-card">
+            <div class="step-number">4</div>
+            <h3>Switch to Timing</h3>
+            <p>Build relationships, set timing ranges, and solve combinations without re-importing the shot.</p>
+          </div>
+          <div class="step-card">
+            <div class="step-number">5</div>
+            <h3>Assemble print pages</h3>
+            <p>Use page tabs to create diagram pages, timing pages, or a mixed print set with different settings per tab.</p>
+          </div>
+          <div class="callout">
+            <h3>Shared project behavior</h3>
+            <p>Diagram data, timing data, and the viewport persist across mode switches during the current session.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">At A Glance</div>
+          <h2>Home and mode structure</h2>
+        </div>
+      </div>
+      <p>The home screen is the front door to Daniel Fire. From there, the centered mode toggle switches between
+        Diagram and Timing inside the same shared planner.</p>
+      <figure class="screenshot-frame">
+        <img src="assets/large-logo.png" alt="Daniel Fire branded guide image">
+        <figcaption class="screenshot-caption">Branding asset shown here. Real workflow screenshots can be dropped into
+          the guide later without changing the PDF pipeline.</figcaption>
+      </figure>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Diagram Mode</div>
+          <h2>Import, edit, annotate, and prepare the shot</h2>
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>Import</h3>
+          <ul>
+            <li>Map collar coordinates, toe coordinates, and hole id.</li>
+            <li>Optional fields include <strong>angle</strong>, <strong>bearing</strong>, and <strong>depth</strong>.</li>
+            <li>Missing or invalid angles default to <strong>0</strong>.</li>
+            <li>Angle <strong>0</strong> is treated as no real angle for labels and arrows.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>View</h3>
+          <ul>
+            <li>Toggle grid, angle, bearing, bearing arrows, and depth.</li>
+            <li>Switch between <strong>Collar</strong> and <strong>Toe</strong> coordinate views.</li>
+            <li>Use fit and rotation controls to frame the shot quickly.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Toolkit</h3>
+          <ul>
+            <li><strong>Select</strong> for click and shift multi-select</li>
+            <li><strong>Box</strong> for drag selection</li>
+            <li><strong>Polygon</strong> for shape-based selection</li>
+            <li><strong>Markup</strong> and <strong>Text</strong> for annotations that also print</li>
+          </ul>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:16px">
+        <div class="callout">
+          <h3>Shot menu</h3>
+          <p>Use the Shot menu for shot number, location, bench, default hole diameter, and face/interior pattern
+            values.</p>
+          <ol>
+            <li>Enter all four pattern values.</li>
+            <li>Click <strong>Assign Face</strong>.</li>
+            <li>Draw a polygon around the face holes.</li>
+            <li>Click <strong>Apply Pattern</strong>.</li>
+          </ol>
+          <p class="mini-note">The face set persists until you redefine it, clear it, or import a new shot.</p>
+        </div>
+        <div class="callout">
+          <h3>Properties menu</h3>
+          <p>Apply per-hole or multi-hole changes for burden, spacing, diameter, angle, bearing, depth, and stem
+            height.</p>
+          <p class="mini-note">Use <strong>Apply Default Diameter</strong> to push the shot default diameter into the
+            selected holes, or the full shot if nothing is selected.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Volume</div>
+          <h2>Whole-shot cubic yards and tonnage</h2>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Calculation</h3>
+          <p>Volume is calculated per hole, then summed across all valid holes.</p>
+          <div class="formula">(burden × spacing × depth) / 27 = cubic yards</div>
+          <div class="formula" style="display:block; margin-top:12px">cubic yards × rock density = tons</div>
+        </div>
+        <div class="card">
+          <h3>Current behavior</h3>
+          <ul>
+            <li>Density defaults to <strong>2.3 tons / cubic yard</strong>.</li>
+            <li>Only holes with valid burden, spacing, and depth are included.</li>
+            <li>The menu shows whole-shot included holes, cubic yards, and tons.</li>
+            <li>Changing burden, spacing, or depth updates the totals.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Timing Mode</div>
+          <h2>Build relationships and solve timing combinations</h2>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Standard timing flow</h3>
+          <ol>
+            <li>Select an origin hole.</li>
+            <li>Draw H-H, R-R, and offset relationships.</li>
+            <li>Enter timing ranges.</li>
+            <li>Run the solver.</li>
+            <li>Choose a result to preview or simulate.</li>
+          </ol>
+        </div>
+        <div class="callout">
+          <h3>Shared import advantage</h3>
+          <p>You do not need to import again after preparing the shot in Diagram. Timing uses the same shared project
+            holes and can be opened directly from the planner toggle.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Print Preview</div>
+          <h2>Build a print set one page tab at a time</h2>
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3>Core controls</h3>
+          <ul>
+            <li><strong>Back</strong></li>
+            <li><strong>Print</strong></li>
+            <li><strong>Fit Page</strong></li>
+            <li><strong>Add Page</strong></li>
+            <li><strong>Add Timing Page</strong> when timing results exist</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Diagram-specific controls</h3>
+          <ul>
+            <li>Text size</li>
+            <li>Color mode</li>
+            <li>Angle visibility</li>
+            <li>Bearing visibility</li>
+            <li>Depth visibility</li>
+            <li>Bearing arrow weight and length</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Label editing</h3>
+          <ul>
+            <li>Use <strong>Edit Labels</strong> to drag label boxes.</li>
+            <li>Use <strong>Reset Labels</strong> to restore defaults.</li>
+            <li>Label moves are stored only for the current print session.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:16px">
+        <h3>Important print rule</h3>
+        <p>Each print tab is its own page. The current print CSS and page-output flow are intended to produce one
+          printed sheet per tab without extra blank pages between them.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Reference</div>
+          <h2>Menu quick reference</h2>
+        </div>
+      </div>
+      <table class="reference-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Use it for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Diagram</strong></td>
+            <td>Import, layout review, pattern assignment, metadata, annotations, and print preparation.</td>
+          </tr>
+          <tr>
+            <td><strong>Shot</strong></td>
+            <td>Shot metadata, default diameter, face burden/spacing, interior burden/spacing, and face designation.</td>
+          </tr>
+          <tr>
+            <td><strong>View</strong></td>
+            <td>Display toggles, coordinate view, fit, and rotation.</td>
+          </tr>
+          <tr>
+            <td><strong>Properties</strong></td>
+            <td>Selected-hole edits for burden, spacing, diameter, angle, bearing, depth, and stem height.</td>
+          </tr>
+          <tr>
+            <td><strong>Volume</strong></td>
+            <td>Whole-shot included-hole count, cubic yards, tons, and editable rock density.</td>
+          </tr>
+          <tr>
+            <td><strong>Timing</strong></td>
+            <td>Relationship pathing, timing ranges, result solving, preview, and simulation.</td>
+          </tr>
+          <tr>
+            <td><strong>Print</strong></td>
+            <td>Multi-page print sessions with per-page independent settings.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <div class="section-kicker">Notes</div>
+          <h2>Current limits</h2>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <ul>
+            <li>Project persistence to disk is still limited.</li>
+            <li>Multi-page print sessions are in-memory only.</li>
+            <li>Volume is whole-shot only, not per-hole.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul>
+            <li>The built-in Help page is still older content.</li>
+            <li>Some browser interaction paths still need manual verification on real datasets.</li>
+            <li>Real workflow screenshots are not yet bundled in the repo.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">Generated for the current repository state.</div>
+  </main>
+</body>
+
+</html>

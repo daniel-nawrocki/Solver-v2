@@ -7,311 +7,677 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
 endobj
 3 0 obj
-<< /Type /Pages /Count 7 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R] >>
+<< /Type /Pages /Count 9 /Kids [5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R 19 0 R 21 0 R] >>
 endobj
 4 0 obj
-<< /Length 2548 >>
+<< /Length 1051 >>
 stream
-BT
-/F2 22 Tf 1 0 0 1 54 732 Tm (Daniel Fire User Guide) Tj
-/F2 15 Tf 1 0 0 1 54 704 Tm (Overview) Tj
-/F1 11 Tf 1 0 0 1 54 684 Tm (Daniel Fire is a blast-planning workspace with two main modes:) Tj
-/F1 11 Tf 1 0 0 1 54 662 Tm (? `Diagram` for layout, metadata, burden/spacing assignment, annotations, and print) Tj
-/F1 11 Tf 1 0 0 1 68 647 Tm (preparation) Tj
-/F1 11 Tf 1 0 0 1 54 625 Tm (? `Timing` for relationship pathing, timing ranges, solving, previewing, and timing) Tj
-/F1 11 Tf 1 0 0 1 68 610 Tm (print pages) Tj
-/F1 11 Tf 1 0 0 1 54 588 Tm (The app uses a shared project spine, so imported holes, diagram edits, timing data,) Tj
-/F1 11 Tf 1 0 0 1 54 573 Tm (and view state can carry across mode switches.) Tj
-/F2 15 Tf 1 0 0 1 54 547 Tm (Start Here) Tj
-/F1 11 Tf 1 0 0 1 54 527 Tm (1. Open the home screen.) Tj
-/F1 11 Tf 1 0 0 1 54 505 Tm (2. Enter the planner through `Diagram` if you need to import or edit the shot) Tj
-/F1 11 Tf 1 0 0 1 72 490 Tm (layout.) Tj
-/F1 11 Tf 1 0 0 1 54 468 Tm (3. Enter `Timing` when you are ready to define relationships and generate timing) Tj
-/F1 11 Tf 1 0 0 1 72 453 Tm (results.) Tj
-/F1 11 Tf 1 0 0 1 54 431 Tm (4. Use `Print` when you want page-tab output for diagram pages, timing pages, or a) Tj
-/F1 11 Tf 1 0 0 1 72 416 Tm (mixed print session.) Tj
-/F2 15 Tf 1 0 0 1 54 390 Tm (Diagram Mode) Tj
-/F1 11 Tf 1 0 0 1 54 370 Tm (Diagram mode is where the shot is imported and prepared.) Tj
-/F2 12 Tf 1 0 0 1 54 346 Tm (Import) Tj
-/F1 11 Tf 1 0 0 1 54 328 Tm (Use the `Import` menu to bring in a CSV.) Tj
-/F1 11 Tf 1 0 0 1 54 306 Tm (? Supported core columns are collar coordinates, toe coordinates, and hole id.) Tj
-/F1 11 Tf 1 0 0 1 54 284 Tm (? Optional columns include `angle`, `bearing`, and `depth`.) Tj
-/F1 11 Tf 1 0 0 1 54 262 Tm (? If angle is missing or invalid, Daniel Fire defaults it to `0`.) Tj
-/F1 11 Tf 1 0 0 1 54 240 Tm (? `0` angle is treated as no real angle for display purposes, so it will not draw) Tj
-/F1 11 Tf 1 0 0 1 68 225 Tm (angle labels or bearing arrows.) Tj
-/F1 11 Tf 1 0 0 1 54 203 Tm (After import:) Tj
-/F1 11 Tf 1 0 0 1 54 181 Tm (? the hole set becomes the shared project hole set) Tj
-/F1 11 Tf 1 0 0 1 54 159 Tm (? the view can be switched between `Collar` and `Toe`) Tj
-/F1 11 Tf 1 0 0 1 54 137 Tm (? a fresh import resets diagram-specific project metadata and face designation) Tj
-/F2 12 Tf 1 0 0 1 54 113 Tm (Shot Menu) Tj
-/F1 11 Tf 1 0 0 1 54 95 Tm (Use `Shot` to manage shot-level metadata and pattern assignment.) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 1 of 7) Tj
-ET
+0.96 0.98 1.0 rg
+0 0 612 792 re f
+0.09 0.28 0.54 rg
+0 577 612 215 re f
+1.0 1.0 1.0 rg
+52 662 185 26 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 64.00 679.00 Tm (FIELD GUIDE) Tj ET
+1.0 1.0 1.0 rg
+BT /F2 30 Tf 1 0 0 1 52.00 617.00 Tm (Daniel Fire User Guide) Tj ET
+BT /F1 13 Tf 1 0 0 1 52.00 584.00 Tm (Current workflow for Diagram, Timing, and Print.) Tj ET
+1.0 1.0 1.0 rg
+0.82 0.88 0.95 RG
+1 w
+52 272 508 214 re B
+0.09 0.28 0.54 rg
+BT /F2 16 Tf 1 0 0 1 74.00 452.00 Tm (What this guide covers) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 11 Tf 1 0 0 1 86.00 424.00 Tm (- Diagram import, metadata, properties, and face-pattern assignment) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 11 Tf 1 0 0 1 86.00 398.00 Tm (- Whole-shot volume totals and rock density workflow) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 11 Tf 1 0 0 1 86.00 372.00 Tm (- Timing relationships, solving, and result preview) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 11 Tf 1 0 0 1 86.00 346.00 Tm (- Multi-page print tabs, label editing, and print controls) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 42.00 Tm (Page 1 of 9) Tj ET
 endstream
 endobj
 5 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 4 0 R >>
 endobj
 6 0 obj
-<< /Length 1909 >>
+<< /Length 3514 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (Fields:) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (? `Shot Number`) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (? `Location`) Tj
-/F1 11 Tf 1 0 0 1 54 672 Tm (? `Bench`) Tj
-/F1 11 Tf 1 0 0 1 54 650 Tm (? `Hole Diameter`) Tj
-/F1 11 Tf 1 0 0 1 54 628 Tm (Pattern assignment uses two numeric burden x spacing pairs:) Tj
-/F1 11 Tf 1 0 0 1 54 606 Tm (? `Face Pattern`) Tj
-/F1 11 Tf 1 0 0 1 54 584 Tm (? `Interior Pattern`) Tj
-/F1 11 Tf 1 0 0 1 54 562 Tm (Buttons:) Tj
-/F1 11 Tf 1 0 0 1 54 540 Tm (? `Assign Face`) Tj
-/F1 11 Tf 1 0 0 1 54 518 Tm (? `Clear Face`) Tj
-/F1 11 Tf 1 0 0 1 54 496 Tm (? `Apply Pattern`) Tj
-/F1 11 Tf 1 0 0 1 54 474 Tm (Typical pattern workflow:) Tj
-/F1 11 Tf 1 0 0 1 54 452 Tm (1. Enter all four numeric pattern values.) Tj
-/F1 11 Tf 1 0 0 1 54 430 Tm (2. Click `Assign Face`.) Tj
-/F1 11 Tf 1 0 0 1 54 408 Tm (3. Draw a polygon around the face holes on the diagram.) Tj
-/F1 11 Tf 1 0 0 1 54 386 Tm (4. Click `Apply Pattern`.) Tj
-/F1 11 Tf 1 0 0 1 54 364 Tm (What happens on apply:) Tj
-/F1 11 Tf 1 0 0 1 54 342 Tm (? face-designated holes receive the face burden and spacing) Tj
-/F1 11 Tf 1 0 0 1 54 320 Tm (? all other holes receive the interior burden and spacing) Tj
-/F1 11 Tf 1 0 0 1 54 298 Tm (? existing burden and spacing values are overwritten) Tj
-/F1 11 Tf 1 0 0 1 54 276 Tm (The face designation persists until you redefine it, clear it, or import a new) Tj
-/F1 11 Tf 1 0 0 1 54 261 Tm (project.) Tj
-/F2 12 Tf 1 0 0 1 54 237 Tm (View Menu) Tj
-/F1 11 Tf 1 0 0 1 54 219 Tm (Use `View` to control how the shot is displayed.) Tj
-/F1 11 Tf 1 0 0 1 54 197 Tm (Options include:) Tj
-/F1 11 Tf 1 0 0 1 54 175 Tm (? `Show Grid`) Tj
-/F1 11 Tf 1 0 0 1 54 153 Tm (? `Show Angle`) Tj
-/F1 11 Tf 1 0 0 1 54 131 Tm (? `Show Bearing`) Tj
-/F1 11 Tf 1 0 0 1 54 109 Tm (? `Show Bearing Arrows`) Tj
-/F1 11 Tf 1 0 0 1 54 87 Tm (? `Show Depth`) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 2 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 2 of 9) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 696 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 712.00 Tm (Overview) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 682.00 Tm (Daniel Fire is a blast-planning workspace with two main modes:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 661.00 Tm (- `Diagram` for layout, metadata, burden/spacing assignment, annotations, and) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 646.00 Tm (  print preparation) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 626.00 Tm (- `Timing` for relationship pathing, timing ranges, solving, previewing, and) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 611.00 Tm (  timing print pages) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 591.00 Tm (The app uses a shared project spine, so imported holes, diagram edits, timing data,) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 576.00 Tm (and view state can carry across mode switches.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 531 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 547.00 Tm (Start Here) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 517.00 Tm (1. Open the home screen.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 497.00 Tm (2. Enter the planner through `Diagram` if you need to import or edit the shot) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 482.00 Tm (    layout.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 462.00 Tm (3. Enter `Timing` when you are ready to define relationships and generate timing) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 447.00 Tm (    results.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 427.00 Tm (4. Use `Print` when you want page-tab output for diagram pages, timing pages, or) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 412.00 Tm (    a mixed print session.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 368 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 384.00 Tm (Diagram Mode) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 354.00 Tm (Diagram mode is where the shot is imported and prepared.) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 333.00 Tm (Import) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 315.00 Tm (Use the `Import` menu to bring in a CSV.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 294.00 Tm (- Supported core columns are collar coordinates, toe coordinates, and hole id.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 274.00 Tm (- Optional columns include `angle`, `bearing`, and `depth`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 254.00 Tm (- If angle is missing or invalid, Daniel Fire defaults it to `0`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 234.00 Tm (- `0` angle is treated as no real angle for display purposes, so it will not draw) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 219.00 Tm (  angle labels or bearing arrows.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 199.00 Tm (After import:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 178.00 Tm (- the hole set becomes the shared project hole set) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 7 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 6 0 R >>
 endobj
 8 0 obj
-<< /Length 2012 >>
+<< /Length 2778 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (? `Fit View`) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (? `Coordinate View`) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (? rotation controls for coarse and fine rotation) Tj
-/F1 11 Tf 1 0 0 1 54 672 Tm (? `Reset Rotation`) Tj
-/F2 12 Tf 1 0 0 1 54 648 Tm (Properties Menu) Tj
-/F1 11 Tf 1 0 0 1 54 630 Tm (Use `Properties` to edit the currently selected holes.) Tj
-/F1 11 Tf 1 0 0 1 54 608 Tm (Editable fields:) Tj
-/F1 11 Tf 1 0 0 1 54 586 Tm (? `Burden`) Tj
-/F1 11 Tf 1 0 0 1 54 564 Tm (? `Spacing`) Tj
-/F1 11 Tf 1 0 0 1 54 542 Tm (? `Diameter`) Tj
-/F1 11 Tf 1 0 0 1 54 520 Tm (? `Angle`) Tj
-/F1 11 Tf 1 0 0 1 54 498 Tm (? `Bearing`) Tj
-/F1 11 Tf 1 0 0 1 54 476 Tm (? `Depth`) Tj
-/F1 11 Tf 1 0 0 1 54 454 Tm (? `Stem Height`) Tj
-/F1 11 Tf 1 0 0 1 54 432 Tm (Selection behavior:) Tj
-/F1 11 Tf 1 0 0 1 54 410 Tm (? click a hole to select it) Tj
-/F1 11 Tf 1 0 0 1 54 388 Tm (? `Shift` + click to add or remove holes from the selection) Tj
-/F1 11 Tf 1 0 0 1 54 366 Tm (? use `Apply to Selection` to write changes) Tj
-/F1 11 Tf 1 0 0 1 54 344 Tm (? use `Clear Selection` to clear the current selection) Tj
-/F1 11 Tf 1 0 0 1 54 322 Tm (Default diameter behavior:) Tj
-/F1 11 Tf 1 0 0 1 54 300 Tm (? choose a shot-level `Hole Diameter` in the `Shot` menu) Tj
-/F1 11 Tf 1 0 0 1 54 278 Tm (? use `Apply Default Diameter` in `Properties` to push that diameter to the selected) Tj
-/F1 11 Tf 1 0 0 1 68 263 Tm (holes or, if nothing is selected, to the full shot) Tj
-/F2 12 Tf 1 0 0 1 54 239 Tm (Volume Menu) Tj
-/F1 11 Tf 1 0 0 1 54 221 Tm (Use `Volume` for whole-shot volume and tonnage totals.) Tj
-/F1 11 Tf 1 0 0 1 54 199 Tm (The app calculates per-hole cubic yards as:) Tj
-/F1 11 Tf 1 0 0 1 54 177 Tm (`\(burden * spacing * depth\) / 27`) Tj
-/F1 11 Tf 1 0 0 1 54 155 Tm (Then it sums all valid holes to show:) Tj
-/F1 11 Tf 1 0 0 1 54 133 Tm (? `Included Holes`) Tj
-/F1 11 Tf 1 0 0 1 54 111 Tm (? `Total Cubic Yards`) Tj
-/F1 11 Tf 1 0 0 1 54 89 Tm (? `Total Tons`) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 3 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 3 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 720.00 Tm (- the view can be switched between `Collar` and `Toe`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 700.00 Tm (- a fresh import resets diagram-specific project metadata and face designation) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 680.00 Tm (Shot Menu) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 662.00 Tm (Use `Shot` to manage shot-level metadata and pattern assignment.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 641.00 Tm (Fields:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 620.00 Tm (- `Shot Number`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 600.00 Tm (- `Location`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 580.00 Tm (- `Bench`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 560.00 Tm (- `Hole Diameter`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 540.00 Tm (Pattern assignment uses two numeric burden x spacing pairs:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 519.00 Tm (- `Face Pattern`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 499.00 Tm (- `Interior Pattern`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 479.00 Tm (Buttons:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 458.00 Tm (- `Assign Face`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 438.00 Tm (- `Clear Face`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 418.00 Tm (- `Apply Pattern`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 398.00 Tm (Typical pattern workflow:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 377.00 Tm (1. Enter all four numeric pattern values.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 357.00 Tm (2. Click `Assign Face`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 337.00 Tm (3. Draw a polygon around the face holes on the diagram.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 317.00 Tm (4. Click `Apply Pattern`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 297.00 Tm (What happens on apply:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 276.00 Tm (- face-designated holes receive the face burden and spacing) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 256.00 Tm (- all other holes receive the interior burden and spacing) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 236.00 Tm (- existing burden and spacing values are overwritten) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 9 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 8 0 R >>
 endobj
 10 0 obj
-<< /Length 2067 >>
+<< /Length 2616 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (Tons are calculated as:) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (`total cubic yards * rock density`) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (Current default density is:) Tj
-/F1 11 Tf 1 0 0 1 54 672 Tm (`2.3 tons / cubic yard`) Tj
-/F1 11 Tf 1 0 0 1 54 650 Tm (Notes:) Tj
-/F1 11 Tf 1 0 0 1 54 628 Tm (? Volume totals are whole-shot totals, not per-hole output.) Tj
-/F1 11 Tf 1 0 0 1 54 606 Tm (? Holes with missing burden, spacing, or depth are excluded from the total.) Tj
-/F1 11 Tf 1 0 0 1 54 584 Tm (? Changing properties or applying a pattern updates the volume summary.) Tj
-/F2 12 Tf 1 0 0 1 54 560 Tm (Diagram Tools) Tj
-/F1 11 Tf 1 0 0 1 54 542 Tm (The floating toolkit supports:) Tj
-/F1 11 Tf 1 0 0 1 54 520 Tm (? `Select`) Tj
-/F1 11 Tf 1 0 0 1 54 498 Tm (? `Box`) Tj
-/F1 11 Tf 1 0 0 1 54 476 Tm (? `Polygon`) Tj
-/F1 11 Tf 1 0 0 1 54 454 Tm (? `Markup`) Tj
-/F1 11 Tf 1 0 0 1 54 432 Tm (? `Text`) Tj
-/F1 11 Tf 1 0 0 1 54 410 Tm (Additional annotation controls let you choose:) Tj
-/F1 11 Tf 1 0 0 1 54 388 Tm (? annotation color) Tj
-/F1 11 Tf 1 0 0 1 54 366 Tm (? annotation size) Tj
-/F1 11 Tf 1 0 0 1 54 344 Tm (? `Clear Markup`) Tj
-/F1 11 Tf 1 0 0 1 54 322 Tm (? `Clear Text`) Tj
-/F1 11 Tf 1 0 0 1 54 300 Tm (Tool behavior:) Tj
-/F1 11 Tf 1 0 0 1 54 278 Tm (? `Select` is for single and shift multi-select) Tj
-/F1 11 Tf 1 0 0 1 54 256 Tm (? `Box` selects holes inside a dragged rectangle) Tj
-/F1 11 Tf 1 0 0 1 54 234 Tm (? `Polygon` selects holes inside a drawn polygon) Tj
-/F1 11 Tf 1 0 0 1 54 212 Tm (? `Markup` draws freehand lines in diagram world coordinates) Tj
-/F1 11 Tf 1 0 0 1 54 190 Tm (? `Text` places text annotations on the diagram) Tj
-/F1 11 Tf 1 0 0 1 54 168 Tm (Annotations follow pan, zoom, rotation, and print layout.) Tj
-/F2 15 Tf 1 0 0 1 54 142 Tm (Timing Mode) Tj
-/F1 11 Tf 1 0 0 1 54 122 Tm (Timing mode uses the shared project hole set and focuses on relationship pathing and) Tj
-/F1 11 Tf 1 0 0 1 54 107 Tm (timing output.) Tj
-/F1 11 Tf 1 0 0 1 54 85 Tm (Typical workflow:) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 4 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 4 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 720.00 Tm (The face designation persists until you redefine it, clear it, or import a new) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 705.00 Tm (project.) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 684.00 Tm (View Menu) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 666.00 Tm (Use `View` to control how the shot is displayed.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 645.00 Tm (Options include:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 624.00 Tm (- `Show Grid`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 604.00 Tm (- `Show Angle`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 584.00 Tm (- `Show Bearing`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 564.00 Tm (- `Show Bearing Arrows`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 544.00 Tm (- `Show Depth`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 524.00 Tm (- `Fit View`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 504.00 Tm (- `Coordinate View`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 484.00 Tm (- rotation controls for coarse and fine rotation) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 464.00 Tm (- `Reset Rotation`) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 444.00 Tm (Properties Menu) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 426.00 Tm (Use `Properties` to edit the currently selected holes.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 405.00 Tm (Editable fields:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 384.00 Tm (- `Burden`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 364.00 Tm (- `Spacing`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 344.00 Tm (- `Diameter`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 324.00 Tm (- `Angle`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 304.00 Tm (- `Bearing`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 284.00 Tm (- `Depth`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 264.00 Tm (- `Stem Height`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 244.00 Tm (Selection behavior:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 223.00 Tm (- click a hole to select it) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 11 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 10 0 R >>
 endobj
 12 0 obj
-<< /Length 1966 >>
+<< /Length 3050 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (1. Switch to `Timing`.) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (2. Select an origin hole.) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (3. Draw timing relationships.) Tj
-/F1 11 Tf 1 0 0 1 54 672 Tm (4. Enter H2H, R2R, and offset timing ranges.) Tj
-/F1 11 Tf 1 0 0 1 54 650 Tm (5. Run the solver.) Tj
-/F1 11 Tf 1 0 0 1 54 628 Tm (6. Review timing results and preview a selection.) Tj
-/F1 11 Tf 1 0 0 1 54 606 Tm (7. Simulate the active timing if needed.) Tj
-/F1 11 Tf 1 0 0 1 54 584 Tm (Timing data persists across mode switches inside the current session.) Tj
-/F2 15 Tf 1 0 0 1 54 558 Tm (Print Preview) Tj
-/F1 11 Tf 1 0 0 1 54 538 Tm (Print preview is shared across the planner and uses page tabs.) Tj
-/F1 11 Tf 1 0 0 1 54 516 Tm (Main controls:) Tj
-/F1 11 Tf 1 0 0 1 54 494 Tm (? `Back`) Tj
-/F1 11 Tf 1 0 0 1 54 472 Tm (? `Print`) Tj
-/F1 11 Tf 1 0 0 1 54 450 Tm (? `Fit Page`) Tj
-/F1 11 Tf 1 0 0 1 54 428 Tm (? `Edit Labels`) Tj
-/F1 11 Tf 1 0 0 1 54 406 Tm (? `Reset Labels`) Tj
-/F1 11 Tf 1 0 0 1 54 384 Tm (? `Add Page`) Tj
-/F1 11 Tf 1 0 0 1 54 362 Tm (? `Add Timing Page` when timing results exist) Tj
-/F1 11 Tf 1 0 0 1 54 340 Tm (Print controls can include:) Tj
-/F1 11 Tf 1 0 0 1 54 318 Tm (? text size) Tj
-/F1 11 Tf 1 0 0 1 54 296 Tm (? color mode) Tj
-/F1 11 Tf 1 0 0 1 54 274 Tm (? relationship visibility) Tj
-/F1 11 Tf 1 0 0 1 54 252 Tm (? angle visibility) Tj
-/F1 11 Tf 1 0 0 1 54 230 Tm (? bearing visibility) Tj
-/F1 11 Tf 1 0 0 1 54 208 Tm (? bearing arrow weight) Tj
-/F1 11 Tf 1 0 0 1 54 186 Tm (? bearing arrow length) Tj
-/F1 11 Tf 1 0 0 1 54 164 Tm (? depth visibility) Tj
-/F1 11 Tf 1 0 0 1 54 142 Tm (Important behavior:) Tj
-/F1 11 Tf 1 0 0 1 54 120 Tm (? each print tab is an independent page) Tj
-/F1 11 Tf 1 0 0 1 54 98 Tm (? adding a page duplicates the active page state) Tj
-/F1 11 Tf 1 0 0 1 54 76 Tm (? page-specific zoom, pan, rotation, toggles, and label edits can diverge per page) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 5 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 5 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 720.00 Tm (- `Shift` + click to add or remove holes from the selection) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 700.00 Tm (- use `Apply to Selection` to write changes) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 680.00 Tm (- use `Clear Selection` to clear the current selection) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 660.00 Tm (Default diameter behavior:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 639.00 Tm (- choose a shot-level `Hole Diameter` in the `Shot` menu) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 619.00 Tm (- use `Apply Default Diameter` in `Properties` to push that diameter to the) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 604.00 Tm (  selected holes or, if nothing is selected, to the full shot) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 584.00 Tm (Volume Menu) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 566.00 Tm (Use `Volume` for whole-shot volume and tonnage totals.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 545.00 Tm (The app calculates per-hole cubic yards as:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 524.00 Tm (`\(burden * spacing * depth\) / 27`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 503.00 Tm (Then it sums all valid holes to show:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 482.00 Tm (- `Included Holes`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 462.00 Tm (- `Total Cubic Yards`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 442.00 Tm (- `Total Tons`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 422.00 Tm (Tons are calculated as:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 401.00 Tm (`total cubic yards * rock density`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 380.00 Tm (Current default density is:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 359.00 Tm (`2.3 tons / cubic yard`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 338.00 Tm (Notes:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 317.00 Tm (- Volume totals are whole-shot totals, not per-hole output.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 297.00 Tm (- Holes with missing burden, spacing, or depth are excluded from the total.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 277.00 Tm (- Changing properties or applying a pattern updates the volume summary.) Tj ET
+0.09 0.28 0.54 rg
+BT /F2 11.5 Tf 1 0 0 1 52.00 257.00 Tm (Diagram Tools) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 239.00 Tm (The floating toolkit supports:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 218.00 Tm (- `Select`) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 13 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 12 0 R >>
 endobj
 14 0 obj
-<< /Length 2485 >>
+<< /Length 2795 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (? print label edits are session-only and reset when print preview closes) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (Diagram print pages include:) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (? shot metadata header) Tj
-/F1 11 Tf 1 0 0 1 54 672 Tm (? diagram labels) Tj
-/F1 11 Tf 1 0 0 1 54 650 Tm (? markup and text annotations) Tj
-/F1 11 Tf 1 0 0 1 54 628 Tm (? optional angle, bearing, and depth labels) Tj
-/F1 11 Tf 1 0 0 1 54 606 Tm (Timing print pages can be added from Diagram print when timing results already exist) Tj
-/F1 11 Tf 1 0 0 1 54 591 Tm (in the shared project.) Tj
-/F2 15 Tf 1 0 0 1 54 565 Tm (Recommended Workflow) Tj
-/F1 11 Tf 1 0 0 1 54 545 Tm (For a normal blast layout:) Tj
-/F1 11 Tf 1 0 0 1 54 523 Tm (1. Import the CSV in `Diagram`.) Tj
-/F1 11 Tf 1 0 0 1 54 501 Tm (2. Set shot metadata in `Shot`.) Tj
-/F1 11 Tf 1 0 0 1 54 479 Tm (3. Set the default hole diameter.) Tj
-/F1 11 Tf 1 0 0 1 54 457 Tm (4. Designate face holes and apply the face/interior pattern.) Tj
-/F1 11 Tf 1 0 0 1 54 435 Tm (5. Review and adjust burden, spacing, depth, angle, or bearing in `Properties`.) Tj
-/F1 11 Tf 1 0 0 1 54 413 Tm (6. Check whole-shot totals in `Volume`.) Tj
-/F1 11 Tf 1 0 0 1 54 391 Tm (7. Add markup or text annotations if needed.) Tj
-/F1 11 Tf 1 0 0 1 54 369 Tm (8. Switch to `Timing` and build relationships.) Tj
-/F1 11 Tf 1 0 0 1 54 347 Tm (9. Solve and review timing results.) Tj
-/F1 11 Tf 1 0 0 1 54 325 Tm (10. Open `Print` and assemble the required page tabs.) Tj
-/F2 15 Tf 1 0 0 1 54 299 Tm (Tips) Tj
-/F1 11 Tf 1 0 0 1 54 279 Tm (? If angle labels or bearing arrows are missing, check whether the hole angle is) Tj
-/F1 11 Tf 1 0 0 1 68 264 Tm (`0`.) Tj
-/F1 11 Tf 1 0 0 1 54 242 Tm (? If volume looks low, confirm burden, spacing, and depth are present on the holes) Tj
-/F1 11 Tf 1 0 0 1 68 227 Tm (you expect to count.) Tj
-/F1 11 Tf 1 0 0 1 54 205 Tm (? If `Apply Pattern` does nothing, make sure all four pattern inputs are filled and) Tj
-/F1 11 Tf 1 0 0 1 68 190 Tm (at least one face hole is designated.) Tj
-/F1 11 Tf 1 0 0 1 54 168 Tm (? If you want a clean page variant, duplicate a print page and adjust only that tab.) Tj
-/F2 15 Tf 1 0 0 1 54 142 Tm (Current Limits) Tj
-/F1 11 Tf 1 0 0 1 54 122 Tm (As of this guide:) Tj
-/F1 11 Tf 1 0 0 1 54 100 Tm (? project persistence to disk is still limited) Tj
-/F1 11 Tf 1 0 0 1 54 78 Tm (? print label edits are only stored for the current print session) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 6 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 6 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 720.00 Tm (- `Box`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 700.00 Tm (- `Polygon`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 680.00 Tm (- `Markup`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 660.00 Tm (- `Text`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 640.00 Tm (Additional annotation controls let you choose:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 619.00 Tm (- annotation color) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 599.00 Tm (- annotation size) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 579.00 Tm (- `Clear Markup`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 559.00 Tm (- `Clear Text`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 539.00 Tm (Tool behavior:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 518.00 Tm (- `Select` is for single and shift multi-select) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 498.00 Tm (- `Box` selects holes inside a dragged rectangle) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 478.00 Tm (- `Polygon` selects holes inside a drawn polygon) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 458.00 Tm (- `Markup` draws freehand lines in diagram world coordinates) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 438.00 Tm (- `Text` places text annotations on the diagram) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 418.00 Tm (Annotations follow pan, zoom, rotation, and print layout.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 373 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 389.00 Tm (Timing Mode) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 359.00 Tm (Timing mode uses the shared project hole set and focuses on relationship pathing and) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 344.00 Tm (timing output.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 323.00 Tm (Typical workflow:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 302.00 Tm (1. Switch to `Timing`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 282.00 Tm (2. Select an origin hole.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 262.00 Tm (3. Draw timing relationships.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 242.00 Tm (4. Enter H2H, R2R, and offset timing ranges.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 222.00 Tm (5. Run the solver.) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 15 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 14 0 R >>
 endobj
 16 0 obj
-<< /Length 1013 >>
+<< /Length 2708 >>
 stream
-BT
-/F1 11 Tf 1 0 0 1 54 738 Tm (? multi-page print sessions are in-memory only) Tj
-/F1 11 Tf 1 0 0 1 54 716 Tm (? volume is shown as whole-shot totals only) Tj
-/F1 11 Tf 1 0 0 1 54 694 Tm (? the built-in Help page is still older timing-focused content and does not fully) Tj
-/F1 11 Tf 1 0 0 1 68 679 Tm (reflect the current planner) Tj
-/F2 15 Tf 1 0 0 1 54 653 Tm (Quick Reference) Tj
-/F1 11 Tf 1 0 0 1 54 633 Tm (? `Diagram`: import, edit, annotate, pattern, print prep) Tj
-/F1 11 Tf 1 0 0 1 54 611 Tm (? `Timing`: relationships, timing ranges, solve, preview) Tj
-/F1 11 Tf 1 0 0 1 54 589 Tm (? `Shot`: metadata, default diameter, face/interior pattern) Tj
-/F1 11 Tf 1 0 0 1 54 567 Tm (? `View`: display toggles and rotation) Tj
-/F1 11 Tf 1 0 0 1 54 545 Tm (? `Properties`: selected-hole edits) Tj
-/F1 11 Tf 1 0 0 1 54 523 Tm (? `Volume`: whole-shot cubic yards and tons) Tj
-/F1 11 Tf 1 0 0 1 54 501 Tm (? `Print`: multi-page print session with per-tab settings) Tj
-/F1 9 Tf 1 0 0 1 488 42 Tm (Page 7 of 7) Tj
-ET
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 7 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 720.00 Tm (6. Review timing results and preview a selection.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 700.00 Tm (7. Simulate the active timing if needed.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 680.00 Tm (Timing data persists across mode switches inside the current session.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 635 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 651.00 Tm (Print Preview) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 621.00 Tm (Print preview is shared across the planner and uses page tabs.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 600.00 Tm (Main controls:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 579.00 Tm (- `Back`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 559.00 Tm (- `Print`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 539.00 Tm (- `Fit Page`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 519.00 Tm (- `Edit Labels`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 499.00 Tm (- `Reset Labels`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 479.00 Tm (- `Add Page`) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 459.00 Tm (- `Add Timing Page` when timing results exist) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 439.00 Tm (Print controls can include:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 418.00 Tm (- text size) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 398.00 Tm (- color mode) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 378.00 Tm (- relationship visibility) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 358.00 Tm (- angle visibility) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 338.00 Tm (- bearing visibility) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 318.00 Tm (- bearing arrow weight) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 298.00 Tm (- bearing arrow length) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 278.00 Tm (- depth visibility) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 258.00 Tm (Important behavior:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 237.00 Tm (- each print tab is an independent page) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 217.00 Tm (- adding a page duplicates the active page state) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
 endstream
 endobj
 17 0 obj
 << /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 16 0 R >>
 endobj
 18 0 obj
+<< /Length 3041 >>
+stream
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 8 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 720.00 Tm (- page-specific zoom, pan, rotation, toggles, and label edits can diverge per page) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 700.00 Tm (- print label edits are session-only and reset when print preview closes) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 680.00 Tm (Diagram print pages include:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 659.00 Tm (- shot metadata header) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 639.00 Tm (- diagram labels) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 619.00 Tm (- markup and text annotations) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 599.00 Tm (- optional angle, bearing, and depth labels) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 579.00 Tm (Timing print pages can be added from Diagram print when timing results already exist) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 564.00 Tm (in the shared project.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 519 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 535.00 Tm (Recommended Workflow) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 505.00 Tm (For a normal blast layout:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 484.00 Tm (1. Import the CSV in `Diagram`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 464.00 Tm (2. Set shot metadata in `Shot`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 444.00 Tm (3. Set the default hole diameter.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 424.00 Tm (4. Designate face holes and apply the face/interior pattern.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 404.00 Tm (5. Review and adjust burden, spacing, depth, angle, or bearing in `Properties`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 384.00 Tm (6. Check whole-shot totals in `Volume`.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 364.00 Tm (7. Add markup or text annotations if needed.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 344.00 Tm (8. Switch to `Timing` and build relationships.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 324.00 Tm (9. Solve and review timing results.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 304.00 Tm (10. Open `Print` and assemble the required page tabs.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 259 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 275.00 Tm (Tips) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 245.00 Tm (- If angle labels or bearing arrows are missing, check whether the hole angle is) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 230.00 Tm (  `0`.) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
+endstream
+endobj
+19 0 obj
+<< /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 18 0 R >>
+endobj
+20 0 obj
+<< /Length 2937 >>
+stream
+1.0 1.0 1.0 rg
+0 0 612 792 re f
+0.91 0.95 0.99 rg
+0 752 612 40 re f
+0.09 0.28 0.54 rg
+BT /F2 11 Tf 1 0 0 1 52.00 766.00 Tm (Daniel Fire User Guide) Tj ET
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 480.00 766.00 Tm (Page 9 of 9) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 720.00 Tm (- If volume looks low, confirm burden, spacing, and depth are present on the holes) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 705.00 Tm (  you expect to count.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 685.00 Tm (- If `Apply Pattern` does nothing, make sure all four pattern inputs are filled) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 670.00 Tm (  and at least one face hole is designated.) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 650.00 Tm (- If you want a clean page variant, duplicate a print page and adjust only that) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 635.00 Tm (  tab.) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 591 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 607.00 Tm (Current Limits) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 52.00 577.00 Tm (As of this guide:) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 556.00 Tm (- project persistence to disk is still limited) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 536.00 Tm (- print label edits are only stored for the current print session) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 516.00 Tm (- multi-page print sessions are in-memory only) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 496.00 Tm (- volume is shown as whole-shot totals only) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 476.00 Tm (- the built-in Help page is still older timing-focused content and does not fully) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 461.00 Tm (  reflect the current planner) Tj ET
+0.91 0.95 0.99 rg
+0.82 0.88 0.95 RG
+1 w
+52 417 508 24 re B
+0.09 0.28 0.54 rg
+BT /F2 14 Tf 1 0 0 1 66.00 433.00 Tm (Quick Reference) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 403.00 Tm (- `Diagram`: import, edit, annotate, pattern, print prep) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 383.00 Tm (- `Timing`: relationships, timing ranges, solve, preview) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 363.00 Tm (- `Shot`: metadata, default diameter, face/interior pattern) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 343.00 Tm (- `View`: display toggles and rotation) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 323.00 Tm (- `Properties`: selected-hole edits) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 303.00 Tm (- `Volume`: whole-shot cubic yards and tons) Tj ET
+0.19 0.27 0.4 rg
+BT /F1 10.5 Tf 1 0 0 1 60.00 283.00 Tm (- `Print`: multi-page print session with per-tab settings) Tj ET
+0.82 0.88 0.95 RG
+1 w
+52 48 508 0 l S
+0.4 0.48 0.6 rg
+BT /F1 9 Tf 1 0 0 1 52.00 34.00 Tm (Generated from HOW_TO_USE.md for the current repo state.) Tj ET
+endstream
+endobj
+21 0 obj
+<< /Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 20 0 R >>
+endobj
+22 0 obj
 << /Type /Catalog /Pages 3 0 R >>
 endobj
 xref
-0 19
+0 23
 0000000000 65535 f 
 0000000015 00000 n 
 0000000085 00000 n 
 0000000160 00000 n 
-0000000257 00000 n 
-0000002857 00000 n 
-0000002993 00000 n 
-0000004954 00000 n 
-0000005090 00000 n 
-0000007154 00000 n 
-0000007290 00000 n 
-0000009410 00000 n 
-0000009548 00000 n 
-0000011567 00000 n 
-0000011705 00000 n 
-0000014243 00000 n 
-0000014381 00000 n 
-0000015447 00000 n 
-0000015585 00000 n 
+0000000271 00000 n 
+0000001374 00000 n 
+0000001510 00000 n 
+0000005076 00000 n 
+0000005212 00000 n 
+0000008042 00000 n 
+0000008178 00000 n 
+0000010847 00000 n 
+0000010985 00000 n 
+0000014088 00000 n 
+0000014226 00000 n 
+0000017074 00000 n 
+0000017212 00000 n 
+0000019973 00000 n 
+0000020111 00000 n 
+0000023205 00000 n 
+0000023343 00000 n 
+0000026333 00000 n 
+0000026471 00000 n 
 trailer
-<< /Size 19 /Root 18 0 R >>
+<< /Size 23 /Root 22 0 R >>
 startxref
-15635
+26521
 %%EOF

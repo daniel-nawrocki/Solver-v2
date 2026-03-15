@@ -1,7 +1,7 @@
 import { parseCsvText, buildHolesFromMapping } from "./csvParser.js";
 import { DiagramRenderer } from "./diagramRenderer.js";
 import { initTimingControls } from "./timingControls.js";
-import { solveTimingCombinations, formatTimingResult, validateTimingGraph } from "./timingSolver.js";
+import { solveTimingCombinations, formatTimingResult, validateTimingGraph, buildManualTimingResult } from "./timingSolver.js";
 import {
   addRelationship,
   clearRelationships,
@@ -61,6 +61,7 @@ function createSolverState() {
       showGrid: true,
       showRelationships: true,
       showOverlayText: true,
+      timingMode: "solver",
       toolMode: "origin",
       coordView: "collar",
       activeTimingPreviewIndex: -1,
@@ -82,6 +83,11 @@ function createSolverState() {
       holeToHole: { min: 16, max: 34 },
       rowToRow: { min: 84, max: 142 },
       offset: { min: 17, max: 42 },
+    },
+    manualTiming: {
+      holeDelay: 16,
+      rowDelay: 84,
+      offsetDelay: 17,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     csvCache: null,
@@ -221,6 +227,7 @@ const projectState = {
       showGrid: true,
       showRelationships: true,
       showOverlayText: true,
+      timingMode: "solver",
       toolMode: "origin",
       activeTimingPreviewIndex: -1,
     },
@@ -228,6 +235,11 @@ const projectState = {
       holeToHole: { min: 16, max: 34 },
       rowToRow: { min: 84, max: 142 },
       offset: { min: 17, max: 42 },
+    },
+    manualTiming: {
+      holeDelay: 16,
+      rowDelay: 84,
+      offsetDelay: 17,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
@@ -298,12 +310,20 @@ const els = {
   clearRelationshipsBtn: document.getElementById("clearRelationshipsBtn"),
   clearOriginBtn: document.getElementById("clearOriginBtn"),
   relationshipList: document.getElementById("relationshipList"),
+  timingSolverModeBtn: document.getElementById("timingSolverModeBtn"),
+  timingManualModeBtn: document.getElementById("timingManualModeBtn"),
+  timingMenuTitle: document.getElementById("timingMenuTitle"),
+  timingSolverFields: document.getElementById("timingSolverFields"),
+  timingManualFields: document.getElementById("timingManualFields"),
   holeDelayMin: document.getElementById("holeDelayMinInput"),
   holeDelayMax: document.getElementById("holeDelayMaxInput"),
   rowDelayMin: document.getElementById("rowDelayMinInput"),
   rowDelayMax: document.getElementById("rowDelayMaxInput"),
   offsetDelayMin: document.getElementById("offsetDelayMinInput"),
   offsetDelayMax: document.getElementById("offsetDelayMaxInput"),
+  manualHoleDelayInput: document.getElementById("manualHoleDelayInput"),
+  manualRowDelayInput: document.getElementById("manualRowDelayInput"),
+  manualOffsetDelayInput: document.getElementById("manualOffsetDelayInput"),
   solveTimingBtn: document.getElementById("solveTimingBtn"),
   timingResults: document.getElementById("timingResults"),
   timingResultsMenuWrap: document.getElementById("timingResultsMenuWrap"),
@@ -579,6 +599,7 @@ function cloneSelectedTiming(selectedTiming) {
     ...selectedTiming,
     holeTimes: new Map(selectedTiming.holeTimes),
     offsetAssignments: selectedTiming.offsetAssignments ? new Map(selectedTiming.offsetAssignments) : new Map(),
+    delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
   }];
 }
 
@@ -646,11 +667,20 @@ function cloneTimingRanges(timing = {}) {
   };
 }
 
+function cloneManualTiming(manualTiming = {}) {
+  return {
+    holeDelay: Number.isFinite(Number(manualTiming.holeDelay)) ? Number(manualTiming.holeDelay) : 16,
+    rowDelay: Number.isFinite(Number(manualTiming.rowDelay)) ? Number(manualTiming.rowDelay) : 84,
+    offsetDelay: Number.isFinite(Number(manualTiming.offsetDelay)) ? Number(manualTiming.offsetDelay) : 17,
+  };
+}
+
 function cloneTimingResults(results = []) {
   return results.map((result) => ({
     ...result,
     holeTimes: result.holeTimes ? new Map(result.holeTimes) : new Map(),
     offsetAssignments: result.offsetAssignments ? new Map(result.offsetAssignments) : new Map(),
+    delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
   }));
 }
 
@@ -690,11 +720,13 @@ function hydrateSolverFromProject() {
   solverState.csvCache = projectState.csvCache;
   solverState.relationships = cloneRelationshipsState(projectState.timing.relationships);
   solverState.timing = cloneTimingRanges(projectState.timing.timing);
+  solverState.manualTiming = cloneManualTiming(projectState.timing.manualTiming);
   solverState.timingResults = cloneTimingResults(projectState.timing.timingResults);
   solverState.solverMessage = projectState.timing.solverMessage || "";
   solverState.ui.showGrid = projectState.timing.ui.showGrid !== false;
   solverState.ui.showRelationships = projectState.timing.ui.showRelationships !== false;
   solverState.ui.showOverlayText = projectState.timing.ui.showOverlayText !== false;
+  solverState.ui.timingMode = projectState.timing.ui.timingMode === "manual" ? "manual" : "solver";
   solverState.ui.toolMode = projectState.timing.ui.toolMode || "origin";
   solverState.ui.coordView = projectState.view.coordView || "collar";
   solverState.ui.activeTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
@@ -703,6 +735,8 @@ function hydrateSolverFromProject() {
   solverState.ui.relationshipDraft = null;
   solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
   timingControlsApi?.syncFromState?.();
+  syncManualTimingInputs();
+  renderTimingModeControls();
 }
 
 function hydrateDiagramFromProject() {
@@ -737,11 +771,13 @@ function persistTimingStateToProject() {
   projectState.timing.ui.showGrid = solverState.ui.showGrid !== false;
   projectState.timing.ui.showRelationships = solverState.ui.showRelationships !== false;
   projectState.timing.ui.showOverlayText = solverState.ui.showOverlayText !== false;
+  projectState.timing.ui.timingMode = solverState.ui.timingMode === "manual" ? "manual" : "solver";
   projectState.timing.ui.toolMode = solverState.ui.toolMode || "origin";
   projectState.timing.ui.activeTimingPreviewIndex = Number.isInteger(solverState.ui.activeTimingPreviewIndex)
     ? solverState.ui.activeTimingPreviewIndex
     : -1;
   projectState.timing.timing = cloneTimingRanges(solverState.timing);
+  projectState.timing.manualTiming = cloneManualTiming(solverState.manualTiming);
   projectState.timing.relationships = cloneRelationshipsState(solverState.relationships);
   projectState.timing.timingResults = cloneTimingResults(solverState.timingResults);
   projectState.timing.solverMessage = solverState.solverMessage || "";
@@ -822,8 +858,10 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.timing.ui.showGrid = true;
   projectState.timing.ui.showRelationships = true;
   projectState.timing.ui.showOverlayText = true;
+  projectState.timing.ui.timingMode = "solver";
   projectState.timing.ui.toolMode = "origin";
   projectState.timing.ui.activeTimingPreviewIndex = -1;
+  projectState.timing.manualTiming = cloneManualTiming();
   projectState.timing.timingVisualization = cloneTimingVisualizationState();
 }
 
@@ -834,6 +872,59 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function activeTimingMode() {
+  return solverState.ui.timingMode === "manual" ? "manual" : "solver";
+}
+
+function defaultTimingMessage() {
+  return activeTimingMode() === "manual"
+    ? "Enter manual H2H, R2R, and Offset values, then apply manual timing."
+    : "Run solver to see best delay combinations.";
+}
+
+function syncManualTimingInputs() {
+  els.manualHoleDelayInput.value = String(solverState.manualTiming.holeDelay);
+  els.manualRowDelayInput.value = String(solverState.manualTiming.rowDelay);
+  els.manualOffsetDelayInput.value = String(solverState.manualTiming.offsetDelay);
+}
+
+function renderTimingModeControls() {
+  const manualMode = activeTimingMode() === "manual";
+  els.timingSolverModeBtn.classList.toggle("active", !manualMode);
+  els.timingManualModeBtn.classList.toggle("active", manualMode);
+  els.timingMenuTitle.textContent = manualMode ? "Manual Timing" : "Timing Ranges";
+  els.timingSolverFields.classList.toggle("hidden", manualMode);
+  els.timingManualFields.classList.toggle("hidden", !manualMode);
+  els.solveTimingBtn.textContent = manualMode ? "Apply Manual Timing" : "Run Timing Combinations";
+}
+
+function setTimingMode(mode) {
+  const nextMode = mode === "manual" ? "manual" : "solver";
+  if (solverState.ui.timingMode === nextMode) return;
+  resetTimingVisualization();
+  solverState.ui.timingMode = nextMode;
+  solverState.timingResults = [];
+  solverState.ui.activeTimingPreviewIndex = -1;
+  solverState.solverMessage = defaultTimingMessage();
+  renderTimingModeControls();
+  fullSolverRefresh();
+}
+
+function manualDelayCountsMarkup(result) {
+  if (!Array.isArray(result.delayCounts) || !result.delayCounts.length) return "";
+  const rows = result.delayCounts
+    .map((entry) => `<div class="timing-delay-count-row"><span>${escapeHtml(`${entry.time}ms`)}</span><strong>${escapeHtml(`${entry.count} hole${entry.count === 1 ? "" : "s"}`)}</strong></div>`)
+    .join("");
+  return `<div class="timing-delay-counts">${rows}</div>`;
+}
+
+function syncManualTimingFromInputs() {
+  solverState.manualTiming.holeDelay = Number(els.manualHoleDelayInput.value) || 0;
+  solverState.manualTiming.rowDelay = Number(els.manualRowDelayInput.value) || 0;
+  solverState.manualTiming.offsetDelay = Number(els.manualOffsetDelayInput.value) || 0;
+  persistTimingStateToProject();
 }
 
 function cloneLabelLayoutMap(layoutMap = new Map()) {
@@ -865,6 +956,7 @@ function clonePrintPage(page) {
       ...timing,
       holeTimes: new Map(timing.holeTimes),
       offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
+      delayCounts: Array.isArray(timing.delayCounts) ? timing.delayCounts.map((entry) => ({ ...entry })) : [],
     })),
     viewport: {
       zoom: Number(page.viewport?.zoom) || 1,
@@ -1784,13 +1876,14 @@ function renderTimingResults() {
     resultsButton?.classList.remove("active");
   }
   if (!solverState.timingResults.length) {
-    els.timingResults.innerHTML = `<div>${escapeHtml(solverState.solverMessage || "Run solver to see best delay combinations.")}</div>`;
+    els.timingResults.innerHTML = `<div>${escapeHtml(solverState.solverMessage || defaultTimingMessage())}</div>`;
     renderTimingVisualizationControls();
     return;
   }
   els.timingResults.innerHTML = solverState.timingResults.map((result, index) => {
     const active = index === solverState.ui.activeTimingPreviewIndex ? "active" : "";
-    return `<button class="timing-item ${active}" data-timing-index="${index}">${escapeHtml(formatTimingResult(result, index))}</button>`;
+    const counts = result.mode === "manual" ? manualDelayCountsMarkup(result) : "";
+    return `<button class="timing-item ${active}" data-timing-index="${index}"><span>${escapeHtml(formatTimingResult(result, index))}</span>${counts}</button>`;
   }).join("");
   renderTimingVisualizationControls();
 }
@@ -1819,7 +1912,7 @@ function applyImportedHoles(holes) {
   solverState.ui.relationshipDraft = null;
   rebuildHolesById(solverState);
   resetGraphState();
-  resetTimingResults();
+  resetTimingResults(defaultTimingMessage());
   applyCoordinateView(solverState, els.coordViewSelect, solverRenderer, "collar");
 }
 
@@ -2575,6 +2668,15 @@ if (els.openDiagramMakerBtn) {
 }
 els.plannerDiagramModeBtn.addEventListener("click", () => switchPlannerMode("diagram"));
 els.plannerTimingModeBtn.addEventListener("click", () => switchPlannerMode("timing"));
+els.timingSolverModeBtn.addEventListener("click", () => setTimingMode("solver"));
+els.timingManualModeBtn.addEventListener("click", () => setTimingMode("manual"));
+[
+  els.manualHoleDelayInput,
+  els.manualRowDelayInput,
+  els.manualOffsetDelayInput,
+].forEach((input) => {
+  input.addEventListener("input", () => syncManualTimingFromInputs());
+});
 
 els.originToolBtn.addEventListener("click", () => setToolMode("origin"));
 els.holeRelationPositiveToolBtn.addEventListener("click", () => setToolMode("holeRelationshipPositive"));
@@ -2585,12 +2687,12 @@ els.offsetRelationToolBtn.addEventListener("click", () => setToolMode("offsetRel
 els.clearRelationshipsBtn.addEventListener("click", () => {
   solverState.relationships.edges = [];
   solverState.ui.relationshipDraft = null;
-  resetTimingResults();
+  resetTimingResults(defaultTimingMessage());
   fullSolverRefresh();
 });
 els.clearOriginBtn.addEventListener("click", () => {
   setOriginHole(solverState, null);
-  resetTimingResults();
+  resetTimingResults(defaultTimingMessage());
   fullSolverRefresh();
 });
 
@@ -2603,22 +2705,34 @@ els.relationshipList.addEventListener("click", (event) => {
   if (action === "edit") editRelationship(edge);
   if (action === "delete") {
     deleteRelationship(solverState, edge.id);
-    resetTimingResults();
+    resetTimingResults(defaultTimingMessage());
     fullSolverRefresh();
   }
 });
 
 els.solveTimingBtn.addEventListener("click", () => {
   resetTimingVisualization();
-  const validation = validateTimingGraph(solverState);
-  if (!validation.valid) {
-    resetTimingResults(validation.reason);
-    solverRenderer.render();
-    return;
+  if (activeTimingMode() === "manual") {
+    const manual = buildManualTimingResult(solverState, solverState.manualTiming);
+    if (!manual.valid) {
+      resetTimingResults(manual.reason || "Manual timing could not be applied.");
+      solverRenderer.render();
+      return;
+    }
+    solverState.timingResults = [manual.result];
+    solverState.ui.activeTimingPreviewIndex = 0;
+    solverState.solverMessage = "";
+  } else {
+    const validation = validateTimingGraph(solverState);
+    if (!validation.valid) {
+      resetTimingResults(validation.reason);
+      solverRenderer.render();
+      return;
+    }
+    solverState.timingResults = solveTimingCombinations(solverState);
+    solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
+    solverState.solverMessage = solverState.timingResults.length ? "" : "No valid timing combinations were produced for the current graph.";
   }
-  solverState.timingResults = solveTimingCombinations(solverState);
-  solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
-  solverState.solverMessage = solverState.timingResults.length ? "" : "No valid timing combinations were produced for the current graph.";
   renderTimingResults();
   if (solverState.timingResults.length) openMenu("timingResultsMenu");
   solverRenderer.render();
@@ -2728,6 +2842,8 @@ els.diagramAnnotationSizeSelect.value = diagramState.ui.annotationSize;
 setDiagramToolMode(diagramState.ui.activeTool);
 els.diagramBearingLabelToggle.checked = diagramState.ui.showBearingLabels;
 els.diagramBearingArrowToggle.checked = diagramState.ui.showBearingArrows;
+syncManualTimingInputs();
+renderTimingModeControls();
 syncRelationshipVisibilityUi();
 renderOriginStatus();
 renderRelationshipList();

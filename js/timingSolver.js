@@ -24,6 +24,18 @@ function maxHolesInWindow(times, windowMs = 8) {
   return maxCount;
 }
 
+function summarizeDelayCounts(holeTimes) {
+  const counts = new Map();
+  for (const value of holeTimes.values()) {
+    if (!Number.isFinite(value)) continue;
+    const rounded = Math.round(value * 1000) / 1000;
+    counts.set(rounded, (counts.get(rounded) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([time, count]) => ({ time, count }));
+}
+
 function edgeDelay(edge, holeDelay, rowDelay, offsetAssignments) {
   if (edge.type === "offset") return offsetAssignments.get(edge.id) ?? 17;
   if (edge.type === "rowToRow") return (edge.sign === -1 ? -1 : 1) * rowDelay;
@@ -124,6 +136,32 @@ function buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments = ne
     times,
     endTime,
     density8ms,
+    delayCounts: summarizeDelayCounts(holeTimes),
+  };
+}
+
+export function buildManualTimingResult(state, manualTiming = {}) {
+  const graph = validateTimingGraph(state);
+  if (!graph.valid) return graph;
+
+  const holeDelay = Number.isFinite(Number(manualTiming.holeDelay)) ? Number(manualTiming.holeDelay) : 0;
+  const rowDelay = Number.isFinite(Number(manualTiming.rowDelay)) ? Number(manualTiming.rowDelay) : 0;
+  const offsetDelay = Number.isFinite(Number(manualTiming.offsetDelay)) ? Number(manualTiming.offsetDelay) : 0;
+  const offsetAssignments = new Map(
+    graph.edges
+      .filter((edge) => edge.type === "offset")
+      .map((edge) => [edge.id, offsetDelay])
+  );
+
+  const schedule = buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments);
+  if (!schedule.valid) return schedule;
+  return {
+    valid: true,
+    result: {
+      ...schedule,
+      mode: "manual",
+      manualOffsetDelay: offsetDelay,
+    },
   };
 }
 
@@ -168,6 +206,10 @@ export function solveTimingCombinations(state) {
 }
 
 export function formatTimingResult(result, index) {
+  if (result.mode === "manual") {
+    const offsetSummary = result.offsetAssignments?.size ? ` | offset ${result.manualOffsetDelay}ms` : "";
+    return `${index + 1}. Manual | H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak in 8ms: ${result.density8ms} holes | total duration: ${result.endTime.toFixed(1)}ms`;
+  }
   const offsetSummary = result.offsetAssignments?.size
     ? ` | offsets: ${[...result.offsetAssignments.values()].join(",")}ms`
     : "";

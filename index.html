@@ -68,6 +68,10 @@
   <section id="delaySolverWorkspace" class="workspace workspace-solver hidden" aria-label="Delay Solver">
     <main class="canvas-wrap">
       <div class="menu-bar" aria-label="Top Menus">
+        <div class="timing-mode-toggle" aria-label="Timing Mode">
+          <button id="timingSolverModeBtn" class="timing-mode-btn active" type="button">Solver</button>
+          <button id="timingManualModeBtn" class="timing-mode-btn" type="button">Manual</button>
+        </div>
         <div class="top-menu">
           <button class="menu-toggle" type="button" data-menu-toggle="importMenu">Import</button>
           <section id="importMenu" class="menu-panel panel hidden">
@@ -155,25 +159,39 @@
         <div class="top-menu">
           <button class="menu-toggle" type="button" data-menu-toggle="timingMenu">Timing Ranges</button>
           <section id="timingMenu" class="menu-panel panel hidden">
-            <h2>Timing Ranges</h2>
-            <label>Hole-to-Hole Min (ms)
-              <input id="holeDelayMinInput" type="number" min="0" value="16">
-            </label>
-            <label>Hole-to-Hole Max (ms)
-              <input id="holeDelayMaxInput" type="number" min="0" value="34">
-            </label>
-            <label>Row-to-Row Min (ms)
-              <input id="rowDelayMinInput" type="number" min="0" value="84">
-            </label>
-            <label>Row-to-Row Max (ms)
-              <input id="rowDelayMaxInput" type="number" min="0" value="142">
-            </label>
-            <label>Offset Min (ms)
-              <input id="offsetDelayMinInput" type="number" min="0" value="17">
-            </label>
-            <label>Offset Max (ms)
-              <input id="offsetDelayMaxInput" type="number" min="0" value="42">
-            </label>
+            <h2 id="timingMenuTitle">Timing Ranges</h2>
+            <div id="timingSolverFields">
+              <label>Hole-to-Hole Min (ms)
+                <input id="holeDelayMinInput" type="number" min="0" value="16">
+              </label>
+              <label>Hole-to-Hole Max (ms)
+                <input id="holeDelayMaxInput" type="number" min="0" value="34">
+              </label>
+              <label>Row-to-Row Min (ms)
+                <input id="rowDelayMinInput" type="number" min="0" value="84">
+              </label>
+              <label>Row-to-Row Max (ms)
+                <input id="rowDelayMaxInput" type="number" min="0" value="142">
+              </label>
+              <label>Offset Min (ms)
+                <input id="offsetDelayMinInput" type="number" min="0" value="17">
+              </label>
+              <label>Offset Max (ms)
+                <input id="offsetDelayMaxInput" type="number" min="0" value="42">
+              </label>
+            </div>
+            <div id="timingManualFields" class="hidden">
+              <label>Hole-to-Hole Delay (ms)
+                <input id="manualHoleDelayInput" type="number" min="0" value="16">
+              </label>
+              <label>Row-to-Row Delay (ms)
+                <input id="manualRowDelayInput" type="number" min="0" value="84">
+              </label>
+              <label>Offset Delay (ms)
+                <input id="manualOffsetDelayInput" type="number" min="0" value="17">
+              </label>
+              <div class="status-note">Manual mode applies these values directly to the current timing pathing graph.</div>
+            </div>
           </section>
         </div>
 

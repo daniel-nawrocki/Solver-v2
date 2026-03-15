@@ -742,11 +742,11 @@ export class DiagramRenderer {
     this.ctx.save();
     this.ctx.fillStyle = "#0f172a";
     this.ctx.font = `${Math.max(10, Math.round(12 * this.textScale()))}px Segoe UI`;
-    this.ctx.fillText(
-      `Timing Preview: H2H ${preview.holeDelay}ms | R2R ${preview.rowDelay}ms | Peak(8ms): ${preview.density8ms}`,
-      14,
-      topOverlayOffset
-    );
+    const prefix = preview.mode === "manual" ? "Manual Timing" : "Timing Preview";
+    const offsetText = preview.mode === "manual" && preview.offsetAssignments?.size
+      ? ` | Offset ${preview.manualOffsetDelay}ms`
+      : "";
+    this.ctx.fillText(`${prefix}: H2H ${preview.holeDelay}ms | R2R ${preview.rowDelay}ms${offsetText} | Peak(8ms): ${preview.density8ms}`, 14, topOverlayOffset);
     this.ctx.restore();
   }
 
