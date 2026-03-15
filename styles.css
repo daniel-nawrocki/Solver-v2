@@ -941,12 +941,18 @@ button:active {
 
 .print-pages-output {
   display: none;
+  width: 100%;
 }
 
 .print-output-page {
+  display: block;
   width: 100%;
+  margin: 0;
+  padding: 0;
   break-after: page;
   page-break-after: always;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 .print-output-page:last-child {
@@ -1239,8 +1245,8 @@ body.help-active .print-workspace {
     visibility: hidden;
   }
 
-  .print-workspace,
-  .print-workspace * {
+  .print-pages-output,
+  .print-pages-output * {
     visibility: visible;
   }
 
@@ -1248,6 +1254,7 @@ body.help-active .print-workspace {
     position: absolute;
     inset: 0;
     background: #ffffff;
+    visibility: visible;
   }
 
   .print-workspace {
@@ -1265,10 +1272,15 @@ body.help-active .print-workspace {
 
   .print-pages-output {
     display: block !important;
+    position: static;
+    margin: 0;
+    padding: 0;
   }
 
   .print-output-page {
     display: block;
+    width: 100%;
+    margin: 0;
     padding: 0;
   }
 
@@ -1277,6 +1289,8 @@ body.help-active .print-workspace {
     border: none;
     box-shadow: none;
     padding: 0;
+    margin: 0;
+    aspect-ratio: auto;
   }
 
   .print-paper-frame::before {

@@ -595,7 +595,7 @@ export class DiagramRenderer {
     const { hole, rect, lines, metrics } = layout;
     const isHovered = this.stateRef?.ui?.hoverLabelHoleId === hole.id;
     const isDragging = this.stateRef?.dragLabelHoleId === hole.id;
-    if (this.stateRef?.ui?.showPrintLabelBoxes !== false) {
+    if (this.stateRef?.ui?.labelEditMode === true) {
       this.ctx.save();
       this.ctx.shadowColor = "rgba(15, 23, 42, 0.10)";
       this.ctx.shadowBlur = isDragging ? 12 : 8;

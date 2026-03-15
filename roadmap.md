@@ -270,7 +270,7 @@ Implemented in code.
 
 What was added:
 - Diagram Maker print preview now has:
-  - `Edit Labels`
+  - `Labels`
   - `Reset Labels`
 - hole print labels now render as compact draggable boxes in Diagram Maker print preview instead of fixed inline text
 - label boxes include:
@@ -286,6 +286,7 @@ What was added:
 Current rule:
 - label edits are print-session only
 - closing and reopening print preview resets the custom label layout
+- label boxes are only visible while the `Labels` toggle is on, and dragging is enabled immediately when visible
 
 ### 14. Multi-Page Print Preview
 Implemented in code.
@@ -301,6 +302,7 @@ What was added:
   - Diagram Maker label-edit state and label positions
 - pages can be removed from the strip as long as at least one page remains
 - browser print now prepares all print pages and outputs them as separate sheets in the current page order
+- print CSS now targets the generated print-page output so the hidden live preview stage should not produce extra blank sheets
 
 Current rule:
 - main workspace edits do not overwrite existing print pages after print preview is opened
@@ -339,6 +341,7 @@ Important recent context:
 - Polygon selection UX may still need polish, but completion now uses right-click instead of double-click.
 - Diagram Maker annotation tools still need manual testing for drag feel, clutter, and print readability with real datasets.
 - Multi-page print add/remove/switch behavior and browser print sheet ordering still need manual testing.
+- Real browser print dialogs still need confirmation that blank interstitial pages are gone.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -360,6 +363,10 @@ Important recent context:
   - leader line behavior when labels move away from holes
   - `Reset Labels`
   - label layout persistence only within the active print session
+  - single `Labels` toggle behavior:
+    - hidden when off
+    - visible and draggable when on
+    - `Reset Labels` only shown when on
   - multi-page print flow:
     - `Add Page`
     - page switching
@@ -368,6 +375,7 @@ Important recent context:
     - per-page independent color mode
     - page removal
     - browser print output order across multiple pages
+    - no blank pages between printed sheets
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
