@@ -290,18 +290,18 @@
               <select id="diagramShotLocationSelect">
                 <option value="">Select location</option>
                 <option value="Barricks">Barricks</option>
-                <option value="Laurel Hill">Laurel Hill</option>
+                <option value="Beaver Creek">Beaver Creek</option>
+                <option value="Churchville">Churchville</option>
                 <option value="Inwood">Inwood</option>
-                <option value="Savage">Savage</option>
+                <option value="Laurel Hill">Laurel Hill</option>
+                <option value="Medford">Medford</option>
                 <option value="Middletown">Middletown</option>
                 <option value="Millville">Millville</option>
-                <option value="Quikrete">Quikrete</option>
-                <option value="Medford">Medford</option>
-                <option value="Rockville">Rockville</option>
                 <option value="Northeast">Northeast</option>
-                <option value="Churchville">Churchville</option>
+                <option value="Quikrete">Quikrete</option>
+                <option value="Rockville">Rockville</option>
+                <option value="Savage">Savage</option>
                 <option value="Texas">Texas</option>
-                <option value="Beaver Creek">Beaver Creek</option>
               </select>
             </label>
             <label>Bench
@@ -459,7 +459,7 @@
         <button id="printBackBtn" type="button">Back</button>
         <button id="printActionBtn" type="button">Print</button>
         <button id="printFitBtn" type="button">Fit Page</button>
-        <button id="printEditLabelsBtn" class="hidden" type="button">Labels</button>
+        <button id="printEditLabelsBtn" class="hidden" type="button">Edit Labels</button>
         <button id="printResetLabelsBtn" class="hidden" type="button">Reset Labels</button>
       </div>
       <div class="print-toolbar-group print-toolbar-controls">
@@ -472,6 +472,9 @@
         <label id="printBearingToggleWrap" class="hidden"><input id="printBearingToggle" type="checkbox" checked> Show Bearing</label>
         <label id="printBearingArrowWeightWrap" class="hidden">Arrow Weight
           <input id="printBearingArrowWeightInput" type="range" min="1" max="3" step="0.1" value="1">
+        </label>
+        <label id="printBearingArrowLengthWrap" class="hidden">Arrow Length
+          <input id="printBearingArrowLengthInput" type="range" min="8" max="48" step="1" value="16">
         </label>
         <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show Depth</label>
       </div>

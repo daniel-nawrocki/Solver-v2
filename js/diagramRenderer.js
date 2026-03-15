@@ -362,6 +362,9 @@ export class DiagramRenderer {
     const settings = this.diagramLabelSettings();
     if (!settings.showBearingArrows) return;
     const weightScale = this.isPrintRenderer ? Math.max(1, Math.min(3, Number(this.stateRef?.ui?.bearingArrowWeight) || 1)) : 1;
+    const length = this.isPrintRenderer
+      ? Math.max(8, Math.min(48, Number(this.stateRef?.ui?.bearingArrowLength) || 16))
+      : 16;
 
     this.ctx.save();
     this.ctx.strokeStyle = "rgba(61, 79, 102, 0.45)";
@@ -372,7 +375,6 @@ export class DiagramRenderer {
       if (!Number.isFinite(hole.bearing)) continue;
       if (!Number.isFinite(hole.angle) || Number(hole.angle) === 0) continue;
       const start = this.worldToScreen(hole.x, hole.y);
-      const length = 16;
       const radians = ((Math.round(hole.bearing) - this.rotationDeg - 90) * Math.PI) / 180;
       const end = {
         x: start.x + (Math.cos(radians) * length),

@@ -270,7 +270,7 @@ Implemented in code.
 
 What was added:
 - Diagram Maker print preview now has:
-  - `Labels`
+  - `Edit Labels`
   - `Reset Labels`
 - hole print labels now render as compact draggable boxes in Diagram Maker print preview instead of fixed inline text
 - label boxes include:
@@ -286,7 +286,7 @@ What was added:
 Current rule:
 - label edits are print-session only
 - closing and reopening print preview resets the custom label layout
-- label boxes are only visible while the `Labels` toggle is on, and dragging is enabled immediately when visible
+- label boxes are only visible while the `Edit Labels` toggle is on, and dragging is enabled immediately when visible
 
 ### 14. Multi-Page Print Preview
 Implemented in code.
@@ -299,10 +299,12 @@ What was added:
   - text scale
   - color / greyscale mode
   - workspace-specific print toggles
+  - Diagram Maker bearing-arrow weight and length
   - Diagram Maker label-edit state and label positions
 - pages can be removed from the strip as long as at least one page remains
 - browser print now prepares all print pages and outputs them as separate sheets in the current page order
 - print CSS now targets the generated print-page output so the hidden live preview stage should not produce extra blank sheets
+- Diagram Maker print preview now includes a separate bearing-arrow length slider alongside arrow weight
 
 Current rule:
 - main workspace edits do not overwrite existing print pages after print preview is opened
@@ -367,6 +369,10 @@ Important recent context:
     - hidden when off
     - visible and draggable when on
     - `Reset Labels` only shown when on
+  - print bearing-arrow controls:
+    - weight slider
+    - length slider
+    - independent per print page
   - multi-page print flow:
     - `Add Page`
     - page switching
