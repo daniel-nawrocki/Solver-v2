@@ -1307,7 +1307,7 @@ body.help-active .print-workspace {
 @media print {
   @page print-landscape {
     size: landscape;
-    margin: 0;
+    margin: 0.25in;
   }
 
   html,
@@ -1348,7 +1348,7 @@ body.help-active .print-workspace {
   .print-pages-output {
     display: block !important;
     position: static;
-    width: 11in;
+    width: auto;
     margin: 0;
     padding: 0;
   }
@@ -1356,9 +1356,9 @@ body.help-active .print-workspace {
   .print-output-page {
     display: block;
     box-sizing: border-box;
-    width: 11in;
-    height: 8.5in;
-    margin: 0;
+    width: 10.5in;
+    height: 8in;
+    margin: 0 auto;
     padding: 0;
     overflow: hidden;
     break-after: page;
@@ -1374,8 +1374,8 @@ body.help-active .print-workspace {
 
   .print-paper-frame {
     box-sizing: border-box;
-    width: 11in;
-    height: 8.5in;
+    width: 10.5in;
+    height: 8in;
     border: none;
     box-shadow: none;
     padding: 0;
@@ -1390,8 +1390,8 @@ body.help-active .print-workspace {
 
   #printCanvas,
   .print-output-page canvas {
-    width: 11in;
-    height: 8.5in;
+    width: 10.5in;
+    height: 8in;
     max-width: none;
     max-height: none;
     display: block;
