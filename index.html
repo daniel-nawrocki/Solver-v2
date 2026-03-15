@@ -28,44 +28,6 @@
     </div>
     <div class="topbar-actions">
       <button id="homeNavBtn" class="topbar-nav-btn hidden" type="button">Home</button>
-      <div id="authStatus" class="topbar-status">Supabase not configured</div>
-      <div class="top-menu topbar-menu">
-        <button id="cloudMenuBtn" class="menu-toggle" type="button" data-menu-toggle="cloudMenu">Cloud</button>
-        <section id="cloudMenu" class="menu-panel panel hidden">
-          <h2>Cloud Projects</h2>
-          <div id="cloudProjectStatus" class="status-note">Configure Supabase to enable cloud save.</div>
-          <div class="row-actions">
-            <button id="cloudSaveBtn" type="button">Save</button>
-            <button id="cloudSaveAsBtn" type="button">Save As</button>
-          </div>
-          <div class="row-actions">
-            <button id="cloudRefreshProjectsBtn" type="button">Refresh</button>
-            <button id="localProjectExportBtn" type="button">Export Project File</button>
-          </div>
-          <label class="file-btn">Import Project File
-            <input id="projectFileInput" type="file" accept=".json,application/json" hidden>
-          </label>
-          <div id="cloudProjectsList" class="list">Sign in to manage cloud projects.</div>
-        </section>
-      </div>
-      <div class="top-menu topbar-menu">
-        <button id="accountMenuBtn" class="menu-toggle" type="button" data-menu-toggle="accountMenu">Account</button>
-        <section id="accountMenu" class="menu-panel panel hidden">
-          <h2>Account</h2>
-          <div id="accountStatus" class="status-note">Configure Supabase to enable sign-in.</div>
-          <label>Email
-            <input id="authEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
-          </label>
-          <label>Password
-            <input id="authPasswordInput" type="password" placeholder="Enter password" autocomplete="current-password">
-          </label>
-          <div class="row-actions">
-            <button id="authSignInBtn" type="button">Sign In</button>
-            <button id="authSignUpBtn" type="button">Create Account</button>
-          </div>
-          <button id="authSignOutBtn" type="button">Sign Out</button>
-        </section>
-      </div>
       <div id="timingVisualizationControls" class="timing-visualization-controls hidden">
         <div class="timing-visualization-row">
           <button id="timingVisualizationBtn" type="button">Simulate</button>
@@ -85,6 +47,49 @@
       <button id="exportPdfBtn">Export PDF</button>
     </div>
   </header>
+
+  <div class="corner-dock" aria-label="Cloud and Account Controls">
+    <div id="authStatus" class="corner-dock-status">Supabase not configured</div>
+    <div class="corner-dock-actions">
+      <div class="top-menu corner-dock-menu">
+        <button id="cloudMenuBtn" class="menu-toggle corner-dock-toggle" type="button" data-menu-toggle="cloudMenu">Cloud</button>
+        <section id="cloudMenu" class="menu-panel panel hidden">
+          <h2>Cloud Projects</h2>
+          <div id="cloudProjectStatus" class="status-note">Configure Supabase to enable cloud save.</div>
+          <div class="row-actions">
+            <button id="cloudSaveBtn" type="button">Save</button>
+            <button id="cloudSaveAsBtn" type="button">Save As</button>
+          </div>
+          <div class="row-actions">
+            <button id="cloudRefreshProjectsBtn" type="button">Refresh</button>
+            <button id="localProjectExportBtn" type="button">Export Project File</button>
+          </div>
+          <label class="file-btn">Import Project File
+            <input id="projectFileInput" type="file" accept=".json,application/json" hidden>
+          </label>
+          <div id="cloudProjectsList" class="list">Sign in to manage cloud projects.</div>
+        </section>
+      </div>
+      <div class="top-menu corner-dock-menu">
+        <button id="accountMenuBtn" class="menu-toggle corner-dock-toggle" type="button" data-menu-toggle="accountMenu">Account</button>
+        <section id="accountMenu" class="menu-panel panel hidden">
+          <h2>Account</h2>
+          <div id="accountStatus" class="status-note">Configure Supabase to enable sign-in.</div>
+          <label>Email
+            <input id="authEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
+          </label>
+          <label>Password
+            <input id="authPasswordInput" type="password" placeholder="Enter password" autocomplete="current-password">
+          </label>
+          <div class="row-actions">
+            <button id="authSignInBtn" type="button">Sign In</button>
+            <button id="authSignUpBtn" type="button">Create Account</button>
+          </div>
+          <button id="authSignOutBtn" type="button">Sign Out</button>
+        </section>
+      </div>
+    </div>
+  </div>
 
   <main id="homeWorkspace" class="workspace workspace-home">
     <section class="home-shell">
