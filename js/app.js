@@ -472,6 +472,7 @@ function renderWorkspaceChrome() {
 
 function setActiveWorkspace(workspaceId) {
   if (!Object.hasOwn(WORKSPACE_TITLES, workspaceId)) return;
+  if (appUi.activeWorkspace === "delaySolver" && workspaceId !== "delaySolver") resetTimingVisualization();
   closeAllMenus();
   closeHelpWorkspace();
   closePrintWorkspace();
@@ -770,9 +771,24 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.view.panX = 0;
   projectState.view.panY = 0;
   projectState.view.rotationDeg = 0;
+  projectState.diagram.metadata = cloneDiagramMetadata();
+  projectState.diagram.annotations = cloneDiagramAnnotations();
+  projectState.diagram.ui.showGrid = true;
+  projectState.diagram.ui.showOverlayText = false;
+  projectState.diagram.ui.showAngleLabels = true;
+  projectState.diagram.ui.showBearingLabels = false;
+  projectState.diagram.ui.showBearingArrows = true;
+  projectState.diagram.ui.showDepthLabels = true;
+  projectState.diagram.ui.activeTool = "single";
+  projectState.diagram.ui.annotationColor = "#000000";
+  projectState.diagram.ui.annotationSize = "medium";
   projectState.timing.relationships = { originHoleId: null, edges: [], nextId: 1 };
   projectState.timing.timingResults = [];
   projectState.timing.solverMessage = "";
+  projectState.timing.ui.showGrid = true;
+  projectState.timing.ui.showRelationships = true;
+  projectState.timing.ui.showOverlayText = true;
+  projectState.timing.ui.toolMode = "origin";
   projectState.timing.ui.activeTimingPreviewIndex = -1;
   projectState.timing.timingVisualization = cloneTimingVisualizationState();
 }
