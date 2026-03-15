@@ -123,6 +123,7 @@ function createDiagramState() {
       faceSpacing: null,
       interiorBurden: null,
       interiorSpacing: null,
+      rockDensityTonsPerCubicYard: 2.3,
     },
     annotations: {
       strokes: [],
@@ -167,6 +168,7 @@ function createPrintPageState() {
       faceSpacing: null,
       interiorBurden: null,
       interiorSpacing: null,
+      rockDensityTonsPerCubicYard: 2.3,
     },
     annotations: {
       strokes: [],
@@ -335,6 +337,10 @@ const els = {
   diagramAssignFaceBtn: document.getElementById("diagramAssignFaceBtn"),
   diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
   diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
+  diagramRockDensityInput: document.getElementById("diagramRockDensityInput"),
+  diagramVolumeIncludedStatus: document.getElementById("diagramVolumeIncludedStatus"),
+  diagramVolumeCubicYardsStatus: document.getElementById("diagramVolumeCubicYardsStatus"),
+  diagramVolumeTonsStatus: document.getElementById("diagramVolumeTonsStatus"),
   diagramGridToggle: document.getElementById("diagramGridToggle"),
   diagramAngleLabelToggle: document.getElementById("diagramAngleLabelToggle"),
   diagramBearingLabelToggle: document.getElementById("diagramBearingLabelToggle"),
@@ -456,8 +462,9 @@ function activeRenderer() {
 }
 
 function closeAllMenus() {
-  els.menuPanels.forEach((panel) => panel.classList.add("hidden"));
-  els.menuToggles.forEach((button) => button.classList.remove("active"));
+  const stickyMenuId = isDiagramWorkspaceActive() && diagramState.ui.pendingFaceDesignation ? "diagramShotMenu" : null;
+  els.menuPanels.forEach((panel) => panel.classList.toggle("hidden", panel.id !== stickyMenuId));
+  els.menuToggles.forEach((button) => button.classList.toggle("active", button.dataset.menuToggle === stickyMenuId));
 }
 
 function renderWorkspaceChrome() {
@@ -487,6 +494,10 @@ function renderWorkspaceChrome() {
 function setActiveWorkspace(workspaceId) {
   if (!Object.hasOwn(WORKSPACE_TITLES, workspaceId)) return;
   if (appUi.activeWorkspace === "delaySolver" && workspaceId !== "delaySolver") resetTimingVisualization();
+  if (appUi.activeWorkspace === "diagramMaker" && workspaceId !== "diagramMaker") {
+    diagramState.ui.pendingFaceDesignation = false;
+    diagramState.ui.selectionPolygonDraft = null;
+  }
   closeAllMenus();
   closeHelpWorkspace();
   closePrintWorkspace();
@@ -590,6 +601,7 @@ function cloneDiagramMetadata(metadata = {}) {
     faceSpacing: Number.isFinite(Number(metadata.faceSpacing)) ? Number(metadata.faceSpacing) : null,
     interiorBurden: Number.isFinite(Number(metadata.interiorBurden)) ? Number(metadata.interiorBurden) : null,
     interiorSpacing: Number.isFinite(Number(metadata.interiorSpacing)) ? Number(metadata.interiorSpacing) : null,
+    rockDensityTonsPerCubicYard: Number.isFinite(Number(metadata.rockDensityTonsPerCubicYard)) ? Number(metadata.rockDensityTonsPerCubicYard) : 2.3,
   };
 }
 
@@ -1084,6 +1096,10 @@ function removePrintPage(index) {
 }
 
 function openPrintWorkspace() {
+  if (isDiagramWorkspaceActive() && diagramState.ui.pendingFaceDesignation) {
+    diagramState.ui.pendingFaceDesignation = false;
+    diagramState.ui.selectionPolygonDraft = null;
+  }
   syncCurrentWorkspaceToProject();
   let initialPage = null;
   if (isSolverWorkspaceActive()) {
@@ -1268,9 +1284,10 @@ function handlePrintPointerUp() {
 
 function normalizeAngleValue(value) {
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) return null;
+  if (!Number.isFinite(numeric)) return 0;
   const rounded = Math.round(numeric);
-  return ALLOWED_ANGLES.has(rounded) ? rounded : null;
+  if (rounded === 0) return 0;
+  return ALLOWED_ANGLES.has(rounded) ? rounded : 0;
 }
 
 function formatDiagramDiameterLabel(value) {
@@ -1290,6 +1307,11 @@ function selectedDiagramDefaultDiameter() {
 function selectedDiagramMetadataNumber(input) {
   const numeric = Number(input.value);
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function selectedDiagramRockDensity() {
+  const numeric = Number(els.diagramRockDensityInput.value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
 function applyShotDefaultDiameterToExistingHoles(nextDefaultDiameter) {
@@ -1335,12 +1357,57 @@ function renderDiagramShotPanel() {
   els.diagramApplyPatternBtn.disabled = !diagramState.holes.length;
 }
 
+function formatVolumeNumber(value) {
+  if (!Number.isFinite(value)) return "0";
+  return (Math.round(value * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function summarizeDiagramVolume() {
+  const density = Number.isFinite(diagramState.metadata.rockDensityTonsPerCubicYard)
+    ? diagramState.metadata.rockDensityTonsPerCubicYard
+    : 2.3;
+  let includedHoleCount = 0;
+  let cubicYards = 0;
+  diagramState.holes.forEach((hole) => {
+    const burden = Number(hole.burden);
+    const spacing = Number(hole.spacing);
+    const depth = Number(hole.depth);
+    if (!Number.isFinite(burden) || !Number.isFinite(spacing) || !Number.isFinite(depth)) return;
+    includedHoleCount += 1;
+    cubicYards += (burden * spacing * depth) / 27;
+  });
+  return {
+    includedHoleCount,
+    cubicYards,
+    tons: cubicYards * density,
+  };
+}
+
+function renderDiagramVolumePanel() {
+  const density = Number.isFinite(diagramState.metadata.rockDensityTonsPerCubicYard)
+    ? diagramState.metadata.rockDensityTonsPerCubicYard
+    : 2.3;
+  const summary = summarizeDiagramVolume();
+  els.diagramRockDensityInput.value = String(density);
+  els.diagramVolumeIncludedStatus.textContent = `Included Holes: ${summary.includedHoleCount}`;
+  els.diagramVolumeCubicYardsStatus.textContent = `Total Cubic Yards: ${formatVolumeNumber(summary.cubicYards)}`;
+  els.diagramVolumeTonsStatus.textContent = `Total Tons: ${formatVolumeNumber(summary.tons)}`;
+}
+
 function annotationSizeConfig(size) {
   return DIAGRAM_ANNOTATION_SIZE_MAP[size] || DIAGRAM_ANNOTATION_SIZE_MAP.medium;
 }
 
 function normalizeAnnotationTool(tool) {
   return DIAGRAM_TOOL_MODES.has(tool) ? tool : "single";
+}
+
+function parseEditableAngleValue(raw) {
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric);
+  if (rounded === 0) return 0;
+  return ALLOWED_ANGLES.has(rounded) ? rounded : null;
 }
 
 function pointToWorld(renderer, point) {
@@ -2108,7 +2175,7 @@ function renderDiagramPropertiesPanel() {
     input.placeholder = !allSame && selected.length > 1 ? "Mixed values" : "";
     input.disabled = false;
   });
-  els.diagramAngleInput.placeholder = selected.length > 1 && !selected.every((hole) => hole.angle === selected[0].angle) ? "Mixed values (5,10,15,20,25,30)" : "5, 10, 15, 20, 25, or 30";
+  els.diagramAngleInput.placeholder = selected.length > 1 && !selected.every((hole) => hole.angle === selected[0].angle) ? "Mixed values (0,5,10,15,20,25,30)" : "0, 5, 10, 15, 20, 25, or 30";
 
   els.diagramApplyPropertiesBtn.disabled = false;
   els.diagramClearSelectionBtn.disabled = false;
@@ -2119,6 +2186,7 @@ function renderDiagramPropertiesPanel() {
 function fullDiagramRefresh({ fit = false } = {}) {
   persistDiagramStateToProject();
   renderDiagramShotPanel();
+  renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
   if (fit) diagramRenderer.fitToData();
@@ -2165,7 +2233,7 @@ function collectDiagramPropertyPatch() {
     const raw = input.value.trim();
     if (!raw) return;
     if (field === "angle") {
-      const angle = normalizeAngleValue(raw);
+      const angle = parseEditableAngleValue(raw);
       if (angle === null) {
         invalidAngle = true;
         return;
@@ -2182,7 +2250,7 @@ function collectDiagramPropertyPatch() {
 function applyDiagramPropertyPatchToSelection(result) {
   const { patch, invalidAngle } = result;
   if (invalidAngle) {
-    window.alert("Angle must be one of: 5, 10, 15, 20, 25, 30.");
+    window.alert("Angle must be 0 or one of: 5, 10, 15, 20, 25, 30.");
     return;
   }
   const selected = selectedDiagramHoles();
@@ -2195,8 +2263,7 @@ function applyDiagramPropertyPatchToSelection(result) {
     return;
   }
   selected.forEach((hole) => Object.assign(hole, patch));
-  renderDiagramPropertiesPanel();
-  diagramRenderer.render();
+  fullDiagramRefresh();
 }
 
 function applyPatternAssignment() {
@@ -2235,6 +2302,7 @@ function startFaceDesignation() {
   }
   diagramState.ui.pendingFaceDesignation = true;
   diagramState.ui.faceDesignationReturnTool = diagramState.ui.activeTool || "single";
+  openMenu("diagramShotMenu");
   setDiagramToolMode("polygon");
   renderDiagramShotPanel();
 }
@@ -2264,8 +2332,7 @@ function applyDefaultDiameterToDiagramSelection() {
   targets.forEach((hole) => {
     hole.diameter = defaultDiameter;
   });
-  renderDiagramPropertiesPanel();
-  diagramRenderer.render();
+  fullDiagramRefresh();
 }
 
 function applyDiagramMetadataPatch(field, value) {
@@ -2275,11 +2342,14 @@ function applyDiagramMetadataPatch(field, value) {
     if (Number.isFinite(normalizedValue)) applyShotDefaultDiameterToExistingHoles(normalizedValue);
     diagramState.metadata[field] = normalizedValue;
     syncDiagramDefaultDiameterStatus();
+  } else if (field === "rockDensityTonsPerCubicYard") {
+    diagramState.metadata[field] = Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 2.3;
   } else {
     diagramState.metadata[field] = value;
   }
   syncDiagramDefaultDiameterStatus();
   renderDiagramShotPanel();
+  renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
   persistDiagramStateToProject();
@@ -2396,6 +2466,7 @@ els.diagramFaceBurdenInput.addEventListener("change", () => applyDiagramMetadata
 els.diagramFaceSpacingInput.addEventListener("change", () => applyDiagramMetadataPatch("faceSpacing", selectedDiagramMetadataNumber(els.diagramFaceSpacingInput)));
 els.diagramInteriorBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("interiorBurden", selectedDiagramMetadataNumber(els.diagramInteriorBurdenInput)));
 els.diagramInteriorSpacingInput.addEventListener("change", () => applyDiagramMetadataPatch("interiorSpacing", selectedDiagramMetadataNumber(els.diagramInteriorSpacingInput)));
+els.diagramRockDensityInput.addEventListener("change", () => applyDiagramMetadataPatch("rockDensityTonsPerCubicYard", selectedDiagramRockDensity()));
 els.diagramAssignFaceBtn.addEventListener("click", () => startFaceDesignation());
 els.diagramClearFaceBtn.addEventListener("click", () => clearFaceDesignation());
 els.diagramApplyPatternBtn.addEventListener("click", () => applyPatternAssignment());
@@ -2651,6 +2722,7 @@ els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
 renderDiagramShotPanel();
+renderDiagramVolumePanel();
 els.diagramAnnotationColorInput.value = diagramState.ui.annotationColor;
 els.diagramAnnotationSizeSelect.value = diagramState.ui.annotationSize;
 setDiagramToolMode(diagramState.ui.activeTool);

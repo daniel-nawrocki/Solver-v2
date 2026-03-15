@@ -249,6 +249,24 @@ button:active {
   margin-bottom: var(--space-2);
 }
 
+.menu-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.menu-checkbox-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.menu-checkbox-row span {
+  line-height: 1.2;
+}
+
 .status-chip,
 .status-note {
   margin-bottom: var(--space-2);

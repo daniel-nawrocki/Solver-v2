@@ -349,7 +349,7 @@ export class DiagramRenderer {
   diagramMetadataLines(hole) {
     const settings = this.diagramLabelSettings();
     const lines = [];
-    if (settings.showAngleLabels) {
+    if (settings.showAngleLabels && Number.isFinite(hole.angle) && Number(hole.angle) !== 0) {
       const angleText = formatWholeNumber(hole.angle, "°");
       if (angleText) lines.push({ text: angleText, color: angleColor(hole.angle) });
     }
@@ -506,7 +506,7 @@ export class DiagramRenderer {
     if (!this.isDiagramPrintMode()) return [];
     const settings = this.diagramLabelSettings();
     const lines = [{ text: hole.holeNumber || hole.id, color: "#111827", weight: 700, size: Math.max(9, Math.round(11 * this.textScale())) }];
-    if (settings.showAngleLabels) {
+    if (settings.showAngleLabels && Number.isFinite(hole.angle) && Number(hole.angle) !== 0) {
       const angleText = formatWholeNumber(hole.angle, "°");
       if (angleText) lines.push({ text: angleText, color: angleColor(hole.angle), weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
     }

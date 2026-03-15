@@ -62,6 +62,10 @@ Code-level status:
 - Diagram Maker `Shot` menu pattern entry now uses numeric `Face` / `Interior` burden x spacing pairs instead of free-text pattern labels.
 - Diagram Maker now supports `Assign Face` via polygon designation plus `Apply Pattern` to overwrite burden/spacing from the stored face/interior pattern pairs.
 - per-hole face designation now persists in the shared project so pattern assignment survives mode switches until cleared or redefined.
+- Diagram Maker now defaults missing angles to `0` while still suppressing angle labels and bearing arrows for zero-angle holes.
+- Diagram Maker `Assign Face` now keeps the `Shot` menu open while polygon designation is active.
+- Diagram Maker now includes a `Volume` menu with whole-shot cubic-yard and tonnage totals using editable rock density.
+- Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
 - print CSS was simplified so print preview now outputs one sheet per page tab without the extra blank/overflow pages seen in browser PDF export.
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
@@ -75,6 +79,7 @@ What has not been fully verified yet:
 - whether print-label drag UX and leader thresholds feel right on dense layouts in real use
 - whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
 - whether the new face designation / pattern assignment flow feels clear enough without additional face highlighting on dense diagrams
+- whether the new `Volume` menu totals and density workflow feel clear enough in real use
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 - whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
 
@@ -386,6 +391,27 @@ Intent:
 - ensure one printed sheet per print page tab
 - avoid the extra mostly blank overflow pages seen in browser PDF export
 
+### 20. Diagram Angle Default + Volume Menu
+Implemented in code.
+
+What was added:
+- missing or invalid Diagram hole angles now normalize to `0`
+- zero-angle holes still suppress angle label output and bearing arrows
+- `Assign Face` now keeps the `Shot` menu open while polygon designation is active
+- new `Volume` menu to the right of `Properties`
+- whole-shot totals now show:
+  - included hole count
+  - cubic yards
+  - tons
+- rock density now defaults to `2.3` tons / cubic yard and is editable in the `Volume` menu
+- Diagram `View` checkbox rows now render inline with their labels instead of stacking awkwardly
+
+Current rule:
+- only holes with valid burden, spacing, and depth contribute to the shot volume totals
+- tons are calculated from total cubic yards multiplied by the current rock density
+- density persists in Diagram shot metadata across mode switches
+- zero angle is treated as the default no-angle state, not as a drawable classified angle
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -403,6 +429,7 @@ Important recent context:
 - Multi-page print sessions are in-memory only and are not persisted yet.
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
 - Diagram Maker face designation currently has no dedicated visual highlighting beyond selection/status, so dense layouts may need a later clarity pass.
+- Volume totals currently show whole-shot output only; there is no per-hole tonnage UI yet.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
 - the unified planner still relies on the legacy separate workspace DOM internally, so cleanup remains to be done later
@@ -436,6 +463,8 @@ Important recent context:
   - `Apply Pattern`
   - persistence of the designated face set across mode switches
   - overwrite behavior for burden/spacing after repeated pattern applies
+  - zero-angle default behavior for imports and manual angle edits
+  - `Shot` menu staying open during `Assign Face`
   - single-select and multi-select property edits
   - markup drawing tool
   - text placement tool
@@ -473,6 +502,8 @@ Important recent context:
   - separate Angle/Bearing toggles on canvas and print
   - low-profile bearing arrows on dense diagrams
   - angle color mapping and invalid-angle handling
+  - `View` menu checkbox alignment
+  - `Volume` menu totals and density edits
   - selection toolkit behavior:
     - select mode
     - box mode

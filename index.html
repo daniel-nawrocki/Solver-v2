@@ -358,11 +358,11 @@
           <button class="menu-toggle" type="button" data-menu-toggle="diagramViewMenu">View</button>
           <section id="diagramViewMenu" class="menu-panel panel hidden">
             <h2>View</h2>
-            <label><input id="diagramGridToggle" type="checkbox" checked> Show Grid</label>
-            <label><input id="diagramAngleLabelToggle" type="checkbox" checked> Show Angle</label>
-            <label><input id="diagramBearingLabelToggle" type="checkbox" checked> Show Bearing</label>
-            <label><input id="diagramBearingArrowToggle" type="checkbox"> Show Bearing Arrows</label>
-            <label><input id="diagramDepthLabelToggle" type="checkbox" checked> Show Depth</label>
+            <label class="menu-checkbox-row"><input id="diagramGridToggle" type="checkbox" checked><span>Show Grid</span></label>
+            <label class="menu-checkbox-row"><input id="diagramAngleLabelToggle" type="checkbox" checked><span>Show Angle</span></label>
+            <label class="menu-checkbox-row"><input id="diagramBearingLabelToggle" type="checkbox" checked><span>Show Bearing</span></label>
+            <label class="menu-checkbox-row"><input id="diagramBearingArrowToggle" type="checkbox"><span>Show Bearing Arrows</span></label>
+            <label class="menu-checkbox-row"><input id="diagramDepthLabelToggle" type="checkbox" checked><span>Show Depth</span></label>
             <button id="diagramFitViewBtn" type="button">Fit View</button>
             <label>Coordinate View
               <select id="diagramCoordViewSelect">
@@ -415,6 +415,20 @@
               <button id="diagramApplyPropertiesBtn" type="button">Apply to Selection</button>
               <button id="diagramClearSelectionBtn" type="button">Clear Selection</button>
             </div>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramVolumeMenu">Volume</button>
+          <section id="diagramVolumeMenu" class="menu-panel panel hidden">
+            <h2>Shot Volume</h2>
+            <label>Rock Density
+              <input id="diagramRockDensityInput" type="number" step="0.01">
+            </label>
+            <div class="status-note">Density units: tons / cubic yard</div>
+            <div id="diagramVolumeIncludedStatus" class="status-chip">Included Holes: 0</div>
+            <div id="diagramVolumeCubicYardsStatus" class="status-note">Total Cubic Yards: 0</div>
+            <div id="diagramVolumeTonsStatus" class="status-note">Total Tons: 0</div>
           </section>
         </div>
       </div>
