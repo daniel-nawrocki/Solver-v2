@@ -17,8 +17,9 @@ Design consistency rule:
 - Reuse the same top bar, floating controls, panel style, spacing, glassy menu panels, and overall interaction tone wherever possible.
 
 Current top-level tool goals:
-- `Delay Solver`: existing timing workflow
-- `Diagram Maker`: layout and hole-property workflow
+- `Blast Planner`: unified workspace with:
+  - `Diagram` mode for layout / metadata / annotation workflow
+  - `Timing` mode for pathing / timing-range / firing-time workflow
 
 Future possible directions discussed:
 - richer diagram drafting
@@ -46,7 +47,7 @@ Code-level status:
 - `js/app.js` was rebuilt to support both workspaces after a failed large-file replacement attempt.
 - `Diagram Maker` now exists in the DOM as a real workspace, not a placeholder.
 - `Diagram Maker` has its own state, renderer instance, import flow, selection flow, and property editor.
-- the app now also has a top-bar mode toggle that switches between `Diagram` and `Timing` while syncing through a shared project state
+- the app now has a centered top-bar mode toggle that switches between `Diagram` and `Timing` while syncing through a shared project state
 - Home now presents a single `Blast Planner` entry point instead of two separate tool cards
 - `Print Preview` is shared, but branches behavior based on whether the active workspace is `Delay Solver` or `Diagram Maker`.
 - Diagram Maker now has a bottom selection toolkit styled to match the Delay Solver bottom controls.
@@ -57,6 +58,7 @@ Code-level status:
 - Diagram Maker print now has a label-edit mode for manually repositioning per-hole print label boxes during the current print session.
 - Print preview now supports multiple independently configurable pages per session for both Delay Solver and Diagram Maker.
 - Adding a print page duplicates the active print page state so toggles, zoom/pan/rotation, label layouts, and color mode can diverge page by page.
+- main-canvas viewport state now persists across `Diagram` / `Timing` mode switches so the layout should stay in the same screen position while switching modes
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -69,6 +71,7 @@ What has not been fully verified yet:
 - whether print-label drag UX and leader thresholds feel right on dense layouts in real use
 - whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
+- whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
 
 ## Completed Work
 
@@ -77,9 +80,8 @@ Done.
 
 What was added:
 - app launches to `Home`
-- `Home` has entries for:
-  - `Delay Solver`
-  - `Diagram Maker`
+- `Home` now has one unified entry:
+  - `Blast Planner`
 - shared top bar now reflects active workspace
 - navigation works without page reload
 
@@ -327,11 +329,13 @@ Implemented as an incremental merge path.
 
 What was added:
 - Home now opens a single `Blast Planner` entry
-- top bar now includes `Diagram` / `Timing` mode buttons
+- top bar now includes centered `Diagram` / `Timing` mode buttons
 - imports in either mode now initialize one shared project hole set
 - switching modes now hydrates the target mode from the shared project instead of requiring a second import
 - timing origin / relationships / ranges / results persist across mode switches
 - diagram metadata / properties / annotations persist across mode switches
+- optional `angle` / `bearing` / `depth` mapping now exists in the Timing-mode import panel too so either mode can seed the same shared project data
+- shared main-canvas viewport state now persists across mode switches
 
 Current rule:
 - the underlying DOM still uses the legacy Delay Solver and Diagram Maker workspace sections for safety
@@ -372,13 +376,16 @@ Important recent context:
 - Multi-page print add/remove/switch behavior and browser print sheet ordering still need manual testing.
 - Real browser print dialogs still need confirmation that blank interstitial pages are gone.
 - shared-project mode switching, import parity, and print timing-page behavior all need manual browser verification
+- centered mode-toggle layout still needs manual responsive/browser verification
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
   - single `Blast Planner` home entry flow
   - top-bar `Diagram` / `Timing` mode switch
+  - centered top-bar mode-toggle layout stability
   - persistence of diagram edits across mode switches
   - persistence of timing graph/results across mode switches
+  - persistence of canvas zoom/pan position across mode switches
   - Home navigation
   - Delay Solver still works
   - Diagram Maker import
@@ -433,7 +440,7 @@ Important recent context:
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded
-- update Help content to include Diagram Maker
+- update Help content to include the unified planner workflow
 
 ## Medium-Priority Future Work
 - project persistence across sessions
@@ -442,6 +449,16 @@ Important recent context:
 - hole trace / projected path visualization mode
 - annotation tools
 - additional diagram fields and validation rules
+- expanded Help menu / content for the unified planner
+- manual timing tool
+- better presentation / layout for the pattern and diameter box area
+- tonnage calculator
+- automatic burden and spacing designation workflow:
+  - separate burden / spacing boxes with an `x` between them
+  - assign both face pattern and interior pattern values first
+  - designate the face after pattern entry
+  - apply the face pattern to face-designated holes
+  - apply the interior pattern to all other holes
 
 ## Long-Term Ideas
 - real login/auth with unique profiles
@@ -460,12 +477,13 @@ If a new chat starts, it should read this file first.
 
 Most important current repo facts to preserve:
 - This is a single-page multi-workspace app.
-- Delay Solver is the established reference for UI style.
-- Diagram Maker should continue matching that style unless explicitly changed.
+- Delay Solver remains the established reference for UI style, but the user-facing workflow is now one unified `Blast Planner`.
+- Diagram mode should continue matching the established solver style unless explicitly changed.
 - Shared renderer logic lives in `js/diagramRenderer.js`.
 - Shared app/workspace wiring lives in `js/app.js`.
 - Shared CSV parsing lives in `js/csvParser.js`.
 - Shared print preview now uses a multi-page print session managed in `js/app.js`.
+- The planner now uses a shared project spine so imports, diagram data, timing data, and viewport state persist across `Diagram` / `Timing` mode switches.
 - Diagram Maker currently supports:
   - import with collar/toe/id/angle/bearing/depth
   - `inclination` alias for angle import guessing
