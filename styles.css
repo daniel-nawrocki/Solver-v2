@@ -43,6 +43,7 @@ body {
   color: #f7fbff;
   border-bottom: 2px solid #314a69;
   box-shadow: var(--shadow-1);
+  position: relative;
 }
 
 .topbar-brand {
@@ -50,6 +51,8 @@ body {
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+  flex: 1 1 0;
+  justify-content: flex-start;
 }
 
 .topbar h1 {
@@ -89,10 +92,28 @@ body {
   white-space: nowrap;
 }
 
+.topbar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.topbar-center .planner-mode-toggle {
+  pointer-events: auto;
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 1 1 0;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .planner-mode-toggle {
@@ -1238,12 +1259,26 @@ body.help-active .print-workspace {
     padding-bottom: 10px;
   }
 
+  .topbar-center {
+    position: static;
+    left: auto;
+    transform: none;
+    width: 100%;
+    order: 2;
+    pointer-events: auto;
+  }
+
   .topbar-brand,
   .topbar-actions {
     width: 100%;
   }
 
+  .topbar-brand {
+    order: 1;
+  }
+
   .topbar-actions {
+    order: 3;
     flex-wrap: wrap;
     justify-content: flex-start;
   }
