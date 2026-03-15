@@ -1310,6 +1310,12 @@ body.help-active .print-workspace {
     margin: 0;
   }
 
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -1342,28 +1348,40 @@ body.help-active .print-workspace {
   .print-pages-output {
     display: block !important;
     position: static;
+    width: 11in;
     margin: 0;
     padding: 0;
   }
 
   .print-output-page {
     display: block;
-    width: 100%;
+    box-sizing: border-box;
+    width: 11in;
+    height: 8.5in;
     margin: 0;
     padding: 0;
-    break-after: auto;
-    page-break-after: auto;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
+  .print-output-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
   .print-paper-frame {
-    width: 100%;
+    box-sizing: border-box;
+    width: 11in;
+    height: 8.5in;
     border: none;
     box-shadow: none;
     padding: 0;
     margin: 0;
     aspect-ratio: auto;
+    overflow: hidden;
   }
 
   .print-paper-frame::before {
@@ -1372,8 +1390,10 @@ body.help-active .print-workspace {
 
   #printCanvas,
   .print-output-page canvas {
-    width: 100%;
-    height: auto;
+    width: 11in;
+    height: 8.5in;
+    max-width: none;
+    max-height: none;
     display: block;
     margin: 0;
     vertical-align: top;
