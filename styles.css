@@ -116,6 +116,33 @@ body {
   min-width: 0;
 }
 
+.topbar-status {
+  min-width: 0;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 1px solid rgba(159, 179, 201, 0.34);
+  border-radius: 999px;
+  background: rgba(10, 18, 31, 0.18);
+  color: rgba(247, 251, 255, 0.82);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-menu .menu-panel {
+  right: 0;
+  left: auto;
+  min-width: 340px;
+}
+
+.topbar-menu .menu-panel button,
+.topbar-menu .menu-panel .file-btn {
+  min-width: 0;
+}
+
 .planner-mode-toggle {
   display: inline-flex;
   align-items: center;
@@ -157,6 +184,59 @@ body {
 .topbar-actions button {
   width: auto;
   min-width: 156px;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: 12px;
+  border: 1px solid rgba(159, 179, 201, 0.46);
+  border-radius: 12px;
+  background: rgba(248, 251, 255, 0.92);
+}
+
+.project-row + .project-row {
+  margin-top: var(--space-2);
+}
+
+.project-row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+.project-row-title strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-row-title span {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.project-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.project-row-actions button {
+  min-width: 0;
+  flex: 1 1 92px;
+}
+
+.menu-help {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .panel {
@@ -1393,9 +1473,28 @@ body.help-active .print-workspace {
     justify-content: flex-start;
   }
 
+  .topbar-status {
+    max-width: none;
+    width: 100%;
+  }
+
   .topbar-actions button {
     min-width: 0;
     flex: 1 1 140px;
+  }
+
+  .topbar-menu {
+    width: 100%;
+  }
+
+  .topbar-menu .menu-toggle {
+    width: 100%;
+  }
+
+  .topbar-menu .menu-panel {
+    left: 0;
+    right: 0;
+    min-width: 0;
   }
 
   .workspace {

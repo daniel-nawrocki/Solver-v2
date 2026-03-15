@@ -1,5 +1,21 @@
 import { parseCsvText, buildHolesFromMapping } from "./csvParser.js";
 import { DiagramRenderer } from "./diagramRenderer.js";
+import { parseProjectDocument, serializeProjectDocument } from "./projectDocument.js";
+import {
+  createCloudProject,
+  deleteCloudProject,
+  getAuthSession,
+  isSupabaseConfigured,
+  listCloudProjects,
+  listQuarries,
+  loadCloudProject,
+  onAuthStateChange,
+  renameCloudProject,
+  signInWithMagicLink,
+  signOutSession,
+  supabaseConfigMessage,
+  updateCloudProject,
+} from "./supabaseService.js";
 import { initTimingControls } from "./timingControls.js";
 import { solveTimingCombinations, formatTimingResult, validateTimingGraph, buildManualTimingResult } from "./timingSolver.js";
 import {
@@ -49,7 +65,16 @@ const DIAGRAM_ANNOTATION_SIZE_MAP = {
   large: { strokeWidth: 6, textSize: 28 },
 };
 
-const appUi = { activeWorkspace: "home" };
+const appUi = {
+  activeWorkspace: "home",
+  currentProjectId: null,
+  currentProjectName: "",
+  cloudProjects: [],
+  quarries: [],
+  authSession: null,
+  dirty: false,
+  suspendDirtyTracking: true,
+};
 
 function createSolverState() {
   return {
@@ -269,6 +294,20 @@ const els = {
   diagramMakerWorkspace: document.getElementById("diagramMakerWorkspace"),
   workspaceTitle: document.getElementById("workspaceTitle"),
   homeNavBtn: document.getElementById("homeNavBtn"),
+  authStatus: document.getElementById("authStatus"),
+  cloudMenuBtn: document.getElementById("cloudMenuBtn"),
+  cloudProjectStatus: document.getElementById("cloudProjectStatus"),
+  cloudSaveBtn: document.getElementById("cloudSaveBtn"),
+  cloudSaveAsBtn: document.getElementById("cloudSaveAsBtn"),
+  cloudRefreshProjectsBtn: document.getElementById("cloudRefreshProjectsBtn"),
+  cloudProjectsList: document.getElementById("cloudProjectsList"),
+  localProjectExportBtn: document.getElementById("localProjectExportBtn"),
+  projectFileInput: document.getElementById("projectFileInput"),
+  accountMenuBtn: document.getElementById("accountMenuBtn"),
+  accountStatus: document.getElementById("accountStatus"),
+  authEmailInput: document.getElementById("authEmailInput"),
+  authSendLinkBtn: document.getElementById("authSendLinkBtn"),
+  authSignOutBtn: document.getElementById("authSignOutBtn"),
   plannerModeToggle: document.getElementById("plannerModeToggle"),
   plannerDiagramModeBtn: document.getElementById("plannerDiagramModeBtn"),
   plannerTimingModeBtn: document.getElementById("plannerTimingModeBtn"),
@@ -593,6 +632,327 @@ function openMenu(menuId) {
   button.classList.add("active");
 }
 
+function isSignedIn() {
+  return Boolean(appUi.authSession?.user);
+}
+
+function activeUserEmail() {
+  return appUi.authSession?.user?.email || "";
+}
+
+function formatTimestamp(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function setCurrentProjectRef(projectId, projectName = "") {
+  appUi.currentProjectId = projectId || null;
+  appUi.currentProjectName = projectName || "";
+}
+
+function markProjectDirty() {
+  if (appUi.suspendDirtyTracking) return;
+  appUi.dirty = true;
+  renderCloudProjectUi();
+}
+
+function setProjectSavedState(projectId, projectName = "") {
+  setCurrentProjectRef(projectId, projectName);
+  appUi.dirty = false;
+  renderCloudProjectUi();
+}
+
+function resetCurrentProjectRef() {
+  setCurrentProjectRef(null, "");
+  appUi.dirty = false;
+  renderCloudProjectUi();
+}
+
+function requireConfiguredSupabase() {
+  if (isSupabaseConfigured()) return true;
+  window.alert(supabaseConfigMessage());
+  return false;
+}
+
+function requireSignedIn() {
+  if (!requireConfiguredSupabase()) return false;
+  if (isSignedIn()) return true;
+  window.alert("Sign in with a magic link before using cloud projects.");
+  openMenu("accountMenu");
+  return false;
+}
+
+function serializeCurrentProject() {
+  syncCurrentWorkspaceToProject();
+  return serializeProjectDocument(projectState);
+}
+
+function replaceProjectStateFromDocument(document) {
+  const parsed = parseProjectDocument(document);
+  appUi.suspendDirtyTracking = true;
+  refreshProjectHoles(parsed.holes);
+  projectState.csvCache = parsed.csvCache;
+  projectState.view.coordView = parsed.view.coordView || "collar";
+  projectState.view.zoom = Number(parsed.view.zoom) || 1;
+  projectState.view.panX = Number(parsed.view.panX) || 0;
+  projectState.view.panY = Number(parsed.view.panY) || 0;
+  projectState.view.rotationDeg = Number(parsed.view.rotationDeg) || 0;
+  projectState.diagram.ui = {
+    ...projectState.diagram.ui,
+    ...(parsed.diagram.ui || {}),
+    pendingFaceDesignation: false,
+    faceDesignationReturnTool: "single",
+  };
+  projectState.diagram.metadata = cloneDiagramMetadata(parsed.diagram.metadata);
+  projectState.diagram.annotations = cloneDiagramAnnotations(parsed.diagram.annotations);
+  projectState.timing.ui = {
+    ...projectState.timing.ui,
+    ...(parsed.timing.ui || {}),
+  };
+  projectState.timing.timing = cloneTimingRanges(parsed.timing.timing);
+  projectState.timing.manualTiming = cloneManualTiming(parsed.timing.manualTiming);
+  projectState.timing.relationships = cloneRelationshipsState(parsed.timing.relationships);
+  projectState.timing.timingResults = cloneTimingResults(parsed.timing.timingResults);
+  projectState.timing.solverMessage = parsed.timing.solverMessage || "";
+  projectState.timing.timingVisualization = cloneTimingVisualizationState(parsed.timing.timingVisualization);
+  hydrateDiagramFromProject();
+  hydrateSolverFromProject();
+  renderCloudProjectUi();
+  renderQuarryOptions();
+  requestAnimationFrame(() => {
+    if (isDiagramWorkspaceActive()) {
+      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view);
+      fullDiagramRefresh();
+    } else if (isSolverWorkspaceActive()) {
+      applyProjectViewToMode(solverState, els.coordViewSelect, solverRenderer, projectState.view.coordView, projectState.view);
+      fullSolverRefresh();
+    } else {
+      renderDiagramShotPanel();
+      renderDiagramVolumePanel();
+    }
+    appUi.suspendDirtyTracking = false;
+  });
+}
+
+function downloadJsonFile(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportProjectFile() {
+  const filename = `${(appUi.currentProjectName || "blast-project").replace(/[^\w-]+/g, "-")}.json`;
+  downloadJsonFile(filename, serializeCurrentProject());
+}
+
+async function importProjectFile(file) {
+  const text = await file.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("Invalid project file.");
+  }
+  replaceProjectStateFromDocument(parsed);
+  resetCurrentProjectRef();
+  appUi.dirty = true;
+  renderCloudProjectUi();
+}
+
+function renderCloudProjectsList() {
+  if (!isSupabaseConfigured()) {
+    els.cloudProjectsList.innerHTML = `<div class="status-note">${escapeHtml(supabaseConfigMessage())}</div>`;
+    return;
+  }
+  if (!isSignedIn()) {
+    els.cloudProjectsList.innerHTML = '<div class="status-note">Sign in to load, rename, or delete cloud projects.</div>';
+    return;
+  }
+  if (!appUi.cloudProjects.length) {
+    els.cloudProjectsList.innerHTML = '<div class="status-note">No cloud projects yet.</div>';
+    return;
+  }
+  els.cloudProjectsList.innerHTML = appUi.cloudProjects.map((project) => `
+    <div class="project-row">
+      <div class="project-row-title">
+        <strong>${escapeHtml(project.name || "Untitled Project")}</strong>
+        <span>${escapeHtml(formatTimestamp(project.updated_at) || "No timestamp")}</span>
+      </div>
+      <div class="project-row-actions">
+        <button type="button" data-cloud-action="load" data-cloud-id="${escapeHtml(project.id)}">Load</button>
+        <button type="button" data-cloud-action="rename" data-cloud-id="${escapeHtml(project.id)}">Rename</button>
+        <button type="button" data-cloud-action="delete" data-cloud-id="${escapeHtml(project.id)}">Delete</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function renderAuthUi() {
+  if (!isSupabaseConfigured()) {
+    els.authStatus.textContent = "Supabase not configured";
+    els.accountStatus.textContent = supabaseConfigMessage();
+    els.authSendLinkBtn.disabled = true;
+    els.authSignOutBtn.disabled = true;
+    return;
+  }
+  if (isSignedIn()) {
+    els.authStatus.textContent = `Signed in as ${activeUserEmail()}`;
+    els.accountStatus.textContent = `Signed in as ${activeUserEmail()}`;
+    els.authSendLinkBtn.disabled = false;
+    els.authSignOutBtn.disabled = false;
+    return;
+  }
+  els.authStatus.textContent = "Signed out";
+  els.accountStatus.textContent = "Enter your email to receive a magic link.";
+  els.authSendLinkBtn.disabled = false;
+  els.authSignOutBtn.disabled = true;
+}
+
+function renderCloudProjectUi() {
+  const currentName = appUi.currentProjectName || "Local draft";
+  const dirtySuffix = appUi.dirty ? " (unsaved)" : "";
+  if (!isSupabaseConfigured()) {
+    els.cloudProjectStatus.textContent = supabaseConfigMessage();
+    els.cloudSaveBtn.disabled = true;
+    els.cloudSaveAsBtn.disabled = true;
+    els.cloudRefreshProjectsBtn.disabled = true;
+    els.cloudMenuBtn.disabled = false;
+    renderCloudProjectsList();
+    return;
+  }
+  els.cloudSaveBtn.disabled = !isSignedIn();
+  els.cloudSaveAsBtn.disabled = !isSignedIn();
+  els.cloudRefreshProjectsBtn.disabled = !isSignedIn();
+  els.cloudProjectStatus.textContent = isSignedIn()
+    ? `Current project: ${currentName}${dirtySuffix}`
+    : `Current project: ${currentName}${dirtySuffix}. Sign in to use cloud save.`;
+  renderCloudProjectsList();
+}
+
+function renderQuarryOptions() {
+  const select = els.diagramShotLocationSelect;
+  const currentValue = diagramState.metadata.location || projectState.diagram.metadata.location || "";
+  const quarries = appUi.quarries || [];
+  const optionMarkup = ['<option value="">Select location</option>']
+    .concat(quarries.map((quarry) => `<option value="${escapeHtml(quarry.name)}">${escapeHtml(quarry.name)}</option>`));
+  if (currentValue && !quarries.some((quarry) => quarry.name === currentValue)) {
+    optionMarkup.push(`<option value="${escapeHtml(currentValue)}">${escapeHtml(currentValue)}</option>`);
+  }
+  select.innerHTML = optionMarkup.join("");
+  select.value = currentValue;
+}
+
+async function refreshCloudProjects() {
+  if (!requireSignedIn()) return;
+  const projects = await listCloudProjects();
+  appUi.cloudProjects = projects;
+  renderCloudProjectUi();
+}
+
+async function refreshQuarries() {
+  if (!isSupabaseConfigured() || !isSignedIn()) {
+    appUi.quarries = [];
+    renderQuarryOptions();
+    return;
+  }
+  appUi.quarries = await listQuarries();
+  renderQuarryOptions();
+}
+
+async function saveProjectToCloud({ forcePrompt = false } = {}) {
+  if (!requireSignedIn()) return;
+  const document = serializeCurrentProject();
+  let projectName = appUi.currentProjectName;
+  if (forcePrompt || !appUi.currentProjectId || !projectName) {
+    const proposed = window.prompt("Project name", projectName || "Untitled Project");
+    if (!proposed) return;
+    projectName = proposed.trim();
+    if (!projectName) return;
+  }
+  let saved;
+  if (appUi.currentProjectId && !forcePrompt) {
+    saved = await updateCloudProject({ id: appUi.currentProjectId, name: projectName, document });
+  } else {
+    saved = await createCloudProject({ name: projectName, document });
+  }
+  setProjectSavedState(saved.id, saved.name || projectName);
+  await refreshCloudProjects();
+}
+
+async function loadProjectFromCloud(projectId) {
+  if (!requireSignedIn()) return;
+  const record = await loadCloudProject(projectId);
+  replaceProjectStateFromDocument(record.document);
+  setProjectSavedState(record.id, record.name || "");
+  closeAllMenus();
+}
+
+async function renameProjectInCloud(projectId) {
+  if (!requireSignedIn()) return;
+  const existing = appUi.cloudProjects.find((project) => project.id === projectId);
+  const nextName = window.prompt("Rename project", existing?.name || appUi.currentProjectName || "Untitled Project");
+  if (!nextName) return;
+  const trimmedName = nextName.trim();
+  if (!trimmedName) return;
+  const saved = await renameCloudProject(projectId, trimmedName);
+  if (appUi.currentProjectId === projectId) setCurrentProjectRef(projectId, saved.name || trimmedName);
+  await refreshCloudProjects();
+  renderCloudProjectUi();
+}
+
+async function deleteProjectFromCloud(projectId) {
+  if (!requireSignedIn()) return;
+  const existing = appUi.cloudProjects.find((project) => project.id === projectId);
+  if (!window.confirm(`Delete "${existing?.name || "this project"}" from the cloud?`)) return;
+  await deleteCloudProject(projectId);
+  if (appUi.currentProjectId === projectId) resetCurrentProjectRef();
+  await refreshCloudProjects();
+}
+
+async function syncAuthSession(session) {
+  appUi.authSession = session || null;
+  renderAuthUi();
+  renderCloudProjectUi();
+  try {
+    if (isSignedIn()) {
+      await refreshCloudProjects();
+      await refreshQuarries();
+    } else {
+      appUi.cloudProjects = [];
+      appUi.quarries = [];
+      renderCloudProjectUi();
+      renderQuarryOptions();
+    }
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Supabase sync failed.");
+  }
+}
+
+async function initializeCloudIntegration() {
+  renderAuthUi();
+  renderCloudProjectUi();
+  renderQuarryOptions();
+  if (!isSupabaseConfigured()) return;
+  onAuthStateChange((session) => {
+    syncAuthSession(session);
+  });
+  const session = await getAuthSession();
+  await syncAuthSession(session);
+}
+
 function cloneSelectedTiming(selectedTiming) {
   if (!selectedTiming) return [];
   return [{
@@ -782,6 +1142,7 @@ function persistTimingStateToProject() {
   projectState.timing.timingResults = cloneTimingResults(solverState.timingResults);
   projectState.timing.solverMessage = solverState.solverMessage || "";
   projectState.timing.timingVisualization = cloneTimingVisualizationState(solverState.ui.timingVisualization);
+  markProjectDirty();
 }
 
 function persistDiagramStateToProject() {
@@ -802,6 +1163,7 @@ function persistDiagramStateToProject() {
   projectState.diagram.ui.faceDesignationReturnTool = "single";
   projectState.diagram.metadata = cloneDiagramMetadata(diagramState.metadata);
   projectState.diagram.annotations = cloneDiagramAnnotations(diagramState.annotations);
+  markProjectDirty();
 }
 
 function syncCurrentWorkspaceToProject() {
@@ -863,6 +1225,8 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.timing.ui.activeTimingPreviewIndex = -1;
   projectState.timing.manualTiming = cloneManualTiming();
   projectState.timing.timingVisualization = cloneTimingVisualizationState();
+  resetCurrentProjectRef();
+  appUi.dirty = true;
 }
 
 function escapeHtml(value) {
@@ -1404,6 +1768,18 @@ function selectedDiagramMetadataNumber(input) {
 function selectedDiagramRockDensity() {
   const numeric = Number(els.diagramRockDensityInput.value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function quarryByName(name) {
+  return appUi.quarries.find((quarry) => quarry.name === name) || null;
+}
+
+function applyQuarryDensityDefault(locationName) {
+  const quarry = quarryByName(locationName);
+  if (!quarry) return;
+  const density = Number(quarry.default_rock_density);
+  if (!Number.isFinite(density) || density <= 0) return;
+  diagramState.metadata.rockDensityTonsPerCubicYard = density;
 }
 
 function applyShotDefaultDiameterToExistingHoles(nextDefaultDiameter) {
@@ -2552,7 +2928,16 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
 });
 
 els.diagramShotNumberInput.addEventListener("input", () => applyDiagramMetadataPatch("shotNumber", els.diagramShotNumberInput.value.trim()));
-els.diagramShotLocationSelect.addEventListener("change", () => applyDiagramMetadataPatch("location", els.diagramShotLocationSelect.value));
+els.diagramShotLocationSelect.addEventListener("change", () => {
+  const location = els.diagramShotLocationSelect.value;
+  applyDiagramMetadataPatch("location", location);
+  applyQuarryDensityDefault(location);
+  renderDiagramShotPanel();
+  renderDiagramVolumePanel();
+  renderDiagramPropertiesPanel();
+  diagramRenderer.render();
+  persistDiagramStateToProject();
+});
 els.diagramBenchInput.addEventListener("input", () => applyDiagramMetadataPatch("bench", els.diagramBenchInput.value.trim()));
 els.diagramShotDefaultDiameterSelect.addEventListener("change", () => applyDiagramMetadataPatch("defaultDiameter", selectedDiagramDefaultDiameter()));
 els.diagramFaceBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("faceBurden", selectedDiagramMetadataNumber(els.diagramFaceBurdenInput)));
@@ -2641,6 +3026,92 @@ els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramState.selection = new Set();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
+});
+
+els.authSendLinkBtn.addEventListener("click", async () => {
+  if (!requireConfiguredSupabase()) return;
+  const email = els.authEmailInput.value.trim();
+  if (!email) {
+    window.alert("Enter your email first.");
+    return;
+  }
+  try {
+    await signInWithMagicLink(email);
+    els.accountStatus.textContent = `Magic link sent to ${email}.`;
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Could not send magic link.");
+  }
+});
+
+els.authSignOutBtn.addEventListener("click", async () => {
+  if (!requireConfiguredSupabase()) return;
+  try {
+    await signOutSession();
+    closeAllMenus();
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Could not sign out.");
+  }
+});
+
+els.cloudSaveBtn.addEventListener("click", async () => {
+  try {
+    await saveProjectToCloud();
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Cloud save failed.");
+  }
+});
+
+els.cloudSaveAsBtn.addEventListener("click", async () => {
+  try {
+    await saveProjectToCloud({ forcePrompt: true });
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Cloud save failed.");
+  }
+});
+
+els.cloudRefreshProjectsBtn.addEventListener("click", async () => {
+  try {
+    await refreshCloudProjects();
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Could not refresh cloud projects.");
+  }
+});
+
+els.localProjectExportBtn.addEventListener("click", () => exportProjectFile());
+
+els.projectFileInput.addEventListener("change", async () => {
+  const [file] = els.projectFileInput.files || [];
+  if (!file) return;
+  try {
+    await importProjectFile(file);
+    closeAllMenus();
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Could not import project file.");
+  } finally {
+    els.projectFileInput.value = "";
+  }
+});
+
+els.cloudProjectsList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-cloud-action]");
+  if (!button) return;
+  const projectId = button.getAttribute("data-cloud-id");
+  const action = button.getAttribute("data-cloud-action");
+  if (!projectId || !action) return;
+  try {
+    if (action === "load") await loadProjectFromCloud(projectId);
+    if (action === "rename") await renameProjectInCloud(projectId);
+    if (action === "delete") await deleteProjectFromCloud(projectId);
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Cloud project action failed.");
+  }
 });
 
 els.homeNavBtn.addEventListener("click", () => {
@@ -2854,5 +3325,13 @@ persistDiagramStateToProject();
 persistTimingStateToProject();
 initMenuToggles();
 renderWorkspaceChrome();
+renderAuthUi();
+renderCloudProjectUi();
+renderQuarryOptions();
 solverRenderer.render();
 diagramRenderer.render();
+appUi.suspendDirtyTracking = false;
+initializeCloudIntegration().catch((error) => {
+  console.error(error);
+  window.alert(error.message || "Supabase initialization failed.");
+});

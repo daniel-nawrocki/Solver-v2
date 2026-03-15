@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
   <title>Delay Solver</title>
   <link rel="icon" type="image/png" href="assets/small_logo.png">
   <link rel="stylesheet" href="styles.css">
@@ -28,6 +28,38 @@
     </div>
     <div class="topbar-actions">
       <button id="homeNavBtn" class="topbar-nav-btn hidden" type="button">Home</button>
+      <div id="authStatus" class="topbar-status">Supabase not configured</div>
+      <div class="top-menu topbar-menu">
+        <button id="cloudMenuBtn" class="menu-toggle" type="button" data-menu-toggle="cloudMenu">Cloud</button>
+        <section id="cloudMenu" class="menu-panel panel hidden">
+          <h2>Cloud Projects</h2>
+          <div id="cloudProjectStatus" class="status-note">Configure Supabase to enable cloud save.</div>
+          <div class="row-actions">
+            <button id="cloudSaveBtn" type="button">Save</button>
+            <button id="cloudSaveAsBtn" type="button">Save As</button>
+          </div>
+          <div class="row-actions">
+            <button id="cloudRefreshProjectsBtn" type="button">Refresh</button>
+            <button id="localProjectExportBtn" type="button">Export Project File</button>
+          </div>
+          <label class="file-btn">Import Project File
+            <input id="projectFileInput" type="file" accept=".json,application/json" hidden>
+          </label>
+          <div id="cloudProjectsList" class="list">Sign in to manage cloud projects.</div>
+        </section>
+      </div>
+      <div class="top-menu topbar-menu">
+        <button id="accountMenuBtn" class="menu-toggle" type="button" data-menu-toggle="accountMenu">Account</button>
+        <section id="accountMenu" class="menu-panel panel hidden">
+          <h2>Account</h2>
+          <div id="accountStatus" class="status-note">Configure Supabase to enable sign-in.</div>
+          <label>Email
+            <input id="authEmailInput" type="email" placeholder="you@example.com" autocomplete="email">
+          </label>
+          <button id="authSendLinkBtn" type="button">Send Magic Link</button>
+          <button id="authSignOutBtn" type="button">Sign Out</button>
+        </section>
+      </div>
       <div id="timingVisualizationControls" class="timing-visualization-controls hidden">
         <div class="timing-visualization-row">
           <button id="timingVisualizationBtn" type="button">Simulate</button>
