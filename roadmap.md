@@ -17,7 +17,7 @@ Design consistency rule:
 - Reuse the same top bar, floating controls, panel style, spacing, glassy menu panels, and overall interaction tone wherever possible.
 
 Current top-level tool goals:
-- `Blast Planner`: unified workspace with:
+- `Daniel Fire`: unified workspace with:
   - `Diagram` mode for layout / metadata / annotation workflow
   - `Timing` mode for pathing / timing-range / firing-time workflow
 
@@ -48,7 +48,7 @@ Code-level status:
 - `Diagram Maker` now exists in the DOM as a real workspace, not a placeholder.
 - `Diagram Maker` has its own state, renderer instance, import flow, selection flow, and property editor.
 - the app now has a centered top-bar mode toggle that switches between `Diagram` and `Timing` while syncing through a shared project state
-- Home now presents a single `Blast Planner` entry point instead of two separate tool cards
+- Home now presents a single `Daniel Fire` entry point instead of two separate tool cards
 - `Print Preview` is shared, but branches behavior based on whether the active workspace is `Delay Solver` or `Diagram Maker`.
 - Diagram Maker now has a bottom selection toolkit styled to match the Delay Solver bottom controls.
 - Diagram Maker now also has a bottom annotation toolkit with `Markup` and `Text` tools, plus shared color/size controls.
@@ -67,6 +67,7 @@ Code-level status:
 - Diagram Maker now includes a `Volume` menu with whole-shot cubic-yard and tonnage totals using editable rock density.
 - Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
 - print CSS was simplified so print preview now outputs one sheet per page tab without the extra blank/overflow pages seen in browser PDF export.
+- repo documentation now includes a tracked end-user guide source at `HOW_TO_USE.md` plus a generated `Daniel Fire - How to Use.pdf`
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -91,7 +92,7 @@ Done.
 What was added:
 - app launches to `Home`
 - `Home` now has one unified entry:
-  - `Blast Planner`
+  - `Daniel Fire`
 - shared top bar now reflects active workspace
 - navigation works without page reload
 
@@ -208,8 +209,9 @@ What was added:
 - displayed `bearing` and `depth` values are rounded to whole numbers
 
 Current rule:
-- accepted angle values are only `5`, `10`, `15`, `20`, `25`, `30`
-- imported or edited angles outside that set normalize to `null` / unclassified
+- accepted drawable angle values are `5`, `10`, `15`, `20`, `25`, `30`
+- `0` is also accepted as the default no-angle value
+- imported or edited angles outside that set normalize to `0`
 
 ### 9. Diagram Maker Selection Toolkit
 Implemented in code.
@@ -251,8 +253,10 @@ What was added:
   - `Location`
   - `Bench`
   - `Hole Diameter`
-  - `Face Pattern`
-  - `Interior Pattern`
+  - face burden
+  - face spacing
+  - interior burden
+  - interior spacing
 - `Hole Diameter` now acts as the default shot-level diameter source for Diagram Maker imports and default-diameter application
 - diameter display uses fraction-style labels in UI/print for the supported half-inch values
 
@@ -338,7 +342,7 @@ Current rule:
 Implemented as an incremental merge path.
 
 What was added:
-- Home now opens a single `Blast Planner` entry
+- Home now opens a single `Daniel Fire` entry
 - top bar now includes centered `Diagram` / `Timing` mode buttons
 - imports in either mode now initialize one shared project hole set
 - switching modes now hydrates the target mode from the shared project instead of requiring a second import
@@ -412,6 +416,19 @@ Current rule:
 - density persists in Diagram shot metadata across mode switches
 - zero angle is treated as the default no-angle state, not as a drawable classified angle
 
+### 21. Repository User Guide PDF
+Implemented in repo documentation.
+
+What was added:
+- a tracked end-user guide source at [HOW_TO_USE.md](/c:/Users/danie/Desktop/Solver-v2/Solver-v2/HOW_TO_USE.md)
+- a local PDF generator script at [tools/generate_how_to_use_pdf.py](/c:/Users/danie/Desktop/Solver-v2/Solver-v2/tools/generate_how_to_use_pdf.py)
+- a generated repository guide PDF at [Daniel Fire - How to Use.pdf](/c:/Users/danie/Desktop/Solver-v2/Solver-v2/Daniel%20Fire%20-%20How%20to%20Use.pdf)
+
+Current rule:
+- the PDF is intended as the current full-site how-to reference for the repo
+- regenerate it by running `python tools\generate_how_to_use_pdf.py`
+- the in-app Help page is still older content and does not yet match the PDF guide
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -427,7 +444,7 @@ Important recent context:
 - Diagram Maker shot metadata and annotations are in-memory only and are not persisted yet.
 - Diagram Maker print label edits are session-only and are not persisted yet.
 - Multi-page print sessions are in-memory only and are not persisted yet.
-- Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
+- the in-app Help page is still Delay Solver-focused and has not been expanded to match the current planner, even though a repository PDF guide now exists.
 - Diagram Maker face designation currently has no dedicated visual highlighting beyond selection/status, so dense layouts may need a later clarity pass.
 - Volume totals currently show whole-shot output only; there is no per-hole tonnage UI yet.
 - Full browser interaction testing still needs to be done manually after changes.
@@ -446,7 +463,7 @@ Important recent context:
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
-  - single `Blast Planner` home entry flow
+  - single `Daniel Fire` home entry flow
   - top-bar `Diagram` / `Timing` mode switch
   - centered top-bar mode-toggle layout stability
   - persistence of diagram edits across mode switches
@@ -516,7 +533,7 @@ Important recent context:
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded
-- update Help content to include the unified planner workflow
+- update the in-app Help content to match the current unified planner workflow and the repository PDF guide
 
 ## Medium-Priority Future Work
 - project persistence across sessions
@@ -525,7 +542,7 @@ Important recent context:
 - hole trace / projected path visualization mode
 - annotation tools
 - additional diagram fields and validation rules
-- expanded Help menu / content for the unified planner
+- expanded in-app Help menu / content for the unified planner
 - manual timing tool
 - better presentation / layout for the pattern and diameter box area
 - tonnage calculator
@@ -547,7 +564,7 @@ If a new chat starts, it should read this file first.
 
 Most important current repo facts to preserve:
 - This is a single-page multi-workspace app.
-- Delay Solver remains the established reference for UI style, but the user-facing workflow is now one unified `Blast Planner`.
+- Delay Solver remains the established reference for UI style, but the user-facing workflow is now one unified `Daniel Fire` planner.
 - Diagram mode should continue matching the established solver style unless explicitly changed.
 - Shared renderer logic lives in `js/diagramRenderer.js`.
 - Shared app/workspace wiring lives in `js/app.js`.
