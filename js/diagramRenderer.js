@@ -254,7 +254,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = this.isPrintRenderer && this.isDiagramMode() ? 146 : 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? 196 : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);
@@ -358,7 +358,7 @@ export class DiagramRenderer {
       if (bearingText) lines.push({ text: bearingText, color: "#52657c" });
     }
     if (settings.showDepthLabels) {
-      const depthText = formatWholeNumber(hole.depth, "'");
+      const depthText = formatWholeNumber(hole.depth, " ft");
       if (depthText) lines.push({ text: depthText, color: "#52657c" });
     }
     return lines;
@@ -515,7 +515,7 @@ export class DiagramRenderer {
       if (bearingText) lines.push({ text: bearingText, color: "#52657c", weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
     }
     if (settings.showDepthLabels) {
-      const depthText = formatWholeNumber(hole.depth, "'");
+      const depthText = formatWholeNumber(hole.depth, " ft");
       if (depthText) lines.push({ text: depthText, color: "#52657c", weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
     }
     return lines;
@@ -780,10 +780,37 @@ export class DiagramRenderer {
       this.ctx.fillText(line, 30, 72 + (index * 19));
     });
 
-    this.ctx.textAlign = "right";
-    rightLines.forEach((line, index) => {
-      this.ctx.fillText(line, this.canvas.width - 30, 58 + (index * 19));
-    });
+    if (rightLines.length) {
+      this.ctx.font = printHeaderMetaFont(13, 600);
+      const boxPaddingX = 14;
+      const boxPaddingY = 10;
+      const lineGap = 6;
+      const lineHeight = 13;
+      const textWidths = rightLines.map((line) => this.ctx.measureText(line).width);
+      const boxWidth = Math.max(...textWidths) + (boxPaddingX * 2);
+      const boxHeight = (rightLines.length * lineHeight) + ((rightLines.length - 1) * lineGap) + (boxPaddingY * 2);
+      const boxLeft = this.canvas.width - 30 - boxWidth;
+      const boxTop = 34;
+
+      this.ctx.save();
+      this.ctx.fillStyle = "rgba(248, 251, 255, 0.96)";
+      this.ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
+      this.ctx.lineWidth = 1.2;
+      this.ctx.shadowColor = "rgba(15, 23, 42, 0.08)";
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowOffsetY = 3;
+      this.ctx.beginPath();
+      this.ctx.roundRect(boxLeft, boxTop, boxWidth, boxHeight, 14);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      this.ctx.textAlign = "right";
+      rightLines.forEach((line, index) => {
+        const y = boxTop + boxPaddingY + lineHeight + (index * (lineHeight + lineGap));
+        this.ctx.fillText(line, this.canvas.width - 30 - boxPaddingX, y);
+      });
+    }
     this.ctx.textAlign = "left";
     this.ctx.restore();
   }
