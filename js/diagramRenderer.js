@@ -782,25 +782,25 @@ export class DiagramRenderer {
 
     if (rightLines.length) {
       this.ctx.font = printHeaderMetaFont(13, 600);
-      const boxPaddingX = 14;
-      const boxPaddingY = 10;
-      const lineGap = 6;
+      const boxPaddingX = 16;
+      const boxPaddingY = 12;
+      const lineGap = 7;
       const lineHeight = 13;
       const textWidths = rightLines.map((line) => this.ctx.measureText(line).width);
       const boxWidth = Math.max(...textWidths) + (boxPaddingX * 2);
       const boxHeight = (rightLines.length * lineHeight) + ((rightLines.length - 1) * lineGap) + (boxPaddingY * 2);
       const boxLeft = this.canvas.width - 30 - boxWidth;
-      const boxTop = 34;
+      const boxTop = 32;
 
       this.ctx.save();
-      this.ctx.fillStyle = "rgba(248, 251, 255, 0.96)";
-      this.ctx.strokeStyle = "rgba(148, 163, 184, 0.55)";
-      this.ctx.lineWidth = 1.2;
-      this.ctx.shadowColor = "rgba(15, 23, 42, 0.08)";
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowOffsetY = 3;
+      this.ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
+      this.ctx.strokeStyle = "rgba(148, 163, 184, 0.7)";
+      this.ctx.lineWidth = 1.1;
+      this.ctx.shadowColor = "rgba(15, 23, 42, 0.06)";
+      this.ctx.shadowBlur = 6;
+      this.ctx.shadowOffsetY = 2;
       this.ctx.beginPath();
-      this.ctx.roundRect(boxLeft, boxTop, boxWidth, boxHeight, 14);
+      this.ctx.roundRect(boxLeft, boxTop, boxWidth, boxHeight, 6);
       this.ctx.fill();
       this.ctx.stroke();
       this.ctx.restore();
