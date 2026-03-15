@@ -994,6 +994,10 @@ button:active {
   filter: grayscale(1);
 }
 
+.print-paper-frame.greyscale img {
+  filter: grayscale(1);
+}
+
 .print-pages-output {
   display: none;
   width: 100%;
@@ -1390,6 +1394,10 @@ body.help-active .print-workspace {
 
   #printCanvas,
   .print-output-page canvas {
+    display: none !important;
+  }
+
+  .print-output-page img {
     width: 10.5in;
     height: 8in;
     max-width: none;
