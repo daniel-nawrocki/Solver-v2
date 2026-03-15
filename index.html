@@ -1,13 +1,16 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'">
   <title>Delay Solver</title>
   <link rel="icon" type="image/png" href="assets/small_logo.png">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <header class="topbar">
     <div class="topbar-brand">
@@ -56,7 +59,7 @@
         <button id="openDelaySolverBtn" class="tool-card panel" type="button">
           <span class="tool-card-kicker">Available Now</span>
           <strong>Daniel Fire</strong>
-          <span>Like nobel fire but it doesnt suck</span>
+          <span>Like Nobel Fire but it doesn't suck</span>
         </button>
       </div>
     </section>
@@ -139,7 +142,8 @@
             <h2>Relationships</h2>
             <div id="originStatus" class="status-chip">Origin: not set</div>
             <div id="toolModeStatus" class="status-note">Tool: Select Origin</div>
-            <label><input id="relationshipVisibilityToggleSecondary" type="checkbox" checked> Show Relationship Arrows</label>
+            <label><input id="relationshipVisibilityToggleSecondary" type="checkbox" checked> Show Relationship
+              Arrows</label>
             <div class="row-actions">
               <button id="clearRelationshipsBtn">Clear Relationships</button>
               <button id="clearOriginBtn">Clear Origin</button>
@@ -195,7 +199,8 @@
         </svg>
         <span>Origin</span>
       </button>
-      <button id="holeRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Positive Tool" aria-label="Hole-to-Hole Positive Tool">
+      <button id="holeRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Positive Tool"
+        aria-label="Hole-to-Hole Positive Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="5" cy="12" r="2"></circle>
           <circle cx="19" cy="12" r="2"></circle>
@@ -204,7 +209,8 @@
         </svg>
         <span>H-H +</span>
       </button>
-      <button id="holeRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Negative Tool" aria-label="Hole-to-Hole Negative Tool">
+      <button id="holeRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Hole-to-Hole Negative Tool"
+        aria-label="Hole-to-Hole Negative Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="5" cy="12" r="2"></circle>
           <circle cx="19" cy="12" r="2"></circle>
@@ -213,7 +219,8 @@
         </svg>
         <span>H-H -</span>
       </button>
-      <button id="rowRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Positive Tool" aria-label="Row-to-Row Positive Tool">
+      <button id="rowRelationPositiveToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Positive Tool"
+        aria-label="Row-to-Row Positive Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="5" r="2"></circle>
           <circle cx="12" cy="19" r="2"></circle>
@@ -222,7 +229,8 @@
         </svg>
         <span>R-R +</span>
       </button>
-      <button id="rowRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Negative Tool" aria-label="Row-to-Row Negative Tool">
+      <button id="rowRelationNegativeToolBtn" class="toolkit-btn" type="button" title="Row-to-Row Negative Tool"
+        aria-label="Row-to-Row Negative Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="5" r="2"></circle>
           <circle cx="12" cy="19" r="2"></circle>
@@ -332,17 +340,21 @@
             <div class="pattern-pair-group">
               <div class="pattern-pair-label">Face Pattern</div>
               <div class="pattern-pair-row">
-                <input id="diagramFaceBurdenInput" type="number" step="0.01" placeholder="Burden" aria-label="Face Burden">
+                <input id="diagramFaceBurdenInput" type="number" step="0.01" placeholder="Burden"
+                  aria-label="Face Burden">
                 <span class="pattern-pair-times">x</span>
-                <input id="diagramFaceSpacingInput" type="number" step="0.01" placeholder="Spacing" aria-label="Face Spacing">
+                <input id="diagramFaceSpacingInput" type="number" step="0.01" placeholder="Spacing"
+                  aria-label="Face Spacing">
               </div>
             </div>
             <div class="pattern-pair-group">
               <div class="pattern-pair-label">Interior Pattern</div>
               <div class="pattern-pair-row">
-                <input id="diagramInteriorBurdenInput" type="number" step="0.01" placeholder="Burden" aria-label="Interior Burden">
+                <input id="diagramInteriorBurdenInput" type="number" step="0.01" placeholder="Burden"
+                  aria-label="Interior Burden">
                 <span class="pattern-pair-times">x</span>
-                <input id="diagramInteriorSpacingInput" type="number" step="0.01" placeholder="Spacing" aria-label="Interior Spacing">
+                <input id="diagramInteriorSpacingInput" type="number" step="0.01" placeholder="Spacing"
+                  aria-label="Interior Spacing">
               </div>
             </div>
             <div id="diagramFaceStatus" class="status-note">Face Holes: 0 designated</div>
@@ -358,11 +370,16 @@
           <button class="menu-toggle" type="button" data-menu-toggle="diagramViewMenu">View</button>
           <section id="diagramViewMenu" class="menu-panel panel hidden">
             <h2>View</h2>
-            <label class="menu-checkbox-row"><input id="diagramGridToggle" type="checkbox" checked><span>Show Grid</span></label>
-            <label class="menu-checkbox-row"><input id="diagramAngleLabelToggle" type="checkbox" checked><span>Show Angle</span></label>
-            <label class="menu-checkbox-row"><input id="diagramBearingLabelToggle" type="checkbox" checked><span>Show Bearing</span></label>
-            <label class="menu-checkbox-row"><input id="diagramBearingArrowToggle" type="checkbox"><span>Show Bearing Arrows</span></label>
-            <label class="menu-checkbox-row"><input id="diagramDepthLabelToggle" type="checkbox" checked><span>Show Depth</span></label>
+            <label class="menu-checkbox-row"><input id="diagramGridToggle" type="checkbox" checked><span>Show
+                Grid</span></label>
+            <label class="menu-checkbox-row"><input id="diagramAngleLabelToggle" type="checkbox" checked><span>Show
+                Angle</span></label>
+            <label class="menu-checkbox-row"><input id="diagramBearingLabelToggle" type="checkbox" checked><span>Show
+                Bearing</span></label>
+            <label class="menu-checkbox-row"><input id="diagramBearingArrowToggle" type="checkbox"><span>Show Bearing
+                Arrows</span></label>
+            <label class="menu-checkbox-row"><input id="diagramDepthLabelToggle" type="checkbox" checked><span>Show
+                Depth</span></label>
             <button id="diagramFitViewBtn" type="button">Fit View</button>
             <label>Coordinate View
               <select id="diagramCoordViewSelect">
@@ -387,7 +404,8 @@
           <section id="diagramPropertiesMenu" class="menu-panel panel hidden">
             <h2>Hole Properties</h2>
             <div id="diagramSelectionStatus" class="status-chip">Selection: no holes selected</div>
-            <div id="diagramSelectionList" class="list">Select a hole to edit its properties, or shift-select multiple holes.</div>
+            <div id="diagramSelectionList" class="list">Select a hole to edit its properties, or shift-select multiple
+              holes.</div>
             <div id="diagramDefaultDiameterStatus" class="status-note">Default Hole Diameter: not set</div>
             <button id="diagramApplyDefaultDiameterBtn" type="button">Apply Default Diameter</button>
             <label>Burden
@@ -437,19 +455,22 @@
     </main>
 
     <div class="floating-toolkit" aria-label="Diagram Maker Selection Tools">
-      <button id="diagramSingleSelectToolBtn" class="toolkit-btn" type="button" title="Select Tool" aria-label="Select Tool">
+      <button id="diagramSingleSelectToolBtn" class="toolkit-btn" type="button" title="Select Tool"
+        aria-label="Select Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 4l4 12 2-5 5-2-11-5z"></path>
         </svg>
         <span>Select</span>
       </button>
-      <button id="diagramBoxSelectToolBtn" class="toolkit-btn" type="button" title="Box Select Tool" aria-label="Box Select Tool">
+      <button id="diagramBoxSelectToolBtn" class="toolkit-btn" type="button" title="Box Select Tool"
+        aria-label="Box Select Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <rect x="5" y="5" width="14" height="14" rx="1"></rect>
         </svg>
         <span>Box</span>
       </button>
-      <button id="diagramPolygonSelectToolBtn" class="toolkit-btn" type="button" title="Polygon Select Tool" aria-label="Polygon Select Tool">
+      <button id="diagramPolygonSelectToolBtn" class="toolkit-btn" type="button" title="Polygon Select Tool"
+        aria-label="Polygon Select Tool">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M7 6l10 2-2 10-10-3z"></path>
           <circle cx="7" cy="6" r="1.5"></circle>
@@ -476,7 +497,8 @@
       </button>
       <div class="toolkit-inline-controls" aria-label="Diagram Maker Annotation Controls">
         <label class="toolkit-inline-label" for="diagramAnnotationColorInput">Color</label>
-        <input id="diagramAnnotationColorInput" class="toolkit-color-input" type="color" value="#000000" aria-label="Annotation Color">
+        <input id="diagramAnnotationColorInput" class="toolkit-color-input" type="color" value="#000000"
+          aria-label="Annotation Color">
         <label class="toolkit-inline-label" for="diagramAnnotationSizeSelect">Size</label>
         <select id="diagramAnnotationSizeSelect" class="toolkit-size-select" aria-label="Annotation Size">
           <option value="small">Small</option>
@@ -508,16 +530,20 @@
           <input id="printTextScaleInput" type="range" min="0.7" max="1.8" step="0.1" value="1">
         </label>
         <label><input id="printColorModeToggle" type="checkbox" checked> Color</label>
-        <label id="printRelationshipToggleWrap"><input id="printRelationshipToggle" type="checkbox" checked> Show Relationships</label>
-        <label id="printAngleToggleWrap" class="hidden"><input id="printAngleToggle" type="checkbox" checked> Show Angle</label>
-        <label id="printBearingToggleWrap" class="hidden"><input id="printBearingToggle" type="checkbox" checked> Show Bearing</label>
+        <label id="printRelationshipToggleWrap"><input id="printRelationshipToggle" type="checkbox" checked> Show
+          Relationships</label>
+        <label id="printAngleToggleWrap" class="hidden"><input id="printAngleToggle" type="checkbox" checked> Show
+          Angle</label>
+        <label id="printBearingToggleWrap" class="hidden"><input id="printBearingToggle" type="checkbox" checked> Show
+          Bearing</label>
         <label id="printBearingArrowWeightWrap" class="hidden">Arrow Weight
           <input id="printBearingArrowWeightInput" type="range" min="1" max="3" step="0.1" value="1">
         </label>
         <label id="printBearingArrowLengthWrap" class="hidden">Arrow Length
           <input id="printBearingArrowLengthInput" type="range" min="8" max="48" step="1" value="16">
         </label>
-        <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show Depth</label>
+        <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show
+          Depth</label>
       </div>
     </div>
     <div class="print-stage" id="printStage">
@@ -550,7 +576,8 @@
       <div class="help-content">
         <section id="help-overview" class="help-section panel">
           <h2>What This App Does</h2>
-          <p>Timing Solver lets you import drill-hole coordinates, define directional timing relationships, evaluate timing combinations, and prepare a print-ready diagram preview.</p>
+          <p>Timing Solver lets you import drill-hole coordinates, define directional timing relationships, evaluate
+            timing combinations, and prepare a print-ready diagram preview.</p>
           <div class="help-callout">
             <strong>Quick Start</strong>
             <ol>
@@ -566,8 +593,10 @@
 
         <section id="help-import" class="help-section panel">
           <h2>Importing a CSV</h2>
-          <p>Open <strong>Import</strong>, choose the CSV file, then map the columns used for X, Y, optional Toe X/Toe Y, and hole ID. The app automatically guesses common headers when possible.</p>
-          <p>Use collar coordinates for the default diagram view. If toe columns are provided, you can switch between collar and toe in the <strong>View</strong> menu later.</p>
+          <p>Open <strong>Import</strong>, choose the CSV file, then map the columns used for X, Y, optional Toe X/Toe
+            Y, and hole ID. The app automatically guesses common headers when possible.</p>
+          <p>Use collar coordinates for the default diagram view. If toe columns are provided, you can switch between
+            collar and toe in the <strong>View</strong> menu later.</p>
         </section>
 
         <section id="help-navigation" class="help-section panel">
@@ -579,60 +608,89 @@
             </div>
             <div class="help-card">
               <h3>Rotate</h3>
-              <p>Hold <strong>Ctrl</strong> and use the mouse wheel to rotate. Scroll up and down to rotate in opposite directions.</p>
+              <p>Hold <strong>Ctrl</strong> and use the mouse wheel to rotate. Scroll up and down to rotate in opposite
+                directions.</p>
             </div>
             <div class="help-card">
               <h3>View Tools</h3>
-              <p>Use Fit View, coordinate view switching, relationship visibility, and the rotation buttons in the <strong>View</strong> panel.</p>
+              <p>Use Fit View, coordinate view switching, relationship visibility, and the rotation buttons in the
+                <strong>View</strong> panel.</p>
             </div>
           </div>
         </section>
 
         <section id="help-relationships" class="help-section panel">
           <h2>Setting Origin and Relationships</h2>
-          <p>Choose the active tool from the bottom toolbar, then click holes on the diagram to build the timing graph.</p>
+          <p>Choose the active tool from the bottom toolbar, then click holes on the diagram to build the timing graph.
+          </p>
           <div class="help-icon-row">
             <div class="legend-item">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="7"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
               <span><strong>Origin</strong><br>Sets the reference hole at time zero.</span>
             </div>
             <div class="legend-item">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle><path d="M7 12h10"></path><path d="M14 9l3 3-3 3"></path></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="2"></circle>
+                <circle cx="19" cy="12" r="2"></circle>
+                <path d="M7 12h10"></path>
+                <path d="M14 9l3 3-3 3"></path>
+              </svg>
               <span><strong>H-H</strong><br>Creates a hole-to-hole directed delay relationship.</span>
             </div>
             <div class="legend-item">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="19" r="2"></circle><path d="M12 7v10"></path><path d="M9 14l3 3 3-3"></path></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="2"></circle>
+                <circle cx="12" cy="19" r="2"></circle>
+                <path d="M12 7v10"></path>
+                <path d="M9 14l3 3 3-3"></path>
+              </svg>
               <span><strong>R-R</strong><br>Creates a row-to-row directed delay relationship.</span>
             </div>
             <div class="legend-item">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle><path d="M7 12h10"></path><path d="M12 8l4 4-4 4"></path></svg>
-              <span><strong>Offset</strong><br>Creates a directed offset relationship using the global offset range.</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="2"></circle>
+                <circle cx="19" cy="12" r="2"></circle>
+                <path d="M7 12h10"></path>
+                <path d="M12 8l4 4-4 4"></path>
+              </svg>
+              <span><strong>Offset</strong><br>Creates a directed offset relationship using the global offset
+                range.</span>
             </div>
           </div>
-          <p>All holes must be reachable from the origin using directed relationships before the solver can return valid timing combinations.</p>
+          <p>All holes must be reachable from the origin using directed relationships before the solver can return valid
+            timing combinations.</p>
         </section>
 
         <section id="help-solver" class="help-section panel">
           <h2>Timing Ranges and Solving</h2>
-          <p>Open <strong>Timing</strong> to adjust Hole-to-Hole, Row-to-Row, and Offset min/max ranges. These ranges define the values the solver explores.</p>
-          <p>After clicking <strong>Find Timing Combinations</strong>, select a result from the list to preview firing times and the timing summary overlay on the diagram.</p>
+          <p>Open <strong>Timing</strong> to adjust Hole-to-Hole, Row-to-Row, and Offset min/max ranges. These ranges
+            define the values the solver explores.</p>
+          <p>After clicking <strong>Find Timing Combinations</strong>, select a result from the list to preview firing
+            times and the timing summary overlay on the diagram.</p>
           <div class="help-callout">
             <strong>Preview Readout</strong>
-            <p><code>H2H</code> and <code>R2R</code> show the selected delay values. <code>Peak(8ms)</code> shows the most holes firing in any 8 ms window.</p>
+            <p><code>H2H</code> and <code>R2R</code> show the selected delay values. <code>Peak(8ms)</code> shows the
+              most holes firing in any 8 ms window.</p>
           </div>
         </section>
 
         <section id="help-print" class="help-section panel">
           <h2>Print Preview and Printing</h2>
-          <p>Use <strong>Export PDF</strong> to open the full-screen print workspace. The paper border shows the page area for a standard sheet.</p>
+          <p>Use <strong>Export PDF</strong> to open the full-screen print workspace. The paper border shows the page
+            area for a standard sheet.</p>
           <div class="help-grid">
             <div class="help-card">
               <h3>Print-only Controls</h3>
-              <p>Zoom and pan inside print preview, change text size, toggle greyscale or color, and show or hide relationship lines without affecting the main editor.</p>
+              <p>Zoom and pan inside print preview, change text size, toggle greyscale or color, and show or hide
+                relationship lines without affecting the main editor.</p>
             </div>
             <div class="help-card">
               <h3>Fit and Back</h3>
-              <p>Use <strong>Fit Page</strong> to reset the preview framing, <strong>Back</strong> to return without printing, or <strong>Print</strong> to launch the print dialog and return to the main screen.</p>
+              <p>Use <strong>Fit Page</strong> to reset the preview framing, <strong>Back</strong> to return without
+                printing, or <strong>Print</strong> to launch the print dialog and return to the main screen.</p>
             </div>
           </div>
         </section>
@@ -641,9 +699,12 @@
           <h2>Tool Icon Legend</h2>
           <div class="help-icon-row">
             <div class="legend-item"><span class="legend-badge">Origin</span><span>Set the starting hole.</span></div>
-            <div class="legend-item"><span class="legend-badge">H-H + / -</span><span>Positive or negative hole-to-hole sequencing.</span></div>
-            <div class="legend-item"><span class="legend-badge">R-R + / -</span><span>Positive or negative row-to-row sequencing.</span></div>
-            <div class="legend-item"><span class="legend-badge">Offset</span><span>Direct offset link using the Offset min/max range.</span></div>
+            <div class="legend-item"><span class="legend-badge">H-H + / -</span><span>Positive or negative hole-to-hole
+                sequencing.</span></div>
+            <div class="legend-item"><span class="legend-badge">R-R + / -</span><span>Positive or negative row-to-row
+                sequencing.</span></div>
+            <div class="legend-item"><span class="legend-badge">Offset</span><span>Direct offset link using the Offset
+                min/max range.</span></div>
           </div>
         </section>
 
@@ -652,15 +713,18 @@
           <div class="help-grid">
             <div class="help-card">
               <h3>No timing results</h3>
-              <p>Check that an origin is set, every hole is reachable, and the timing graph does not contain conflicting derived times.</p>
+              <p>Check that an origin is set, every hole is reachable, and the timing graph does not contain conflicting
+                derived times.</p>
             </div>
             <div class="help-card">
               <h3>Import problems</h3>
-              <p>Verify that the selected X and Y columns contain valid numeric coordinates and that both Toe columns are either selected together or left blank.</p>
+              <p>Verify that the selected X and Y columns contain valid numeric coordinates and that both Toe columns
+                are either selected together or left blank.</p>
             </div>
             <div class="help-card">
               <h3>Print output not right</h3>
-              <p>Open print preview, fit the page, and adjust text size or relationship visibility there. Those changes only apply to the print view.</p>
+              <p>Open print preview, fit the page, and adjust text size or relationship visibility there. Those changes
+                only apply to the print view.</p>
             </div>
           </div>
         </section>
@@ -670,4 +734,5 @@
 
   <script type="module" src="js/app.js"></script>
 </body>
+
 </html>
