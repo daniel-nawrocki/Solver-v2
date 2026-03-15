@@ -186,6 +186,9 @@ const projectState = {
   csvCache: null,
   view: {
     coordView: "collar",
+    zoom: 1,
+    panX: 0,
+    panY: 0,
     rotationDeg: 0,
   },
   diagram: {
@@ -389,6 +392,7 @@ const solverRenderer = new DiagramRenderer(document.getElementById("diagramCanva
   onHoleHover: handleSolverHoleHover,
   onPointerUp: handleSolverPointerUp,
   onHoleContextMenu: () => {},
+  onViewChange: handleSolverRendererViewChange,
 });
 
 const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMakerCanvas"), {
@@ -401,6 +405,7 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
   onDoubleClick: () => false,
   onHoleContextMenu: () => {},
   onCanvasContextMenu: handleDiagramCanvasContextMenu,
+  onViewChange: handleDiagramRendererViewChange,
 });
 
 const printRenderer = new DiagramRenderer(document.getElementById("printCanvas"), {
@@ -489,7 +494,7 @@ function switchPlannerMode(nextMode) {
     setActiveWorkspace("diagramMaker");
     requestAnimationFrame(() => {
       setDiagramToolMode(diagramState.ui.activeTool);
-      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view);
       fullDiagramRefresh();
     });
     return;
@@ -498,7 +503,7 @@ function switchPlannerMode(nextMode) {
   setActiveWorkspace("delaySolver");
   requestAnimationFrame(() => {
     setToolMode(solverState.ui.toolMode);
-    applyProjectViewToMode(solverState, els.coordViewSelect, solverRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+    applyProjectViewToMode(solverState, els.coordViewSelect, solverRenderer, projectState.view.coordView, projectState.view);
     fullSolverRefresh();
   });
 }
@@ -640,6 +645,15 @@ function refreshProjectHoles(holes = []) {
   projectState.holesById = new Map(projectState.holes.map((hole) => [hole.id, hole]));
 }
 
+function updateProjectViewFromRenderer(renderer) {
+  if (!renderer?.viewState) return;
+  const view = renderer.viewState();
+  projectState.view.zoom = Number(view.zoom) || 1;
+  projectState.view.panX = Number(view.panX) || 0;
+  projectState.view.panY = Number(view.panY) || 0;
+  projectState.view.rotationDeg = Number(view.rotationDeg) || 0;
+}
+
 function hydrateSolverFromProject() {
   solverState.holes = projectState.holes.map(cloneHole);
   rebuildHolesById(solverState);
@@ -688,7 +702,7 @@ function persistTimingStateToProject() {
   refreshProjectHoles(solverState.holes);
   projectState.csvCache = solverState.csvCache;
   projectState.view.coordView = solverState.ui.coordView || "collar";
-  projectState.view.rotationDeg = solverRenderer.rotationDeg;
+  updateProjectViewFromRenderer(solverRenderer);
   projectState.timing.ui.showGrid = solverState.ui.showGrid !== false;
   projectState.timing.ui.showRelationships = solverState.ui.showRelationships !== false;
   projectState.timing.ui.showOverlayText = solverState.ui.showOverlayText !== false;
@@ -707,7 +721,7 @@ function persistDiagramStateToProject() {
   refreshProjectHoles(diagramState.holes);
   projectState.csvCache = diagramState.csvCache;
   projectState.view.coordView = diagramState.ui.coordView || "collar";
-  projectState.view.rotationDeg = diagramRenderer.rotationDeg;
+  updateProjectViewFromRenderer(diagramRenderer);
   projectState.diagram.ui.showGrid = diagramState.ui.showGrid !== false;
   projectState.diagram.ui.showOverlayText = diagramState.ui.showOverlayText === true;
   projectState.diagram.ui.showAngleLabels = diagramState.ui.showAngleLabels !== false;
@@ -726,16 +740,35 @@ function syncCurrentWorkspaceToProject() {
   if (isSolverWorkspaceActive()) persistTimingStateToProject();
 }
 
-function applyProjectViewToMode(targetState, selectEl, renderer, targetView, rotationDeg) {
+function handleSolverRendererViewChange() {
+  if (!isSolverWorkspaceActive()) return;
+  projectState.view.coordView = solverState.ui.coordView || "collar";
+  updateProjectViewFromRenderer(solverRenderer);
+}
+
+function handleDiagramRendererViewChange() {
+  if (!isDiagramWorkspaceActive()) return;
+  projectState.view.coordView = diagramState.ui.coordView || "collar";
+  updateProjectViewFromRenderer(diagramRenderer);
+}
+
+function applyProjectViewToMode(targetState, selectEl, renderer, targetView, view) {
   applyCoordinateView(targetState, selectEl, renderer, targetView, { fit: false });
-  renderer.rotationDeg = Number.isFinite(rotationDeg) ? rotationDeg : 0;
-  renderer.render();
+  renderer.applyViewState({
+    zoom: Number(view?.zoom) || 1,
+    panX: Number(view?.panX) || 0,
+    panY: Number(view?.panY) || 0,
+    rotationDeg: Number(view?.rotationDeg) || 0,
+  });
 }
 
 function initializeProjectFromHoles(holes, csvCache = null) {
   refreshProjectHoles(holes);
   projectState.csvCache = csvCache;
   projectState.view.coordView = "collar";
+  projectState.view.zoom = 1;
+  projectState.view.panX = 0;
+  projectState.view.panY = 0;
   projectState.view.rotationDeg = 0;
   projectState.timing.relationships = { originHoleId: null, edges: [], nextId: 1 };
   projectState.timing.timingResults = [];
@@ -2319,7 +2352,7 @@ els.openDelaySolverBtn.addEventListener("click", () => {
   else persistDiagramStateToProject();
   setActiveWorkspace("diagramMaker");
   requestAnimationFrame(() => {
-    applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+    applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view);
     fullDiagramRefresh({ fit: projectState.holes.length === 0 });
   });
 });
@@ -2328,7 +2361,7 @@ if (els.openDiagramMakerBtn) {
     if (projectState.holes.length) hydrateDiagramFromProject();
     setActiveWorkspace("diagramMaker");
     requestAnimationFrame(() => {
-      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view);
       fullDiagramRefresh();
     });
   });
