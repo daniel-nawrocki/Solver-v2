@@ -36,6 +36,7 @@ Future possible directions discussed:
   - [js/csvParser.js](/c:/Users/danie/Desktop/Solver-v2/Solver-v2/js/csvParser.js)
 - Delay Solver still uses timing/relationship logic from existing modules.
 - Home / Delay Solver / Diagram Maker all live inside one HTML app and switch via workspace state.
+- Print preview now uses a shared print session model with multiple independent print pages per session.
 
 ## Current Snapshot
 This is the current repo memory as of the latest update in this chat.
@@ -51,7 +52,9 @@ Code-level status:
 - Diagram Maker print now includes shot metadata in the reserved top header area, with `Shot Number` as the large top-left title.
 - Diagram Maker annotations now render in both the main canvas and print preview.
 - Diagram Maker print now has a label-edit mode for manually repositioning per-hole print label boxes during the current print session.
-- `js/csvParser.js`, `js/diagramRenderer.js`, and `js/app.js` were syntax-parsed successfully in local checks.
+- Print preview now supports multiple independently configurable pages per session for both Delay Solver and Diagram Maker.
+- Adding a print page duplicates the active print page state so toggles, zoom/pan/rotation, label layouts, and color mode can diverge page by page.
+- `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
 What has not been fully verified yet:
@@ -61,6 +64,7 @@ What has not been fully verified yet:
 - whether Diagram Maker labels feel crowded with dense hole layouts
 - whether annotation readability and printed header spacing still feel balanced on dense real-world diagrams
 - whether print-label drag UX and leader thresholds feel right on dense layouts in real use
+- whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
 
 ## Completed Work
 
@@ -283,6 +287,33 @@ Current rule:
 - label edits are print-session only
 - closing and reopening print preview resets the custom label layout
 
+### 14. Multi-Page Print Preview
+Implemented in code.
+
+What was added:
+- print preview now opens as a print session with page tabs above the toolbar
+- `Add Page` duplicates the active print page and activates the new copy
+- each print page now keeps its own:
+  - zoom / pan / rotation
+  - text scale
+  - color / greyscale mode
+  - workspace-specific print toggles
+  - Diagram Maker label-edit state and label positions
+- pages can be removed from the strip as long as at least one page remains
+- browser print now prepares all print pages and outputs them as separate sheets in the current page order
+
+Current rule:
+- main workspace edits do not overwrite existing print pages after print preview is opened
+- print-page names are fixed `Page 1`, `Page 2`, etc. for now
+
+### 15. Diagram Maker Import Rounding for Bearing + Depth
+Implemented in code.
+
+Current rule:
+- Diagram Maker CSV import now rounds `bearing` to a whole number when imported
+- Diagram Maker CSV import now rounds `depth` to a whole number when imported
+- manual property edits still accept non-rounded numeric values outside the import flow
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -297,6 +328,7 @@ Important recent context:
 - No dedicated export format exists yet for Diagram Maker metadata.
 - Diagram Maker shot metadata and annotations are in-memory only and are not persisted yet.
 - Diagram Maker print label edits are session-only and are not persisted yet.
+- Multi-page print sessions are in-memory only and are not persisted yet.
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
@@ -306,6 +338,7 @@ Important recent context:
 - Diagram Maker box/polygon selection is implemented in code but still needs manual interaction testing with real layouts.
 - Polygon selection UX may still need polish, but completion now uses right-click instead of double-click.
 - Diagram Maker annotation tools still need manual testing for drag feel, clutter, and print readability with real datasets.
+- Multi-page print add/remove/switch behavior and browser print sheet ordering still need manual testing.
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -327,6 +360,14 @@ Important recent context:
   - leader line behavior when labels move away from holes
   - `Reset Labels`
   - label layout persistence only within the active print session
+  - multi-page print flow:
+    - `Add Page`
+    - page switching
+    - per-page independent toggles
+    - per-page independent zoom / pan / rotation
+    - per-page independent color mode
+    - page removal
+    - browser print output order across multiple pages
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
@@ -377,6 +418,7 @@ Most important current repo facts to preserve:
 - Shared renderer logic lives in `js/diagramRenderer.js`.
 - Shared app/workspace wiring lives in `js/app.js`.
 - Shared CSV parsing lives in `js/csvParser.js`.
+- Shared print preview now uses a multi-page print session managed in `js/app.js`.
 - Diagram Maker currently supports:
   - import with collar/toe/id/angle/bearing/depth
   - `inclination` alias for angle import guessing
@@ -391,5 +433,6 @@ Most important current repo facts to preserve:
   - print header with shot metadata
   - markup/text annotations that also print
   - print-preview label edit mode with draggable label boxes and leaders
+  - multi-page print preview with per-page independent print state
 
 This file should stay short, practical, and current enough that a new chat can read it and continue work without reconstructing the whole project from memory.

@@ -124,7 +124,7 @@ function createDiagramState() {
   };
 }
 
-function createPrintState() {
+function createPrintPageState() {
   return {
     holes: [],
     holesById: new Map(),
@@ -164,12 +164,22 @@ function createPrintState() {
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
+    viewport: {
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      rotationDeg: 0,
+    },
+    colorMode: "color",
   };
 }
 
 const solverState = createSolverState();
 const diagramState = createDiagramState();
-const printState = createPrintState();
+const printSession = {
+  pages: [],
+  activePageIndex: -1,
+};
 
 const els = {
   homeWorkspace: document.getElementById("homeWorkspace"),
@@ -280,8 +290,12 @@ const els = {
   diagramApplyPropertiesBtn: document.getElementById("diagramApplyPropertiesBtn"),
   diagramClearSelectionBtn: document.getElementById("diagramClearSelectionBtn"),
   printWorkspace: document.getElementById("printWorkspace"),
+  printPageStrip: document.getElementById("printPageStrip"),
+  printPageTabs: document.getElementById("printPageTabs"),
+  printAddPageBtn: document.getElementById("printAddPageBtn"),
   printCanvas: document.getElementById("printCanvas"),
   printPaperFrame: document.getElementById("printPaperFrame"),
+  printPagesOutput: document.getElementById("printPagesOutput"),
   printBackBtn: document.getElementById("printBackBtn"),
   printActionBtn: document.getElementById("printActionBtn"),
   printFitBtn: document.getElementById("printFitBtn"),
@@ -326,7 +340,7 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
 });
 
 const printRenderer = new DiagramRenderer(document.getElementById("printCanvas"), {
-  stateRef: printState,
+  stateRef: null,
   isPrintRenderer: true,
   onHoleClick: () => {},
   onHoleHover: () => {},
@@ -334,6 +348,7 @@ const printRenderer = new DiagramRenderer(document.getElementById("printCanvas")
   onPointerDown: handlePrintPointerDown,
   onPointerMove: handlePrintPointerMove,
   onHoleContextMenu: () => {},
+  onViewChange: handlePrintRendererViewChange,
 });
 
 initTimingControls(solverState, els, () => {
@@ -486,10 +501,171 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function cloneLabelLayoutMap(layoutMap = new Map()) {
+  return new Map([...layoutMap.entries()].map(([holeId, offset]) => [holeId, { ...offset }]));
+}
+
+function clonePrintPage(page) {
+  const holes = page.holes.map(cloneHole);
+  return {
+    holes,
+    holesById: new Map(holes.map((hole) => [hole.id, hole])),
+    selection: new Set(page.selection || []),
+    ui: {
+      ...page.ui,
+      relationshipDraft: null,
+      hoverLabelHoleId: null,
+    },
+    labelLayoutByHoleId: cloneLabelLayoutMap(page.labelLayoutByHoleId),
+    dragLabelHoleId: null,
+    dragPointerDelta: null,
+    metadata: cloneDiagramMetadata(page.metadata),
+    annotations: cloneDiagramAnnotations(page.annotations),
+    relationships: {
+      originHoleId: page.relationships?.originHoleId || null,
+      edges: (page.relationships?.edges || []).map((edge) => ({ ...edge })),
+      nextId: page.relationships?.nextId || 1,
+    },
+    timingResults: (page.timingResults || []).map((timing) => ({
+      ...timing,
+      holeTimes: new Map(timing.holeTimes),
+      offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
+    })),
+    viewport: {
+      zoom: Number(page.viewport?.zoom) || 1,
+      panX: Number(page.viewport?.panX) || 0,
+      panY: Number(page.viewport?.panY) || 0,
+      rotationDeg: Number(page.viewport?.rotationDeg) || 0,
+    },
+    colorMode: page.colorMode === "greyscale" ? "greyscale" : "color",
+  };
+}
+
+function activePrintPage() {
+  return printSession.pages[printSession.activePageIndex] || null;
+}
+
+function syncPrintPageHolesById(page) {
+  page.holesById = new Map(page.holes.map((hole) => [hole.id, hole]));
+}
+
+function createSolverPrintPage(selectedTiming) {
+  const page = createPrintPageState();
+  page.holes = solverState.holes.map(cloneHole);
+  syncPrintPageHolesById(page);
+  page.selection = new Set();
+  page.relationships = {
+    originHoleId: solverState.relationships.originHoleId,
+    edges: solverState.relationships.edges.map((edge) => ({ ...edge })),
+    nextId: solverState.relationships.nextId,
+  };
+  page.timingResults = cloneSelectedTiming(selectedTiming);
+  page.ui.workspaceMode = "solver";
+  page.ui.activeTimingPreviewIndex = page.timingResults.length ? 0 : -1;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = solverState.ui.showRelationships;
+  page.ui.showOverlayText = true;
+  page.ui.showAngleLabels = false;
+  page.ui.showBearingLabels = false;
+  page.ui.showBearingArrows = false;
+  page.ui.bearingArrowWeight = 1;
+  page.ui.showDepthLabels = false;
+  page.ui.showPrintLabelBoxes = true;
+  page.ui.printEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata();
+  page.annotations = cloneDiagramAnnotations();
+  page.colorMode = "color";
+  return page;
+}
+
+function createDiagramPrintPage() {
+  const page = createPrintPageState();
+  page.holes = diagramState.holes.map(cloneHole);
+  syncPrintPageHolesById(page);
+  page.selection = new Set();
+  page.relationships = { originHoleId: null, edges: [], nextId: 1 };
+  page.timingResults = [];
+  page.ui.workspaceMode = "diagram";
+  page.ui.activeTimingPreviewIndex = -1;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = false;
+  page.ui.showOverlayText = false;
+  page.ui.showAngleLabels = diagramState.ui.showAngleLabels;
+  page.ui.showBearingLabels = diagramState.ui.showBearingLabels;
+  page.ui.showBearingArrows = diagramState.ui.showBearingArrows;
+  page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
+  page.ui.showDepthLabels = diagramState.ui.showDepthLabels;
+  page.ui.showPrintLabelBoxes = true;
+  page.ui.printEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata(diagramState.metadata);
+  page.annotations = cloneDiagramAnnotations(diagramState.annotations);
+  page.colorMode = "color";
+  return page;
+}
+
+function pageWorkspaceLabel(page) {
+  return page?.ui?.workspaceMode === "diagram" ? "Diagram" : "Timing";
+}
+
+function applyPrintPageChrome(page) {
+  const greyscale = page?.colorMode === "greyscale";
+  els.printPaperFrame.classList.toggle("greyscale", greyscale);
+  els.printColorModeToggle.checked = !greyscale;
+}
+
+function setPrintRendererPage(page, options = {}) {
+  printRenderer.stateRef = page;
+  applyPrintPageChrome(page);
+  if (!page) {
+    printRenderer.render();
+    return;
+  }
+  printRenderer.applyViewState(page.viewport, { render: options.render !== false });
+}
+
+function handlePrintRendererViewChange(view) {
+  const page = activePrintPage();
+  if (!page) return;
+  page.viewport = {
+    zoom: Number(view.zoom) || 1,
+    panX: Number(view.panX) || 0,
+    panY: Number(view.panY) || 0,
+    rotationDeg: Number(view.rotationDeg) || 0,
+  };
+}
+
+function renderPrintPageTabs() {
+  const activeIndex = printSession.activePageIndex;
+  els.printPageTabs.innerHTML = printSession.pages.map((page, index) => {
+    const activeClass = index === activeIndex ? " active" : "";
+    const remove = printSession.pages.length > 1
+      ? `<button class="print-page-remove-btn" type="button" data-print-remove="${index}" aria-label="Remove Page ${index + 1}">x</button>`
+      : "";
+    return `
+      <div class="print-page-tab${activeClass}">
+        <button class="print-page-tab-main" type="button" data-print-page="${index}" aria-pressed="${index === activeIndex}">
+          <span class="print-page-tab-label">Page ${index + 1}</span>
+          <span class="print-page-tab-meta">${pageWorkspaceLabel(page)}</span>
+        </button>
+        ${remove}
+      </div>
+    `;
+  }).join("");
+}
+
 function syncPrintControls() {
-  const diagramMode = printState.ui.workspaceMode === "diagram";
-  els.printTextScaleInput.value = String(printState.ui.textScale || 1);
-  els.printColorModeToggle.checked = !els.printPaperFrame.classList.contains("greyscale");
+  const page = activePrintPage();
+  if (!page) return;
+  const diagramMode = page.ui.workspaceMode === "diagram";
+  els.printTextScaleInput.value = String(page.ui.textScale || 1);
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
@@ -497,114 +673,84 @@ function syncPrintControls() {
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printLabelBoxesToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
-  els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !printState.ui.printEditMode);
-  els.printEditLabelsBtn.classList.toggle("active", diagramMode && printState.ui.printEditMode);
-  els.printRelationshipToggle.checked = printState.ui.showRelationships !== false;
-  els.printAngleToggle.checked = printState.ui.showAngleLabels !== false;
-  els.printBearingToggle.checked = printState.ui.showBearingLabels !== false;
-  els.printBearingArrowWeightInput.value = String(printState.ui.bearingArrowWeight || 1);
-  els.printDepthToggle.checked = printState.ui.showDepthLabels !== false;
-  els.printLabelBoxesToggle.checked = printState.ui.showPrintLabelBoxes !== false;
+  els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !page.ui.printEditMode);
+  els.printEditLabelsBtn.classList.toggle("active", diagramMode && page.ui.printEditMode);
+  els.printRelationshipToggle.checked = page.ui.showRelationships !== false;
+  els.printAngleToggle.checked = page.ui.showAngleLabels !== false;
+  els.printBearingToggle.checked = page.ui.showBearingLabels !== false;
+  els.printBearingArrowWeightInput.value = String(page.ui.bearingArrowWeight || 1);
+  els.printDepthToggle.checked = page.ui.showDepthLabels !== false;
+  els.printLabelBoxesToggle.checked = page.ui.showPrintLabelBoxes !== false;
+  applyPrintPageChrome(page);
 }
 
-function applyPrintOrientation() {
-  printState.ui.orientation = "landscape";
+function activatePrintPage(index, options = {}) {
+  if (!Number.isInteger(index) || index < 0 || index >= printSession.pages.length) return;
+  printSession.activePageIndex = index;
+  const page = activePrintPage();
+  renderPrintPageTabs();
+  syncPrintControls();
+  setPrintRendererPage(page, { render: options.render !== false });
 }
 
-function loadSolverPrintState(selectedTiming) {
-  printState.holes = solverState.holes.map(cloneHole);
-  printState.holesById = new Map(printState.holes.map((hole) => [hole.id, hole]));
-  printState.selection = new Set();
-  printState.relationships = {
-    originHoleId: solverState.relationships.originHoleId,
-    edges: solverState.relationships.edges.map((edge) => ({ ...edge })),
-    nextId: solverState.relationships.nextId,
-  };
-  printState.timingResults = cloneSelectedTiming(selectedTiming);
-  printState.ui.workspaceMode = "solver";
-  printState.ui.activeTimingPreviewIndex = printState.timingResults.length ? 0 : -1;
-  printState.ui.showGrid = false;
-  printState.ui.showRelationships = solverState.ui.showRelationships;
-  printState.ui.showOverlayText = true;
-  printState.ui.showAngleLabels = false;
-  printState.ui.showDepthLabels = false;
-  printState.ui.showBearingArrows = false;
-  printState.ui.bearingArrowWeight = 1;
-  printState.ui.showPrintLabelBoxes = true;
-  printState.ui.printEditMode = false;
-  printState.ui.hoverLabelHoleId = null;
-  printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
-  printState.labelLayoutByHoleId = new Map();
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
-  printState.metadata = cloneDiagramMetadata();
-  printState.annotations = cloneDiagramAnnotations();
-  applyPrintOrientation();
+function addPrintPage() {
+  const page = activePrintPage();
+  if (!page) return;
+  printSession.pages.push(clonePrintPage(page));
+  activatePrintPage(printSession.pages.length - 1);
 }
 
-function loadDiagramPrintState() {
-  printState.holes = diagramState.holes.map(cloneHole);
-  printState.holesById = new Map(printState.holes.map((hole) => [hole.id, hole]));
-  printState.selection = new Set();
-  printState.relationships = { originHoleId: null, edges: [], nextId: 1 };
-  printState.timingResults = [];
-  printState.ui.workspaceMode = "diagram";
-  printState.ui.activeTimingPreviewIndex = -1;
-  printState.ui.showGrid = false;
-  printState.ui.showRelationships = false;
-  printState.ui.showOverlayText = false;
-  printState.ui.showAngleLabels = diagramState.ui.showAngleLabels;
-  printState.ui.showBearingLabels = diagramState.ui.showBearingLabels;
-  printState.ui.showBearingArrows = diagramState.ui.showBearingArrows;
-  printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
-  printState.ui.showDepthLabels = diagramState.ui.showDepthLabels;
-  printState.ui.showPrintLabelBoxes = true;
-  printState.ui.printEditMode = false;
-  printState.ui.hoverLabelHoleId = null;
-  printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
-  printState.labelLayoutByHoleId = new Map();
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
-  printState.metadata = cloneDiagramMetadata(diagramState.metadata);
-  printState.annotations = cloneDiagramAnnotations(diagramState.annotations);
-  applyPrintOrientation();
+function removePrintPage(index) {
+  if (printSession.pages.length <= 1) return;
+  if (!Number.isInteger(index) || index < 0 || index >= printSession.pages.length) return;
+  printSession.pages.splice(index, 1);
+  const nextIndex = Math.min(index, printSession.pages.length - 1);
+  activatePrintPage(nextIndex);
 }
 
 function openPrintWorkspace() {
+  let initialPage = null;
   if (isSolverWorkspaceActive()) {
     const selectedTiming = solverState.timingResults[solverState.ui.activeTimingPreviewIndex] || null;
     if (!selectedTiming) {
       window.alert("Select a timing result first, then open print preview.");
       return;
     }
-    loadSolverPrintState(selectedTiming);
+    initialPage = createSolverPrintPage(selectedTiming);
   } else if (isDiagramWorkspaceActive()) {
-    loadDiagramPrintState();
+    initialPage = createDiagramPrintPage();
   } else {
     return;
   }
 
-  els.printPaperFrame.classList.remove("greyscale");
-  els.printColorModeToggle.checked = true;
-  syncPrintControls();
+  printSession.pages = [initialPage];
+  printSession.activePageIndex = 0;
+  els.printPagesOutput.innerHTML = "";
   closeHelpWorkspace();
   document.body.classList.add("print-preview-active");
   els.printWorkspace.classList.remove("hidden");
   closeAllMenus();
+  renderPrintPageTabs();
+  syncPrintControls();
+
   requestAnimationFrame(() => {
+    const page = activePrintPage();
+    if (!page) return;
     printRenderer.resize();
-    printRenderer.rotationDeg = activeRenderer().rotationDeg;
+    page.viewport.rotationDeg = activeRenderer().rotationDeg;
+    setPrintRendererPage(page, { render: false });
     printRenderer.fitToData(PRINT_FIT_MARGINS);
+    syncPrintControls();
   });
 }
 
 function closePrintWorkspace() {
-  printState.ui.printEditMode = false;
-  printState.ui.hoverLabelHoleId = null;
-  printState.ui.showPrintLabelBoxes = true;
-  printState.labelLayoutByHoleId = new Map();
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
+  printSession.pages = [];
+  printSession.activePageIndex = -1;
+  printRenderer.stateRef = null;
+  els.printPagesOutput.innerHTML = "";
+  els.printPageTabs.innerHTML = "";
+  els.printPaperFrame.classList.remove("greyscale");
   document.body.classList.remove("print-preview-active");
   els.printWorkspace.classList.add("hidden");
 }
@@ -623,78 +769,124 @@ function closeHelpWorkspace() {
 }
 
 function applyPrintSettings() {
-  printState.ui.textScale = Number(els.printTextScaleInput.value) || 1;
-  printState.ui.showRelationships = els.printRelationshipToggle.checked;
-  printState.ui.showAngleLabels = els.printAngleToggle.checked;
-  printState.ui.showBearingLabels = els.printBearingToggle.checked;
-  printState.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
-  printState.ui.showDepthLabels = els.printDepthToggle.checked;
-  printState.ui.showPrintLabelBoxes = els.printLabelBoxesToggle.checked;
-  els.printPaperFrame.classList.toggle("greyscale", !els.printColorModeToggle.checked);
-  applyPrintOrientation();
+  const page = activePrintPage();
+  if (!page) return;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.showRelationships = els.printRelationshipToggle.checked;
+  page.ui.showAngleLabels = els.printAngleToggle.checked;
+  page.ui.showBearingLabels = els.printBearingToggle.checked;
+  page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
+  page.ui.showDepthLabels = els.printDepthToggle.checked;
+  page.ui.showPrintLabelBoxes = els.printLabelBoxesToggle.checked;
+  page.ui.orientation = "landscape";
+  page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
+  applyPrintPageChrome(page);
   printRenderer.render();
+  renderPrintPageTabs();
 }
 
 function isDiagramPrintEditing() {
-  return printState.ui.workspaceMode === "diagram" && printState.ui.printEditMode;
+  const page = activePrintPage();
+  return page?.ui?.workspaceMode === "diagram" && page.ui.printEditMode;
 }
 
 function setPrintEditMode(enabled) {
-  printState.ui.printEditMode = enabled === true;
-  printState.ui.hoverLabelHoleId = null;
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
+  const page = activePrintPage();
+  if (!page) return;
+  page.ui.printEditMode = enabled === true;
+  page.ui.hoverLabelHoleId = null;
+  page.dragLabelHoleId = null;
+  page.dragPointerDelta = null;
   syncPrintControls();
   printRenderer.render();
 }
 
 function resetPrintLabelLayouts() {
-  printState.labelLayoutByHoleId = new Map();
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
-  printState.ui.hoverLabelHoleId = null;
+  const page = activePrintPage();
+  if (!page) return;
+  page.labelLayoutByHoleId = new Map();
+  page.dragLabelHoleId = null;
+  page.dragPointerDelta = null;
+  page.ui.hoverLabelHoleId = null;
   printRenderer.render();
 }
 
+function renderPrintPageToCanvas(page, canvas) {
+  if (!page || !canvas) return;
+  const context = canvas.getContext("2d");
+  canvas.width = printRenderer.canvas.width;
+  canvas.height = printRenderer.canvas.height;
+  printRenderer.stateRef = page;
+  printRenderer.applyViewState(page.viewport, { render: false });
+  printRenderer.render();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(printRenderer.canvas, 0, 0);
+}
+
+function preparePrintablePages() {
+  const currentPage = activePrintPage();
+  if (!currentPage) return;
+  els.printPagesOutput.innerHTML = "";
+  printSession.pages.forEach((page, index) => {
+    const wrapper = document.createElement("section");
+    wrapper.className = "print-output-page";
+    const frame = document.createElement("div");
+    frame.className = "print-paper-frame";
+    if (page.colorMode === "greyscale") frame.classList.add("greyscale");
+    const canvas = document.createElement("canvas");
+    canvas.width = printRenderer.canvas.width;
+    canvas.height = printRenderer.canvas.height;
+    canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
+    frame.appendChild(canvas);
+    wrapper.appendChild(frame);
+    els.printPagesOutput.appendChild(wrapper);
+    renderPrintPageToCanvas(page, canvas);
+  });
+  setPrintRendererPage(currentPage, { render: true });
+}
+
 function handlePrintPointerDown(payload) {
-  if (!isDiagramPrintEditing()) return false;
-  if (printState.ui.showPrintLabelBoxes === false) return false;
+  const page = activePrintPage();
+  if (!page || !isDiagramPrintEditing()) return false;
+  if (page.ui.showPrintLabelBoxes === false) return false;
   const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   if (!hit) return false;
-  printState.dragLabelHoleId = hit.hole.id;
-  printState.dragPointerDelta = {
+  page.dragLabelHoleId = hit.hole.id;
+  page.dragPointerDelta = {
     x: payload.x - hit.rect.left,
     y: payload.y - hit.rect.top,
   };
-  printState.ui.hoverLabelHoleId = hit.hole.id;
+  page.ui.hoverLabelHoleId = hit.hole.id;
   printRenderer.render();
   return true;
 }
 
 function handlePrintPointerMove(payload) {
-  if (printState.ui.workspaceMode !== "diagram") return false;
-  const hit = printState.ui.showPrintLabelBoxes === false ? null : printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
+  const page = activePrintPage();
+  if (!page || page.ui.workspaceMode !== "diagram") return false;
+  const hit = page.ui.showPrintLabelBoxes === false ? null : printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   const nextHover = isDiagramPrintEditing() && hit ? hit.hole.id : null;
-  if (printState.ui.hoverLabelHoleId !== nextHover) {
-    printState.ui.hoverLabelHoleId = nextHover;
+  if (page.ui.hoverLabelHoleId !== nextHover) {
+    page.ui.hoverLabelHoleId = nextHover;
     printRenderer.render();
   }
-  if (!isDiagramPrintEditing() || !printState.dragLabelHoleId || !printState.dragPointerDelta) return false;
-  const hole = printState.holesById.get(printState.dragLabelHoleId);
+  if (!isDiagramPrintEditing() || !page.dragLabelHoleId || !page.dragPointerDelta) return false;
+  const hole = page.holesById.get(page.dragLabelHoleId);
   if (!hole) return false;
   const defaultLayout = printRenderer.getDiagramPrintLabelLayout(hole, { ignoreOffset: true });
-  printState.labelLayoutByHoleId.set(hole.id, {
-    offsetX: payload.x - printState.dragPointerDelta.x - defaultLayout.rect.left,
-    offsetY: payload.y - printState.dragPointerDelta.y - defaultLayout.rect.top,
+  page.labelLayoutByHoleId.set(hole.id, {
+    offsetX: payload.x - page.dragPointerDelta.x - defaultLayout.rect.left,
+    offsetY: payload.y - page.dragPointerDelta.y - defaultLayout.rect.top,
   });
   printRenderer.render();
   return true;
 }
 
 function handlePrintPointerUp() {
-  if (!printState.dragLabelHoleId) return false;
-  printState.dragLabelHoleId = null;
-  printState.dragPointerDelta = null;
+  const page = activePrintPage();
+  if (!page || !page.dragLabelHoleId) return false;
+  page.dragLabelHoleId = null;
+  page.dragPointerDelta = null;
   printRenderer.render();
   return true;
 }
@@ -753,16 +945,20 @@ function pointToWorld(renderer, point) {
   return renderer.screenToWorld(point.x, point.y);
 }
 
-function normalizeDiagramHoleFields(hole) {
+function normalizeDiagramHoleFields(hole, options = {}) {
   ensureDiagramHoleFields(hole);
   hole.angle = normalizeAngleValue(hole.angle);
   if (hole.bearing !== null && hole.bearing !== undefined) {
     const numericBearing = Number(hole.bearing);
-    hole.bearing = Number.isFinite(numericBearing) ? numericBearing : null;
+    hole.bearing = Number.isFinite(numericBearing)
+      ? (options.roundBearingAndDepth === true ? Math.round(numericBearing) : numericBearing)
+      : null;
   }
   if (hole.depth !== null && hole.depth !== undefined) {
     const numericDepth = Number(hole.depth);
-    hole.depth = Number.isFinite(numericDepth) ? numericDepth : null;
+    hole.depth = Number.isFinite(numericDepth)
+      ? (options.roundBearingAndDepth === true ? Math.round(numericDepth) : numericDepth)
+      : null;
   }
 }
 
@@ -1592,12 +1788,6 @@ function applyDiagramMetadataPatch(field, value) {
     diagramState.metadata[field] = value;
     syncDiagramDefaultDiameterStatus();
   }
-  if (!els.printWorkspace.classList.contains("hidden") && printState.ui.workspaceMode === "diagram") {
-    printState.metadata = cloneDiagramMetadata(diagramState.metadata);
-    printState.holes = diagramState.holes.map(cloneHole);
-    printState.holesById = new Map(printState.holes.map((hole) => [hole.id, hole]));
-    printRenderer.render();
-  }
 }
 
 function buildToeMap(records, coordType, xColumn, yColumn, idColumn) {
@@ -1687,7 +1877,7 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
   holes.forEach((hole) => {
     hole.collar = { x: hole.x, y: hole.y, original: hole.original };
     hole.toe = toeBySource.get(hole.sourceIndex) || null;
-    normalizeDiagramHoleFields(hole);
+    normalizeDiagramHoleFields(hole, { roundBearingAndDepth: true });
   });
   uniqueHoleIds(holes, records, idColumn);
   applyDiagramImportedHoles(holes);
@@ -1857,8 +2047,24 @@ els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
+els.printAddPageBtn.addEventListener("click", () => addPrintPage());
+els.printPageTabs.addEventListener("click", (event) => {
+  const removeBtn = event.target.closest("[data-print-remove]");
+  if (removeBtn) {
+    event.stopPropagation();
+    removePrintPage(Number(removeBtn.getAttribute("data-print-remove")));
+    return;
+  }
+  const tab = event.target.closest("[data-print-page]");
+  if (!tab) return;
+  activatePrintPage(Number(tab.getAttribute("data-print-page")));
+});
 els.printFitBtn.addEventListener("click", () => printRenderer.fitToData(PRINT_FIT_MARGINS));
-els.printEditLabelsBtn.addEventListener("click", () => setPrintEditMode(!printState.ui.printEditMode));
+els.printEditLabelsBtn.addEventListener("click", () => {
+  const page = activePrintPage();
+  if (!page) return;
+  setPrintEditMode(!page.ui.printEditMode);
+});
 els.printResetLabelsBtn.addEventListener("click", () => resetPrintLabelLayouts());
 els.printTextScaleInput.addEventListener("input", () => applyPrintSettings());
 els.printColorModeToggle.addEventListener("change", () => applyPrintSettings());
@@ -1869,8 +2075,11 @@ els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSetti
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printLabelBoxesToggle.addEventListener("change", () => applyPrintSettings());
 els.printActionBtn.addEventListener("click", () => {
+  preparePrintablePages();
   window.print();
-  closePrintWorkspace();
+});
+window.addEventListener("beforeprint", () => {
+  if (!els.printWorkspace.classList.contains("hidden")) preparePrintablePages();
 });
 
 document.addEventListener("keydown", (event) => {

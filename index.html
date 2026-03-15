@@ -450,6 +450,10 @@
   </section>
 
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">
+    <div id="printPageStrip" class="print-page-strip" aria-label="Print Pages">
+      <div id="printPageTabs" class="print-page-tabs"></div>
+      <button id="printAddPageBtn" class="print-add-page-btn" type="button">Add Page</button>
+    </div>
     <div class="print-toolbar">
       <div class="print-toolbar-group">
         <button id="printBackBtn" type="button">Back</button>
@@ -478,6 +482,7 @@
         <canvas id="printCanvas" width="1100" height="850"></canvas>
       </div>
     </div>
+    <div id="printPagesOutput" class="print-pages-output" aria-hidden="true"></div>
   </section>
 
   <section id="helpWorkspace" class="help-workspace hidden" aria-label="Help">

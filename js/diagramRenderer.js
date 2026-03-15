@@ -88,6 +88,7 @@ export class DiagramRenderer {
     this.onDoubleClick = options.onDoubleClick || (() => false);
     this.onHoleContextMenu = options.onHoleContextMenu || (() => {});
     this.onCanvasContextMenu = options.onCanvasContextMenu || (() => false);
+    this.onViewChange = options.onViewChange || (() => {});
     this.stateRef = options.stateRef;
     this.isPrintRenderer = options.isPrintRenderer === true;
     this.zoom = 1;
@@ -109,6 +110,34 @@ export class DiagramRenderer {
     this.canvas.width = Math.max(400, Math.floor(rect.width));
     this.canvas.height = Math.max(300, Math.floor(rect.height));
     this.render();
+  }
+
+  viewState() {
+    return {
+      zoom: this.zoom,
+      panX: this.panX,
+      panY: this.panY,
+      rotationDeg: this.rotationDeg,
+    };
+  }
+
+  applyViewState(view = {}, options = {}) {
+    const nextZoom = Number(view.zoom);
+    const nextPanX = Number(view.panX);
+    const nextPanY = Number(view.panY);
+    const nextRotation = Number(view.rotationDeg);
+    if (Number.isFinite(nextZoom)) this.zoom = nextZoom;
+    if (Number.isFinite(nextPanX)) this.panX = nextPanX;
+    if (Number.isFinite(nextPanY)) this.panY = nextPanY;
+    if (Number.isFinite(nextRotation)) {
+      this.rotationDeg = ((nextRotation % 360) + 360) % 360;
+      if (this.rotationDeg > 180) this.rotationDeg -= 360;
+    }
+    if (options.render !== false) this.render();
+  }
+
+  syncViewState() {
+    this.onViewChange(this.viewState());
   }
 
   textScale() {
@@ -167,8 +196,8 @@ export class DiagramRenderer {
   }
 
   fitToData(options = {}) {
+    if (!this.stateRef?.holes?.length) return;
     const holes = this.stateRef.holes;
-    if (!holes.length) return;
     const rotated = holes.map((hole) => this.rotatePoint(hole.x, hole.y));
     const xs = rotated.map((hole) => hole.x);
     const ys = rotated.map((hole) => hole.y);
@@ -192,6 +221,7 @@ export class DiagramRenderer {
     this.panX = offsetX - (minX * this.zoom);
     this.panY = offsetY - (minY * this.zoom);
     this.render();
+    this.syncViewState();
   }
 
   drawGrid() {
@@ -750,8 +780,9 @@ export class DiagramRenderer {
   }
 
   render() {
-    const preview = this.activeTimingPreview();
     this.clear();
+    if (!this.stateRef) return;
+    const preview = this.activeTimingPreview();
     this.drawGrid();
     this.drawRelationships();
     this.drawRelationshipDraft();
@@ -775,6 +806,7 @@ export class DiagramRenderer {
     this.rotationDeg = ((deg % 360) + 360) % 360;
     if (this.rotationDeg > 180) this.rotationDeg -= 360;
     this.render();
+    this.syncViewState();
   }
 
   resetRotation() {
@@ -782,6 +814,7 @@ export class DiagramRenderer {
   }
 
   findHoleAtScreen(x, y) {
+    if (!this.stateRef?.holes?.length) return null;
     for (const hole of this.stateRef.holes) {
       const point = this.worldToScreen(hole.x, hole.y);
       if (Math.hypot(x - point.x, y - point.y) <= this.holeRadius + 4) return hole;
@@ -790,6 +823,7 @@ export class DiagramRenderer {
   }
 
   findRelationshipAtScreen(x, y) {
+    if (!this.stateRef) return null;
     const point = { x, y };
     return (this.stateRef.relationships?.edges || []).find((edge) => {
       const fromHole = this.stateRef.holesById.get(edge.fromHoleId);
@@ -836,6 +870,7 @@ export class DiagramRenderer {
       this.panY -= dy;
       this.lastMouse = { x: event.clientX, y: event.clientY };
       this.render();
+      this.syncViewState();
     });
 
     window.addEventListener("mouseup", (event) => {
@@ -892,6 +927,7 @@ export class DiagramRenderer {
       this.panX += (after.x - before.x) * this.zoom;
       this.panY += (after.y - before.y) * this.zoom;
       this.render();
+      this.syncViewState();
     }, { passive: false });
   }
 }
