@@ -19,6 +19,10 @@
     </div>
     <div class="topbar-actions">
       <button id="homeNavBtn" class="topbar-nav-btn hidden" type="button">Home</button>
+      <div id="plannerModeToggle" class="planner-mode-toggle hidden" aria-label="Planner Mode">
+        <button id="plannerDiagramModeBtn" class="planner-mode-btn" type="button">Diagram</button>
+        <button id="plannerTimingModeBtn" class="planner-mode-btn" type="button">Timing</button>
+      </div>
       <div id="timingVisualizationControls" class="timing-visualization-controls hidden">
         <div class="timing-visualization-row">
           <button id="timingVisualizationBtn" type="button">Simulate</button>
@@ -43,19 +47,14 @@
     <section class="home-shell">
       <div class="home-hero panel">
         <div class="home-eyebrow">Blast Planning Suite</div>
-        <h1>Choose a workspace.</h1>
-        <p>Keep the same polished solver feel, but branch into dedicated tools as the program grows.</p>
+        <h1>Open the planner.</h1>
+        <p>Use one shared blast-planning workspace, then switch seamlessly between Diagram and Timing modes.</p>
       </div>
       <div class="home-tool-grid">
         <button id="openDelaySolverBtn" class="tool-card panel" type="button">
           <span class="tool-card-kicker">Available Now</span>
-          <strong>Delay Solver</strong>
-          <span>Open the current timing solver with imports, pathing, timing ranges, previews, and exports.</span>
-        </button>
-        <button id="openDiagramMakerBtn" class="tool-card panel" type="button">
-          <span class="tool-card-kicker tool-card-kicker-soon">Workspace Shell</span>
-          <strong>Diagram Maker</strong>
-          <span>Enter the future diagram builder shell and reserve the space for expanded layout workflows.</span>
+          <strong>Blast Planner</strong>
+          <span>Import once, manage layout data in Diagram mode, and switch into Timing mode for pathing, ranges, and firing-time previews.</span>
         </button>
       </div>
     </section>
@@ -92,6 +91,15 @@
               </label>
               <label>Hole ID Column
                 <select id="idColumnSelect"></select>
+              </label>
+              <label>Angle Column (Optional)
+                <select id="solverAngleColumnSelect"></select>
+              </label>
+              <label>Bearing Column (Optional)
+                <select id="solverBearingColumnSelect"></select>
+              </label>
+              <label>Depth / Length Column (Optional)
+                <select id="solverDepthColumnSelect"></select>
               </label>
               <button id="importMappedBtn">Import</button>
             </div>
@@ -452,6 +460,7 @@
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">
     <div id="printPageStrip" class="print-page-strip" aria-label="Print Pages">
       <div id="printPageTabs" class="print-page-tabs"></div>
+      <button id="printAddTimingPageBtn" class="print-add-page-btn hidden" type="button">Add Timing Page</button>
       <button id="printAddPageBtn" class="print-add-page-btn" type="button">Add Page</button>
     </div>
     <div class="print-toolbar">

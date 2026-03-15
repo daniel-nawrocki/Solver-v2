@@ -35,6 +35,10 @@ const WORKSPACE_TITLES = {
   delaySolver: "Delay Solver",
   diagramMaker: "Diagram Maker",
 };
+const WORKSPACE_TO_MODE = {
+  delaySolver: "timing",
+  diagramMaker: "diagram",
+};
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
 const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
@@ -176,6 +180,59 @@ function createPrintPageState() {
 
 const solverState = createSolverState();
 const diagramState = createDiagramState();
+const projectState = {
+  holes: [],
+  holesById: new Map(),
+  csvCache: null,
+  view: {
+    coordView: "collar",
+    rotationDeg: 0,
+  },
+  diagram: {
+    metadata: cloneDiagramMetadata(),
+    annotations: cloneDiagramAnnotations(),
+    ui: {
+      showGrid: true,
+      showOverlayText: false,
+      showAngleLabels: true,
+      showBearingLabels: false,
+      showBearingArrows: true,
+      showDepthLabels: true,
+      activeTool: "single",
+      annotationColor: "#000000",
+      annotationSize: "medium",
+    },
+  },
+  timing: {
+    ui: {
+      showGrid: true,
+      showRelationships: true,
+      showOverlayText: true,
+      toolMode: "origin",
+      activeTimingPreviewIndex: -1,
+    },
+    timing: {
+      holeToHole: { min: 16, max: 34 },
+      rowToRow: { min: 84, max: 142 },
+      offset: { min: 17, max: 42 },
+    },
+    relationships: { originHoleId: null, edges: [], nextId: 1 },
+    timingResults: [],
+    solverMessage: "",
+    timingVisualization: {
+      speedMultiplier: 1,
+      activeSpeedMultiplier: 1,
+      isPlaying: false,
+      startTimestamp: 0,
+      lastFrameTimestamp: 0,
+      tailStartTimestamp: 0,
+      elapsedMs: 0,
+      completed: false,
+      resultIndexAtStart: -1,
+      frameRequestId: null,
+    },
+  },
+};
 const printSession = {
   pages: [],
   activePageIndex: -1,
@@ -187,6 +244,9 @@ const els = {
   diagramMakerWorkspace: document.getElementById("diagramMakerWorkspace"),
   workspaceTitle: document.getElementById("workspaceTitle"),
   homeNavBtn: document.getElementById("homeNavBtn"),
+  plannerModeToggle: document.getElementById("plannerModeToggle"),
+  plannerDiagramModeBtn: document.getElementById("plannerDiagramModeBtn"),
+  plannerTimingModeBtn: document.getElementById("plannerTimingModeBtn"),
   openDelaySolverBtn: document.getElementById("openDelaySolverBtn"),
   openDiagramMakerBtn: document.getElementById("openDiagramMakerBtn"),
   helpBtn: document.getElementById("helpBtn"),
@@ -206,6 +266,9 @@ const els = {
   toeXColumnSelect: document.getElementById("toeXColumnSelect"),
   toeYColumnSelect: document.getElementById("toeYColumnSelect"),
   idColumnSelect: document.getElementById("idColumnSelect"),
+  solverAngleColumnSelect: document.getElementById("solverAngleColumnSelect"),
+  solverBearingColumnSelect: document.getElementById("solverBearingColumnSelect"),
+  solverDepthColumnSelect: document.getElementById("solverDepthColumnSelect"),
   importMappedBtn: document.getElementById("importMappedBtn"),
   gridToggle: document.getElementById("gridToggle"),
   relationshipVisibilityToggle: document.getElementById("relationshipVisibilityToggle"),
@@ -292,6 +355,7 @@ const els = {
   printWorkspace: document.getElementById("printWorkspace"),
   printPageStrip: document.getElementById("printPageStrip"),
   printPageTabs: document.getElementById("printPageTabs"),
+  printAddTimingPageBtn: document.getElementById("printAddTimingPageBtn"),
   printAddPageBtn: document.getElementById("printAddPageBtn"),
   printCanvas: document.getElementById("printCanvas"),
   printPaperFrame: document.getElementById("printPaperFrame"),
@@ -351,7 +415,7 @@ const printRenderer = new DiagramRenderer(document.getElementById("printCanvas")
   onViewChange: handlePrintRendererViewChange,
 });
 
-initTimingControls(solverState, els, () => {
+const timingControlsApi = initTimingControls(solverState, els, () => {
   resetTimingResults();
   solverRenderer.render();
 });
@@ -362,6 +426,10 @@ function isSolverWorkspaceActive() {
 
 function isDiagramWorkspaceActive() {
   return appUi.activeWorkspace === "diagramMaker";
+}
+
+function activePlannerMode() {
+  return WORKSPACE_TO_MODE[appUi.activeWorkspace] || null;
 }
 
 function activeRenderer() {
@@ -382,10 +450,13 @@ function renderWorkspaceChrome() {
   els.delaySolverWorkspace.classList.toggle("hidden", !solverActive);
   els.diagramMakerWorkspace.classList.toggle("hidden", !diagramActive);
   els.homeNavBtn.classList.toggle("hidden", workspace === "home");
+  els.plannerModeToggle.classList.toggle("hidden", workspace === "home");
   els.helpBtn.classList.toggle("hidden", !solverActive);
   els.csvExportBtn.classList.toggle("hidden", !solverActive);
   els.exportPdfBtn.classList.toggle("hidden", !(solverActive || diagramActive));
   els.workspaceTitle.textContent = WORKSPACE_TITLES[workspace] || "Workspace";
+  els.plannerDiagramModeBtn.classList.toggle("active", activePlannerMode() === "diagram");
+  els.plannerTimingModeBtn.classList.toggle("active", activePlannerMode() === "timing");
 
   if (!solverActive) {
     els.timingVisualizationControls.classList.add("hidden");
@@ -405,6 +476,30 @@ function setActiveWorkspace(workspaceId) {
   requestAnimationFrame(() => {
     if (workspaceId === "delaySolver") solverRenderer.resize();
     if (workspaceId === "diagramMaker") diagramRenderer.resize();
+  });
+}
+
+function switchPlannerMode(nextMode) {
+  if (!["diagram", "timing"].includes(nextMode)) return;
+  const nextWorkspace = nextMode === "diagram" ? "diagramMaker" : "delaySolver";
+  if (appUi.activeWorkspace === nextWorkspace) return;
+  syncCurrentWorkspaceToProject();
+  if (nextMode === "diagram") {
+    hydrateDiagramFromProject();
+    setActiveWorkspace("diagramMaker");
+    requestAnimationFrame(() => {
+      setDiagramToolMode(diagramState.ui.activeTool);
+      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+      fullDiagramRefresh();
+    });
+    return;
+  }
+  hydrateSolverFromProject();
+  setActiveWorkspace("delaySolver");
+  requestAnimationFrame(() => {
+    setToolMode(solverState.ui.toolMode);
+    applyProjectViewToMode(solverState, els.coordViewSelect, solverRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+    fullSolverRefresh();
   });
 }
 
@@ -492,6 +587,163 @@ function cloneDiagramAnnotations(annotations = {}) {
   };
 }
 
+function cloneRelationshipsState(relationships = {}) {
+  return {
+    originHoleId: relationships.originHoleId || null,
+    edges: (relationships.edges || []).map((edge) => ({ ...edge })),
+    nextId: relationships.nextId || 1,
+  };
+}
+
+function cloneTimingRanges(timing = {}) {
+  return {
+    holeToHole: {
+      min: Number(timing.holeToHole?.min) || 16,
+      max: Number(timing.holeToHole?.max) || 34,
+    },
+    rowToRow: {
+      min: Number(timing.rowToRow?.min) || 84,
+      max: Number(timing.rowToRow?.max) || 142,
+    },
+    offset: {
+      min: Number(timing.offset?.min) || 17,
+      max: Number(timing.offset?.max) || 42,
+    },
+  };
+}
+
+function cloneTimingResults(results = []) {
+  return results.map((result) => ({
+    ...result,
+    holeTimes: result.holeTimes ? new Map(result.holeTimes) : new Map(),
+    offsetAssignments: result.offsetAssignments ? new Map(result.offsetAssignments) : new Map(),
+  }));
+}
+
+function cloneTimingVisualizationState(playback = {}) {
+  return {
+    speedMultiplier: Number(playback.speedMultiplier) || 1,
+    activeSpeedMultiplier: Number(playback.activeSpeedMultiplier) || Number(playback.speedMultiplier) || 1,
+    isPlaying: false,
+    startTimestamp: 0,
+    lastFrameTimestamp: 0,
+    tailStartTimestamp: 0,
+    elapsedMs: Number(playback.elapsedMs) || 0,
+    completed: playback.completed === true,
+    resultIndexAtStart: -1,
+    frameRequestId: null,
+  };
+}
+
+function refreshProjectHoles(holes = []) {
+  projectState.holes = holes.map(cloneHole);
+  projectState.holesById = new Map(projectState.holes.map((hole) => [hole.id, hole]));
+}
+
+function hydrateSolverFromProject() {
+  solverState.holes = projectState.holes.map(cloneHole);
+  rebuildHolesById(solverState);
+  solverState.selection = new Set();
+  solverState.csvCache = projectState.csvCache;
+  solverState.relationships = cloneRelationshipsState(projectState.timing.relationships);
+  solverState.timing = cloneTimingRanges(projectState.timing.timing);
+  solverState.timingResults = cloneTimingResults(projectState.timing.timingResults);
+  solverState.solverMessage = projectState.timing.solverMessage || "";
+  solverState.ui.showGrid = projectState.timing.ui.showGrid !== false;
+  solverState.ui.showRelationships = projectState.timing.ui.showRelationships !== false;
+  solverState.ui.showOverlayText = projectState.timing.ui.showOverlayText !== false;
+  solverState.ui.toolMode = projectState.timing.ui.toolMode || "origin";
+  solverState.ui.coordView = projectState.view.coordView || "collar";
+  solverState.ui.activeTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
+    ? projectState.timing.ui.activeTimingPreviewIndex
+    : -1;
+  solverState.ui.relationshipDraft = null;
+  solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
+  timingControlsApi?.syncFromState?.();
+}
+
+function hydrateDiagramFromProject() {
+  diagramState.holes = projectState.holes.map(cloneHole);
+  rebuildHolesById(diagramState);
+  diagramState.selection = new Set();
+  diagramState.csvCache = projectState.csvCache;
+  diagramState.ui.showGrid = projectState.diagram.ui.showGrid !== false;
+  diagramState.ui.showOverlayText = projectState.diagram.ui.showOverlayText === true;
+  diagramState.ui.coordView = projectState.view.coordView || "collar";
+  diagramState.ui.showAngleLabels = projectState.diagram.ui.showAngleLabels !== false;
+  diagramState.ui.showBearingLabels = projectState.diagram.ui.showBearingLabels === true;
+  diagramState.ui.showBearingArrows = projectState.diagram.ui.showBearingArrows === true;
+  diagramState.ui.showDepthLabels = projectState.diagram.ui.showDepthLabels !== false;
+  diagramState.ui.activeTool = normalizeAnnotationTool(projectState.diagram.ui.activeTool || "single");
+  diagramState.ui.selectionBoxDraft = null;
+  diagramState.ui.selectionPolygonDraft = null;
+  diagramState.ui.annotationColor = projectState.diagram.ui.annotationColor || "#000000";
+  diagramState.ui.annotationSize = projectState.diagram.ui.annotationSize || "medium";
+  diagramState.ui.currentStrokeDraft = null;
+  diagramState.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
+  diagramState.annotations = cloneDiagramAnnotations(projectState.diagram.annotations);
+}
+
+function persistTimingStateToProject() {
+  refreshProjectHoles(solverState.holes);
+  projectState.csvCache = solverState.csvCache;
+  projectState.view.coordView = solverState.ui.coordView || "collar";
+  projectState.view.rotationDeg = solverRenderer.rotationDeg;
+  projectState.timing.ui.showGrid = solverState.ui.showGrid !== false;
+  projectState.timing.ui.showRelationships = solverState.ui.showRelationships !== false;
+  projectState.timing.ui.showOverlayText = solverState.ui.showOverlayText !== false;
+  projectState.timing.ui.toolMode = solverState.ui.toolMode || "origin";
+  projectState.timing.ui.activeTimingPreviewIndex = Number.isInteger(solverState.ui.activeTimingPreviewIndex)
+    ? solverState.ui.activeTimingPreviewIndex
+    : -1;
+  projectState.timing.timing = cloneTimingRanges(solverState.timing);
+  projectState.timing.relationships = cloneRelationshipsState(solverState.relationships);
+  projectState.timing.timingResults = cloneTimingResults(solverState.timingResults);
+  projectState.timing.solverMessage = solverState.solverMessage || "";
+  projectState.timing.timingVisualization = cloneTimingVisualizationState(solverState.ui.timingVisualization);
+}
+
+function persistDiagramStateToProject() {
+  refreshProjectHoles(diagramState.holes);
+  projectState.csvCache = diagramState.csvCache;
+  projectState.view.coordView = diagramState.ui.coordView || "collar";
+  projectState.view.rotationDeg = diagramRenderer.rotationDeg;
+  projectState.diagram.ui.showGrid = diagramState.ui.showGrid !== false;
+  projectState.diagram.ui.showOverlayText = diagramState.ui.showOverlayText === true;
+  projectState.diagram.ui.showAngleLabels = diagramState.ui.showAngleLabels !== false;
+  projectState.diagram.ui.showBearingLabels = diagramState.ui.showBearingLabels === true;
+  projectState.diagram.ui.showBearingArrows = diagramState.ui.showBearingArrows === true;
+  projectState.diagram.ui.showDepthLabels = diagramState.ui.showDepthLabels !== false;
+  projectState.diagram.ui.activeTool = diagramState.ui.activeTool || "single";
+  projectState.diagram.ui.annotationColor = diagramState.ui.annotationColor || "#000000";
+  projectState.diagram.ui.annotationSize = diagramState.ui.annotationSize || "medium";
+  projectState.diagram.metadata = cloneDiagramMetadata(diagramState.metadata);
+  projectState.diagram.annotations = cloneDiagramAnnotations(diagramState.annotations);
+}
+
+function syncCurrentWorkspaceToProject() {
+  if (isDiagramWorkspaceActive()) persistDiagramStateToProject();
+  if (isSolverWorkspaceActive()) persistTimingStateToProject();
+}
+
+function applyProjectViewToMode(targetState, selectEl, renderer, targetView, rotationDeg) {
+  applyCoordinateView(targetState, selectEl, renderer, targetView, { fit: false });
+  renderer.rotationDeg = Number.isFinite(rotationDeg) ? rotationDeg : 0;
+  renderer.render();
+}
+
+function initializeProjectFromHoles(holes, csvCache = null) {
+  refreshProjectHoles(holes);
+  projectState.csvCache = csvCache;
+  projectState.view.coordView = "collar";
+  projectState.view.rotationDeg = 0;
+  projectState.timing.relationships = { originHoleId: null, edges: [], nextId: 1 };
+  projectState.timing.timingResults = [];
+  projectState.timing.solverMessage = "";
+  projectState.timing.ui.activeTimingPreviewIndex = -1;
+  projectState.timing.timingVisualization = cloneTimingVisualizationState();
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -549,6 +801,13 @@ function syncPrintPageHolesById(page) {
   page.holesById = new Map(page.holes.map((hole) => [hole.id, hole]));
 }
 
+function selectedProjectTimingResult() {
+  const index = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
+    ? projectState.timing.ui.activeTimingPreviewIndex
+    : -1;
+  return projectState.timing.timingResults[index] || null;
+}
+
 function createSolverPrintPage(selectedTiming) {
   const page = createPrintPageState();
   page.holes = solverState.holes.map(cloneHole);
@@ -578,6 +837,38 @@ function createSolverPrintPage(selectedTiming) {
   page.labelLayoutByHoleId = new Map();
   page.metadata = cloneDiagramMetadata();
   page.annotations = cloneDiagramAnnotations();
+  page.colorMode = "color";
+  return page;
+}
+
+function createSolverPrintPageFromProject() {
+  const selectedTiming = selectedProjectTimingResult();
+  if (!selectedTiming) return null;
+  const page = createPrintPageState();
+  page.holes = projectState.holes.map(cloneHole);
+  syncPrintPageHolesById(page);
+  page.selection = new Set();
+  page.relationships = cloneRelationshipsState(projectState.timing.relationships);
+  page.timingResults = cloneSelectedTiming(selectedTiming);
+  page.ui.workspaceMode = "solver";
+  page.ui.activeTimingPreviewIndex = 0;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = projectState.timing.ui.showRelationships !== false;
+  page.ui.showOverlayText = true;
+  page.ui.showAngleLabels = false;
+  page.ui.showBearingLabels = false;
+  page.ui.showBearingArrows = false;
+  page.ui.bearingArrowWeight = 1;
+  page.ui.bearingArrowLength = 16;
+  page.ui.showDepthLabels = false;
+  page.ui.labelEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
+  page.annotations = cloneDiagramAnnotations();
+  page.viewport.rotationDeg = Number(projectState.view.rotationDeg) || 0;
   page.colorMode = "color";
   return page;
 }
@@ -666,7 +957,9 @@ function syncPrintControls() {
   if (!page) return;
   const diagramMode = page.ui.workspaceMode === "diagram";
   const labelModeEnabled = page.ui.labelEditMode === true;
+  const hasTimingPageOption = projectState.timing.timingResults.length > 0;
   els.printTextScaleInput.value = String(page.ui.textScale || 1);
+  els.printAddTimingPageBtn.classList.toggle("hidden", !diagramMode || !hasTimingPageOption);
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
@@ -701,6 +994,16 @@ function addPrintPage() {
   activatePrintPage(printSession.pages.length - 1);
 }
 
+function addTimingPrintPage() {
+  const page = createSolverPrintPageFromProject();
+  if (!page) {
+    window.alert("Run timing combinations and select a timing result first.");
+    return;
+  }
+  printSession.pages.push(page);
+  activatePrintPage(printSession.pages.length - 1);
+}
+
 function removePrintPage(index) {
   if (printSession.pages.length <= 1) return;
   if (!Number.isInteger(index) || index < 0 || index >= printSession.pages.length) return;
@@ -710,6 +1013,7 @@ function removePrintPage(index) {
 }
 
 function openPrintWorkspace() {
+  syncCurrentWorkspaceToProject();
   let initialPage = null;
   if (isSolverWorkspaceActive()) {
     const selectedTiming = solverState.timingResults[solverState.ui.activeTimingPreviewIndex] || null;
@@ -1162,8 +1466,25 @@ function appendOptions(select, headers, emptyLabel = null) {
 }
 
 function setSolverColumnOptions(headers) {
-  [els.xColumnSelect, els.yColumnSelect, els.toeXColumnSelect, els.toeYColumnSelect, els.idColumnSelect].forEach((select) => {
-    const emptyLabel = select === els.idColumnSelect ? "(Auto)" : (select === els.toeXColumnSelect || select === els.toeYColumnSelect ? "(None)" : null);
+  [
+    els.xColumnSelect,
+    els.yColumnSelect,
+    els.toeXColumnSelect,
+    els.toeYColumnSelect,
+    els.idColumnSelect,
+    els.solverAngleColumnSelect,
+    els.solverBearingColumnSelect,
+    els.solverDepthColumnSelect,
+  ].forEach((select) => {
+    const emptyLabel = select === els.idColumnSelect
+      ? "(Auto)"
+      : (
+        select === els.toeXColumnSelect
+        || select === els.toeYColumnSelect
+        || select === els.solverAngleColumnSelect
+        || select === els.solverBearingColumnSelect
+        || select === els.solverDepthColumnSelect
+      ) ? "(None)" : null;
     appendOptions(select, headers, emptyLabel);
   });
 
@@ -1172,12 +1493,18 @@ function setSolverColumnOptions(headers) {
   const toeXGuess = inferHeaderByPriority(headers, [["toe", "easting"], ["end", "point", "easting"], ["toe", "longitude"], ["end", "point", "longitude"], ["toe", "x"]]);
   const toeYGuess = inferHeaderByPriority(headers, [["toe", "northing"], ["end", "point", "northing"], ["toe", "latitude"], ["end", "point", "latitude"], ["toe", "y"]]);
   const idGuess = inferHeaderByPriority(headers, [["hole"], ["id"]]);
+  const angleGuess = inferHeaderByPriority(headers, [["angle"], ["inclination"], ["dip"]]);
+  const bearingGuess = inferHeaderByPriority(headers, [["bearing"], ["azimuth"], ["azi"]]);
+  const depthGuess = inferHeaderByPriority(headers, [["depth"], ["length"]]);
 
   if (xGuess) els.xColumnSelect.value = xGuess;
   if (yGuess) els.yColumnSelect.value = yGuess;
   if (toeXGuess) els.toeXColumnSelect.value = toeXGuess;
   if (toeYGuess) els.toeYColumnSelect.value = toeYGuess;
   if (idGuess) els.idColumnSelect.value = idGuess;
+  if (angleGuess) els.solverAngleColumnSelect.value = angleGuess;
+  if (bearingGuess) els.solverBearingColumnSelect.value = bearingGuess;
+  if (depthGuess) els.solverDepthColumnSelect.value = depthGuess;
 
   const lowerHeaders = headers.map((header) => header.toLowerCase());
   if (lowerHeaders.some((header) => header.includes("lat")) && lowerHeaders.some((header) => header.includes("lon"))) {
@@ -1303,6 +1630,7 @@ function renderTimingResults() {
 }
 
 function fullSolverRefresh({ fit = false } = {}) {
+  persistTimingStateToProject();
   renderOriginStatus();
   renderRelationshipList();
   renderTimingResults();
@@ -1318,6 +1646,7 @@ function resetGraphState() {
 
 function applyImportedHoles(holes) {
   holes.forEach((hole) => normalizeHoleCoordinateSets(hole));
+  holes.forEach((hole) => normalizeDiagramHoleFields(hole));
   solverState.holes = holes;
   solverState.selection = new Set();
   solverState.ui.coordView = "collar";
@@ -1678,6 +2007,7 @@ function renderDiagramPropertiesPanel() {
 }
 
 function fullDiagramRefresh({ fit = false } = {}) {
+  persistDiagramStateToProject();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
   if (fit) diagramRenderer.fitToData();
@@ -1788,6 +2118,7 @@ function applyDiagramMetadataPatch(field, value) {
     diagramState.metadata[field] = value;
     syncDiagramDefaultDiameterStatus();
   }
+  persistDiagramStateToProject();
 }
 
 function buildToeMap(records, coordType, xColumn, yColumn, idColumn) {
@@ -1822,6 +2153,11 @@ els.importMappedBtn.addEventListener("click", () => {
     xColumn: els.xColumnSelect.value,
     yColumn: els.yColumnSelect.value,
     idColumn,
+    fieldColumns: {
+      angle: els.solverAngleColumnSelect.value || null,
+      bearing: els.solverBearingColumnSelect.value || null,
+      depth: els.solverDepthColumnSelect.value || null,
+    },
   });
   if (!holes.length) {
     window.alert("No valid collar coordinates found for selected columns.");
@@ -1831,9 +2167,12 @@ els.importMappedBtn.addEventListener("click", () => {
   holes.forEach((hole) => {
     hole.collar = { x: hole.x, y: hole.y, original: hole.original };
     hole.toe = toeBySource.get(hole.sourceIndex) || null;
+    normalizeDiagramHoleFields(hole, { roundBearingAndDepth: true });
   });
   uniqueHoleIds(holes, records, idColumn);
+  initializeProjectFromHoles(holes, solverState.csvCache);
   applyImportedHoles(holes);
+  hydrateDiagramFromProject();
   fullSolverRefresh({ fit: true });
 });
 
@@ -1880,7 +2219,9 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
     normalizeDiagramHoleFields(hole, { roundBearingAndDepth: true });
   });
   uniqueHoleIds(holes, records, idColumn);
+  initializeProjectFromHoles(holes, diagramState.csvCache);
   applyDiagramImportedHoles(holes);
+  hydrateSolverFromProject();
 });
 
 els.diagramShotNumberInput.addEventListener("input", () => applyDiagramMetadataPatch("shotNumber", els.diagramShotNumberInput.value.trim()));
@@ -1969,9 +2310,31 @@ els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramRenderer.render();
 });
 
-els.homeNavBtn.addEventListener("click", () => setActiveWorkspace("home"));
-els.openDelaySolverBtn.addEventListener("click", () => setActiveWorkspace("delaySolver"));
-els.openDiagramMakerBtn.addEventListener("click", () => setActiveWorkspace("diagramMaker"));
+els.homeNavBtn.addEventListener("click", () => {
+  syncCurrentWorkspaceToProject();
+  setActiveWorkspace("home");
+});
+els.openDelaySolverBtn.addEventListener("click", () => {
+  if (projectState.holes.length) hydrateDiagramFromProject();
+  else persistDiagramStateToProject();
+  setActiveWorkspace("diagramMaker");
+  requestAnimationFrame(() => {
+    applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+    fullDiagramRefresh({ fit: projectState.holes.length === 0 });
+  });
+});
+if (els.openDiagramMakerBtn) {
+  els.openDiagramMakerBtn.addEventListener("click", () => {
+    if (projectState.holes.length) hydrateDiagramFromProject();
+    setActiveWorkspace("diagramMaker");
+    requestAnimationFrame(() => {
+      applyProjectViewToMode(diagramState, els.diagramCoordViewSelect, diagramRenderer, projectState.view.coordView, projectState.view.rotationDeg);
+      fullDiagramRefresh();
+    });
+  });
+}
+els.plannerDiagramModeBtn.addEventListener("click", () => switchPlannerMode("diagram"));
+els.plannerTimingModeBtn.addEventListener("click", () => switchPlannerMode("timing"));
 
 els.originToolBtn.addEventListener("click", () => setToolMode("origin"));
 els.holeRelationPositiveToolBtn.addEventListener("click", () => setToolMode("holeRelationshipPositive"));
@@ -2047,6 +2410,7 @@ els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
+els.printAddTimingPageBtn.addEventListener("click", () => addTimingPrintPage());
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
 els.printPageTabs.addEventListener("click", (event) => {
   const removeBtn = event.target.closest("[data-print-remove]");
@@ -2122,6 +2486,8 @@ renderRelationshipList();
 renderTimingResults();
 syncDiagramDefaultDiameterStatus();
 renderDiagramPropertiesPanel();
+persistDiagramStateToProject();
+persistTimingStateToProject();
 initMenuToggles();
 renderWorkspaceChrome();
 solverRenderer.render();

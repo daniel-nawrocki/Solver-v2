@@ -37,6 +37,7 @@ Future possible directions discussed:
 - Delay Solver still uses timing/relationship logic from existing modules.
 - Home / Delay Solver / Diagram Maker all live inside one HTML app and switch via workspace state.
 - Print preview now uses a shared print session model with multiple independent print pages per session.
+- A shared project spine now mirrors imported holes, diagram data, and timing data across modes so Diagram and Timing can switch without separate imports.
 
 ## Current Snapshot
 This is the current repo memory as of the latest update in this chat.
@@ -45,6 +46,8 @@ Code-level status:
 - `js/app.js` was rebuilt to support both workspaces after a failed large-file replacement attempt.
 - `Diagram Maker` now exists in the DOM as a real workspace, not a placeholder.
 - `Diagram Maker` has its own state, renderer instance, import flow, selection flow, and property editor.
+- the app now also has a top-bar mode toggle that switches between `Diagram` and `Timing` while syncing through a shared project state
+- Home now presents a single `Blast Planner` entry point instead of two separate tool cards
 - `Print Preview` is shared, but branches behavior based on whether the active workspace is `Delay Solver` or `Diagram Maker`.
 - Diagram Maker now has a bottom selection toolkit styled to match the Delay Solver bottom controls.
 - Diagram Maker now also has a bottom annotation toolkit with `Markup` and `Text` tools, plus shared color/size controls.
@@ -65,6 +68,7 @@ What has not been fully verified yet:
 - whether annotation readability and printed header spacing still feel balanced on dense real-world diagrams
 - whether print-label drag UX and leader thresholds feel right on dense layouts in real use
 - whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
+- whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 
 ## Completed Work
 
@@ -318,6 +322,28 @@ Current rule:
 - Diagram Maker CSV import now rounds `depth` to a whole number when imported
 - manual property edits still accept non-rounded numeric values outside the import flow
 
+### 16. Shared Planner Mode Toggle + Shared Project Spine
+Implemented as an incremental merge path.
+
+What was added:
+- Home now opens a single `Blast Planner` entry
+- top bar now includes `Diagram` / `Timing` mode buttons
+- imports in either mode now initialize one shared project hole set
+- switching modes now hydrates the target mode from the shared project instead of requiring a second import
+- timing origin / relationships / ranges / results persist across mode switches
+- diagram metadata / properties / annotations persist across mode switches
+
+Current rule:
+- the underlying DOM still uses the legacy Delay Solver and Diagram Maker workspace sections for safety
+- the user-facing workflow is now intended to be one planner with two modes, not two unrelated tools
+
+### 17. Diagram Print Can Add Timing Page
+Implemented in code.
+
+What was added:
+- Diagram print preview now exposes `Add Timing Page` when timing results exist in the shared project
+- timing print pages are generated from the shared timing result selection without leaving Diagram mode
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -336,6 +362,7 @@ Important recent context:
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
+- the unified planner still relies on the legacy separate workspace DOM internally, so cleanup remains to be done later
 - Print preview behavior for both workspaces has been refactored and should be manually checked in both modes.
 - The new print-fit behavior is syntax-validated but still needs visual confirmation with real print preview usage.
 - Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
@@ -344,9 +371,14 @@ Important recent context:
 - Diagram Maker annotation tools still need manual testing for drag feel, clutter, and print readability with real datasets.
 - Multi-page print add/remove/switch behavior and browser print sheet ordering still need manual testing.
 - Real browser print dialogs still need confirmation that blank interstitial pages are gone.
+- shared-project mode switching, import parity, and print timing-page behavior all need manual browser verification
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
+  - single `Blast Planner` home entry flow
+  - top-bar `Diagram` / `Timing` mode switch
+  - persistence of diagram edits across mode switches
+  - persistence of timing graph/results across mode switches
   - Home navigation
   - Delay Solver still works
   - Diagram Maker import
@@ -382,6 +414,7 @@ Important recent context:
     - page removal
     - browser print output order across multiple pages
     - no blank pages between printed sheets
+    - `Add Timing Page` from Diagram print when timing results exist
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
