@@ -111,14 +111,18 @@ function createDiagramState() {
       annotationColor: "#000000",
       annotationSize: "medium",
       currentStrokeDraft: null,
+      pendingFaceDesignation: false,
+      faceDesignationReturnTool: "single",
     },
     metadata: {
       shotNumber: "",
       location: "",
       bench: "",
       defaultDiameter: null,
-      facePattern: "",
-      interiorPattern: "",
+      faceBurden: null,
+      faceSpacing: null,
+      interiorBurden: null,
+      interiorSpacing: null,
     },
     annotations: {
       strokes: [],
@@ -159,8 +163,10 @@ function createPrintPageState() {
       location: "",
       bench: "",
       defaultDiameter: null,
-      facePattern: "",
-      interiorPattern: "",
+      faceBurden: null,
+      faceSpacing: null,
+      interiorBurden: null,
+      interiorSpacing: null,
     },
     annotations: {
       strokes: [],
@@ -204,6 +210,8 @@ const projectState = {
       activeTool: "single",
       annotationColor: "#000000",
       annotationSize: "medium",
+      pendingFaceDesignation: false,
+      faceDesignationReturnTool: "single",
     },
   },
   timing: {
@@ -319,8 +327,14 @@ const els = {
   diagramShotLocationSelect: document.getElementById("diagramShotLocationSelect"),
   diagramBenchInput: document.getElementById("diagramBenchInput"),
   diagramShotDefaultDiameterSelect: document.getElementById("diagramShotDefaultDiameterSelect"),
-  diagramFacePatternInput: document.getElementById("diagramFacePatternInput"),
-  diagramInteriorPatternInput: document.getElementById("diagramInteriorPatternInput"),
+  diagramFaceBurdenInput: document.getElementById("diagramFaceBurdenInput"),
+  diagramFaceSpacingInput: document.getElementById("diagramFaceSpacingInput"),
+  diagramInteriorBurdenInput: document.getElementById("diagramInteriorBurdenInput"),
+  diagramInteriorSpacingInput: document.getElementById("diagramInteriorSpacingInput"),
+  diagramFaceStatus: document.getElementById("diagramFaceStatus"),
+  diagramAssignFaceBtn: document.getElementById("diagramAssignFaceBtn"),
+  diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
+  diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
   diagramGridToggle: document.getElementById("diagramGridToggle"),
   diagramAngleLabelToggle: document.getElementById("diagramAngleLabelToggle"),
   diagramBearingLabelToggle: document.getElementById("diagramBearingLabelToggle"),
@@ -572,8 +586,10 @@ function cloneDiagramMetadata(metadata = {}) {
     location: metadata.location || "",
     bench: metadata.bench || "",
     defaultDiameter: Number.isFinite(Number(metadata.defaultDiameter)) ? Number(metadata.defaultDiameter) : null,
-    facePattern: metadata.facePattern || "",
-    interiorPattern: metadata.interiorPattern || "",
+    faceBurden: Number.isFinite(Number(metadata.faceBurden)) ? Number(metadata.faceBurden) : null,
+    faceSpacing: Number.isFinite(Number(metadata.faceSpacing)) ? Number(metadata.faceSpacing) : null,
+    interiorBurden: Number.isFinite(Number(metadata.interiorBurden)) ? Number(metadata.interiorBurden) : null,
+    interiorSpacing: Number.isFinite(Number(metadata.interiorSpacing)) ? Number(metadata.interiorSpacing) : null,
   };
 }
 
@@ -695,6 +711,8 @@ function hydrateDiagramFromProject() {
   diagramState.ui.annotationColor = projectState.diagram.ui.annotationColor || "#000000";
   diagramState.ui.annotationSize = projectState.diagram.ui.annotationSize || "medium";
   diagramState.ui.currentStrokeDraft = null;
+  diagramState.ui.pendingFaceDesignation = false;
+  diagramState.ui.faceDesignationReturnTool = "single";
   diagramState.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
   diagramState.annotations = cloneDiagramAnnotations(projectState.diagram.annotations);
 }
@@ -732,6 +750,8 @@ function persistDiagramStateToProject() {
   projectState.diagram.ui.activeTool = diagramState.ui.activeTool || "single";
   projectState.diagram.ui.annotationColor = diagramState.ui.annotationColor || "#000000";
   projectState.diagram.ui.annotationSize = diagramState.ui.annotationSize || "medium";
+  projectState.diagram.ui.pendingFaceDesignation = false;
+  projectState.diagram.ui.faceDesignationReturnTool = "single";
   projectState.diagram.metadata = cloneDiagramMetadata(diagramState.metadata);
   projectState.diagram.annotations = cloneDiagramAnnotations(diagramState.annotations);
 }
@@ -782,6 +802,8 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.diagram.ui.activeTool = "single";
   projectState.diagram.ui.annotationColor = "#000000";
   projectState.diagram.ui.annotationSize = "medium";
+  projectState.diagram.ui.pendingFaceDesignation = false;
+  projectState.diagram.ui.faceDesignationReturnTool = "single";
   projectState.timing.relationships = { originHoleId: null, edges: [], nextId: 1 };
   projectState.timing.timingResults = [];
   projectState.timing.solverMessage = "";
@@ -1265,6 +1287,11 @@ function selectedDiagramDefaultDiameter() {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
+function selectedDiagramMetadataNumber(input) {
+  const numeric = Number(input.value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 function applyShotDefaultDiameterToExistingHoles(nextDefaultDiameter) {
   const previousDefaultDiameter = diagramState.metadata.defaultDiameter;
   if (!Number.isFinite(nextDefaultDiameter)) return;
@@ -1286,6 +1313,28 @@ function syncDiagramDefaultDiameterStatus() {
     : "Default Hole Diameter: not set";
 }
 
+function faceHoleCount() {
+  return diagramState.holes.filter((hole) => hole.isFaceHole === true).length;
+}
+
+function renderDiagramShotPanel() {
+  els.diagramShotNumberInput.value = diagramState.metadata.shotNumber;
+  els.diagramShotLocationSelect.value = diagramState.metadata.location;
+  els.diagramBenchInput.value = diagramState.metadata.bench;
+  els.diagramShotDefaultDiameterSelect.value = Number.isFinite(diagramState.metadata.defaultDiameter) ? String(diagramState.metadata.defaultDiameter) : "";
+  els.diagramFaceBurdenInput.value = Number.isFinite(diagramState.metadata.faceBurden) ? String(diagramState.metadata.faceBurden) : "";
+  els.diagramFaceSpacingInput.value = Number.isFinite(diagramState.metadata.faceSpacing) ? String(diagramState.metadata.faceSpacing) : "";
+  els.diagramInteriorBurdenInput.value = Number.isFinite(diagramState.metadata.interiorBurden) ? String(diagramState.metadata.interiorBurden) : "";
+  els.diagramInteriorSpacingInput.value = Number.isFinite(diagramState.metadata.interiorSpacing) ? String(diagramState.metadata.interiorSpacing) : "";
+  const count = faceHoleCount();
+  els.diagramFaceStatus.textContent = diagramState.ui.pendingFaceDesignation
+    ? `Face Holes: ${count} designated - draw a polygon to redefine the face`
+    : `Face Holes: ${count} designated`;
+  els.diagramAssignFaceBtn.classList.toggle("active", diagramState.ui.pendingFaceDesignation);
+  els.diagramClearFaceBtn.disabled = !diagramState.holes.length || count === 0;
+  els.diagramApplyPatternBtn.disabled = !diagramState.holes.length;
+}
+
 function annotationSizeConfig(size) {
   return DIAGRAM_ANNOTATION_SIZE_MAP[size] || DIAGRAM_ANNOTATION_SIZE_MAP.medium;
 }
@@ -1301,6 +1350,7 @@ function pointToWorld(renderer, point) {
 function normalizeDiagramHoleFields(hole, options = {}) {
   ensureDiagramHoleFields(hole);
   hole.angle = normalizeAngleValue(hole.angle);
+  hole.isFaceHole = hole.isFaceHole === true;
   if (hole.bearing !== null && hole.bearing !== undefined) {
     const numericBearing = Number(hole.bearing);
     hole.bearing = Number.isFinite(numericBearing)
@@ -1893,7 +1943,18 @@ function finalizeDiagramPolygonSelection() {
   const holeIds = diagramState.holes
     .filter((hole) => pointInPolygon(diagramScreenPoint(hole), draft.points))
     .map((hole) => hole.id);
-  applyDiagramSelection(holeIds, { add: draft.addMode });
+  if (diagramState.ui.pendingFaceDesignation) {
+    const faceIdSet = new Set(holeIds);
+    diagramState.holes.forEach((hole) => {
+      hole.isFaceHole = faceIdSet.has(hole.id);
+    });
+    diagramState.ui.pendingFaceDesignation = false;
+    applyDiagramSelection(holeIds, { add: false });
+    setDiagramToolMode(diagramState.ui.faceDesignationReturnTool || "single");
+    renderDiagramShotPanel();
+  } else {
+    applyDiagramSelection(holeIds, { add: draft.addMode });
+  }
   diagramState.ui.selectionPolygonDraft = null;
   diagramRenderer.render();
 }
@@ -2057,6 +2118,7 @@ function renderDiagramPropertiesPanel() {
 
 function fullDiagramRefresh({ fit = false } = {}) {
   persistDiagramStateToProject();
+  renderDiagramShotPanel();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
   if (fit) diagramRenderer.fitToData();
@@ -2080,6 +2142,8 @@ function applyDiagramImportedHoles(holes) {
   diagramState.holes = holes;
   diagramState.selection = new Set();
   diagramState.ui.coordView = "collar";
+  diagramState.ui.pendingFaceDesignation = false;
+  diagramState.ui.faceDesignationReturnTool = "single";
   rebuildHolesById(diagramState);
   applyCoordinateView(diagramState, els.diagramCoordViewSelect, diagramRenderer, "collar");
   fullDiagramRefresh({ fit: true });
@@ -2135,6 +2199,56 @@ function applyDiagramPropertyPatchToSelection(result) {
   diagramRenderer.render();
 }
 
+function applyPatternAssignment() {
+  if (!diagramState.holes.length) {
+    window.alert("Import holes first.");
+    return;
+  }
+  const faceBurden = diagramState.metadata.faceBurden;
+  const faceSpacing = diagramState.metadata.faceSpacing;
+  const interiorBurden = diagramState.metadata.interiorBurden;
+  const interiorSpacing = diagramState.metadata.interiorSpacing;
+  if (![faceBurden, faceSpacing, interiorBurden, interiorSpacing].every((value) => Number.isFinite(value))) {
+    window.alert("Enter all face and interior burden/spacing values in the Shot menu first.");
+    return;
+  }
+  if (!diagramState.holes.some((hole) => hole.isFaceHole === true)) {
+    window.alert("Assign face holes first.");
+    return;
+  }
+  diagramState.holes.forEach((hole) => {
+    if (hole.isFaceHole === true) {
+      hole.burden = faceBurden;
+      hole.spacing = faceSpacing;
+    } else {
+      hole.burden = interiorBurden;
+      hole.spacing = interiorSpacing;
+    }
+  });
+  fullDiagramRefresh();
+}
+
+function startFaceDesignation() {
+  if (!diagramState.holes.length) {
+    window.alert("Import holes first.");
+    return;
+  }
+  diagramState.ui.pendingFaceDesignation = true;
+  diagramState.ui.faceDesignationReturnTool = diagramState.ui.activeTool || "single";
+  setDiagramToolMode("polygon");
+  renderDiagramShotPanel();
+}
+
+function clearFaceDesignation() {
+  diagramState.holes.forEach((hole) => {
+    hole.isFaceHole = false;
+  });
+  diagramState.ui.pendingFaceDesignation = false;
+  diagramState.ui.selectionPolygonDraft = null;
+  renderDiagramShotPanel();
+  fullDiagramRefresh();
+}
+
 function applyDefaultDiameterToDiagramSelection() {
   const defaultDiameter = diagramState.metadata.defaultDiameter;
   if (!Number.isFinite(defaultDiameter)) {
@@ -2161,12 +2275,13 @@ function applyDiagramMetadataPatch(field, value) {
     if (Number.isFinite(normalizedValue)) applyShotDefaultDiameterToExistingHoles(normalizedValue);
     diagramState.metadata[field] = normalizedValue;
     syncDiagramDefaultDiameterStatus();
-    renderDiagramPropertiesPanel();
-    diagramRenderer.render();
   } else {
     diagramState.metadata[field] = value;
-    syncDiagramDefaultDiameterStatus();
   }
+  syncDiagramDefaultDiameterStatus();
+  renderDiagramShotPanel();
+  renderDiagramPropertiesPanel();
+  diagramRenderer.render();
   persistDiagramStateToProject();
 }
 
@@ -2277,8 +2392,13 @@ els.diagramShotNumberInput.addEventListener("input", () => applyDiagramMetadataP
 els.diagramShotLocationSelect.addEventListener("change", () => applyDiagramMetadataPatch("location", els.diagramShotLocationSelect.value));
 els.diagramBenchInput.addEventListener("input", () => applyDiagramMetadataPatch("bench", els.diagramBenchInput.value.trim()));
 els.diagramShotDefaultDiameterSelect.addEventListener("change", () => applyDiagramMetadataPatch("defaultDiameter", selectedDiagramDefaultDiameter()));
-els.diagramFacePatternInput.addEventListener("input", () => applyDiagramMetadataPatch("facePattern", els.diagramFacePatternInput.value.trim()));
-els.diagramInteriorPatternInput.addEventListener("input", () => applyDiagramMetadataPatch("interiorPattern", els.diagramInteriorPatternInput.value.trim()));
+els.diagramFaceBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("faceBurden", selectedDiagramMetadataNumber(els.diagramFaceBurdenInput)));
+els.diagramFaceSpacingInput.addEventListener("change", () => applyDiagramMetadataPatch("faceSpacing", selectedDiagramMetadataNumber(els.diagramFaceSpacingInput)));
+els.diagramInteriorBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("interiorBurden", selectedDiagramMetadataNumber(els.diagramInteriorBurdenInput)));
+els.diagramInteriorSpacingInput.addEventListener("change", () => applyDiagramMetadataPatch("interiorSpacing", selectedDiagramMetadataNumber(els.diagramInteriorSpacingInput)));
+els.diagramAssignFaceBtn.addEventListener("click", () => startFaceDesignation());
+els.diagramClearFaceBtn.addEventListener("click", () => clearFaceDesignation());
+els.diagramApplyPatternBtn.addEventListener("click", () => applyPatternAssignment());
 
 els.gridToggle.addEventListener("change", () => {
   solverState.ui.showGrid = els.gridToggle.checked;
@@ -2505,7 +2625,19 @@ document.addEventListener("keydown", (event) => {
       diagramState.ui.selectionPolygonDraft = null;
       diagramState.ui.selectionBoxDraft = null;
       diagramState.ui.currentStrokeDraft = null;
-      diagramRenderer.render();
+      if (diagramState.ui.pendingFaceDesignation) {
+        diagramState.ui.pendingFaceDesignation = false;
+        setDiagramToolMode(diagramState.ui.faceDesignationReturnTool || "single");
+        renderDiagramShotPanel();
+      } else {
+        diagramRenderer.render();
+      }
+      return;
+    }
+    if (diagramState.ui.pendingFaceDesignation) {
+      diagramState.ui.pendingFaceDesignation = false;
+      setDiagramToolMode(diagramState.ui.faceDesignationReturnTool || "single");
+      renderDiagramShotPanel();
       return;
     }
   }
@@ -2518,12 +2650,7 @@ els.coordViewSelect.value = solverState.ui.coordView;
 els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
-els.diagramShotNumberInput.value = diagramState.metadata.shotNumber;
-els.diagramShotLocationSelect.value = diagramState.metadata.location;
-els.diagramBenchInput.value = diagramState.metadata.bench;
-els.diagramShotDefaultDiameterSelect.value = Number.isFinite(diagramState.metadata.defaultDiameter) ? String(diagramState.metadata.defaultDiameter) : "";
-els.diagramFacePatternInput.value = diagramState.metadata.facePattern;
-els.diagramInteriorPatternInput.value = diagramState.metadata.interiorPattern;
+renderDiagramShotPanel();
 els.diagramAnnotationColorInput.value = diagramState.ui.annotationColor;
 els.diagramAnnotationSizeSelect.value = diagramState.ui.annotationSize;
 setDiagramToolMode(diagramState.ui.activeTool);

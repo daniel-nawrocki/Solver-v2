@@ -1138,6 +1138,34 @@ body.help-active .print-workspace {
   letter-spacing: 0.02em;
 }
 
+.pattern-pair-group {
+  display: grid;
+  gap: 8px;
+}
+
+.pattern-pair-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #22384f;
+}
+
+.pattern-pair-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.pattern-pair-row input {
+  min-width: 0;
+}
+
+.pattern-pair-times {
+  font-size: 14px;
+  font-weight: 800;
+  color: #52657c;
+}
+
 .panel:nth-child(odd) {
   border-left: 4px solid rgba(15, 126, 115, 0.26);
 }

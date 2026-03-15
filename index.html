@@ -329,12 +329,28 @@
                 <option value="6.5">6 1/2"</option>
               </select>
             </label>
-            <label>Face Pattern
-              <input id="diagramFacePatternInput" type="text" placeholder="Enter face pattern">
-            </label>
-            <label>Interior Pattern
-              <input id="diagramInteriorPatternInput" type="text" placeholder="Enter interior pattern">
-            </label>
+            <div class="pattern-pair-group">
+              <div class="pattern-pair-label">Face Pattern</div>
+              <div class="pattern-pair-row">
+                <input id="diagramFaceBurdenInput" type="number" step="0.01" placeholder="Burden" aria-label="Face Burden">
+                <span class="pattern-pair-times">x</span>
+                <input id="diagramFaceSpacingInput" type="number" step="0.01" placeholder="Spacing" aria-label="Face Spacing">
+              </div>
+            </div>
+            <div class="pattern-pair-group">
+              <div class="pattern-pair-label">Interior Pattern</div>
+              <div class="pattern-pair-row">
+                <input id="diagramInteriorBurdenInput" type="number" step="0.01" placeholder="Burden" aria-label="Interior Burden">
+                <span class="pattern-pair-times">x</span>
+                <input id="diagramInteriorSpacingInput" type="number" step="0.01" placeholder="Spacing" aria-label="Interior Spacing">
+              </div>
+            </div>
+            <div id="diagramFaceStatus" class="status-note">Face Holes: 0 designated</div>
+            <div class="row-actions">
+              <button id="diagramAssignFaceBtn" type="button">Assign Face</button>
+              <button id="diagramClearFaceBtn" type="button">Clear Face</button>
+            </div>
+            <button id="diagramApplyPatternBtn" type="button">Apply Pattern</button>
           </section>
         </div>
 

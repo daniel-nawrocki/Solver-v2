@@ -29,6 +29,13 @@ function formatWholeNumber(value, suffix = "") {
   return `${Math.round(value)}${suffix}`;
 }
 
+function formatPatternPair(burden, spacing) {
+  if (!Number.isFinite(Number(burden)) || !Number.isFinite(Number(spacing))) return null;
+  const left = Math.round(Number(burden) * 100) / 100;
+  const right = Math.round(Number(spacing) * 100) / 100;
+  return `${left} x ${right}`;
+}
+
 function angleColor(value) {
   switch (Math.round(value)) {
     case 5: return "#f59e0b";
@@ -753,8 +760,8 @@ export class DiagramRenderer {
     ].filter(Boolean);
     const rightLines = [
       Number.isFinite(Number(metadata.defaultDiameter)) ? `Hole Diameter: ${formatDiameterLabel(metadata.defaultDiameter)}` : null,
-      metadata.facePattern ? `Face Pattern: ${metadata.facePattern}` : null,
-      metadata.interiorPattern ? `Interior Pattern: ${metadata.interiorPattern}` : null,
+      formatPatternPair(metadata.faceBurden, metadata.faceSpacing) ? `Face Pattern: ${formatPatternPair(metadata.faceBurden, metadata.faceSpacing)}` : null,
+      formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing) ? `Interior Pattern: ${formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing)}` : null,
     ].filter(Boolean);
 
     this.ctx.save();

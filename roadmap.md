@@ -59,6 +59,10 @@ Code-level status:
 - Print preview now supports multiple independently configurable pages per session for both Delay Solver and Diagram Maker.
 - Adding a print page duplicates the active print page state so toggles, zoom/pan/rotation, label layouts, and color mode can diverge page by page.
 - main-canvas viewport state now persists across `Diagram` / `Timing` mode switches so the layout should stay in the same screen position while switching modes
+- Diagram Maker `Shot` menu pattern entry now uses numeric `Face` / `Interior` burden x spacing pairs instead of free-text pattern labels.
+- Diagram Maker now supports `Assign Face` via polygon designation plus `Apply Pattern` to overwrite burden/spacing from the stored face/interior pattern pairs.
+- per-hole face designation now persists in the shared project so pattern assignment survives mode switches until cleared or redefined.
+- print CSS was simplified so print preview now outputs one sheet per page tab without the extra blank/overflow pages seen in browser PDF export.
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -70,6 +74,7 @@ What has not been fully verified yet:
 - whether annotation readability and printed header spacing still feel balanced on dense real-world diagrams
 - whether print-label drag UX and leader thresholds feel right on dense layouts in real use
 - whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
+- whether the new face designation / pattern assignment flow feels clear enough without additional face highlighting on dense diagrams
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 - whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
 
@@ -348,6 +353,39 @@ What was added:
 - Diagram print preview now exposes `Add Timing Page` when timing results exist in the shared project
 - timing print pages are generated from the shared timing result selection without leaving Diagram mode
 
+### 18. Diagram Pattern Assignment via Burden x Spacing
+Implemented in code.
+
+What was added:
+- `Shot` menu pattern entry now uses four numeric inputs:
+  - face burden
+  - face spacing
+  - interior burden
+  - interior spacing
+- `Assign Face` puts Diagram Maker into a polygon face-designation flow
+- completing the polygon stores a persisted face-hole set on the current project holes
+- `Clear Face` removes the stored face designation
+- `Apply Pattern` overwrites per-hole burden/spacing using:
+  - face pattern for designated face holes
+  - interior pattern for all other holes
+- print header pattern text is now derived from the numeric burden x spacing pairs instead of free-text metadata
+
+Current rule:
+- face designation persists across Diagram / Timing mode switches until cleared, redefined, or replaced by a new import
+- applying patterns is explicit and does not auto-run when pattern values change
+- applying patterns requires all four pattern numbers plus at least one designated face hole
+
+### 19. Print Preview Blank-Page Fix
+Implemented in code.
+
+What changed:
+- print CSS no longer relies on the previous global visibility-hiding approach
+- print preview now prints the generated page-tab output in normal flow while hiding only non-print UI
+
+Intent:
+- ensure one printed sheet per print page tab
+- avoid the extra mostly blank overflow pages seen in browser PDF export
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -364,6 +402,7 @@ Important recent context:
 - Diagram Maker print label edits are session-only and are not persisted yet.
 - Multi-page print sessions are in-memory only and are not persisted yet.
 - Help content is still Delay Solver-focused and has not been expanded for Diagram Maker.
+- Diagram Maker face designation currently has no dedicated visual highlighting beyond selection/status, so dense layouts may need a later clarity pass.
 - Full browser interaction testing still needs to be done manually after changes.
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
 - the unified planner still relies on the legacy separate workspace DOM internally, so cleanup remains to be done later
@@ -391,6 +430,12 @@ Important recent context:
   - Diagram Maker import
   - Diagram Maker shot metadata entry
   - default shot diameter behavior during import and `Apply Default Diameter`
+  - face/interior burden x spacing entry in the `Shot` menu
+  - `Assign Face` polygon workflow
+  - `Clear Face`
+  - `Apply Pattern`
+  - persistence of the designated face set across mode switches
+  - overwrite behavior for burden/spacing after repeated pattern applies
   - single-select and multi-select property edits
   - markup drawing tool
   - text placement tool
@@ -453,12 +498,6 @@ Important recent context:
 - manual timing tool
 - better presentation / layout for the pattern and diameter box area
 - tonnage calculator
-- automatic burden and spacing designation workflow:
-  - separate burden / spacing boxes with an `x` between them
-  - assign both face pattern and interior pattern values first
-  - designate the face after pattern entry
-  - apply the face pattern to face-designated holes
-  - apply the interior pattern to all other holes
 
 ## Long-Term Ideas
 - real login/auth with unique profiles
