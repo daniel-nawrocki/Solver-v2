@@ -1351,6 +1351,10 @@ body.help-active .print-workspace {
     width: 100%;
     margin: 0;
     padding: 0;
+    break-after: auto;
+    page-break-after: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .print-paper-frame {
