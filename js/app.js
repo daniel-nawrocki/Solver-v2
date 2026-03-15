@@ -11,8 +11,9 @@ import {
   loadCloudProject,
   onAuthStateChange,
   renameCloudProject,
-  signInWithMagicLink,
+  signInWithPassword,
   signOutSession,
+  signUpWithPassword,
   supabaseConfigMessage,
   updateCloudProject,
 } from "./supabaseService.js";
@@ -306,7 +307,9 @@ const els = {
   accountMenuBtn: document.getElementById("accountMenuBtn"),
   accountStatus: document.getElementById("accountStatus"),
   authEmailInput: document.getElementById("authEmailInput"),
-  authSendLinkBtn: document.getElementById("authSendLinkBtn"),
+  authPasswordInput: document.getElementById("authPasswordInput"),
+  authSignInBtn: document.getElementById("authSignInBtn"),
+  authSignUpBtn: document.getElementById("authSignUpBtn"),
   authSignOutBtn: document.getElementById("authSignOutBtn"),
   plannerModeToggle: document.getElementById("plannerModeToggle"),
   plannerDiagramModeBtn: document.getElementById("plannerDiagramModeBtn"),
@@ -685,7 +688,7 @@ function requireConfiguredSupabase() {
 function requireSignedIn() {
   if (!requireConfiguredSupabase()) return false;
   if (isSignedIn()) return true;
-  window.alert("Sign in with a magic link before using cloud projects.");
+  window.alert("Sign in with your email and password before using cloud projects.");
   openMenu("accountMenu");
   return false;
 }
@@ -803,20 +806,23 @@ function renderAuthUi() {
   if (!isSupabaseConfigured()) {
     els.authStatus.textContent = "Supabase not configured";
     els.accountStatus.textContent = supabaseConfigMessage();
-    els.authSendLinkBtn.disabled = true;
+    els.authSignInBtn.disabled = true;
+    els.authSignUpBtn.disabled = true;
     els.authSignOutBtn.disabled = true;
     return;
   }
   if (isSignedIn()) {
     els.authStatus.textContent = `Signed in as ${activeUserEmail()}`;
     els.accountStatus.textContent = `Signed in as ${activeUserEmail()}`;
-    els.authSendLinkBtn.disabled = false;
+    els.authSignInBtn.disabled = false;
+    els.authSignUpBtn.disabled = false;
     els.authSignOutBtn.disabled = false;
     return;
   }
   els.authStatus.textContent = "Signed out";
-  els.accountStatus.textContent = "Enter your email to receive a magic link.";
-  els.authSendLinkBtn.disabled = false;
+  els.accountStatus.textContent = "Enter your email and password to sign in or create an account.";
+  els.authSignInBtn.disabled = false;
+  els.authSignUpBtn.disabled = false;
   els.authSignOutBtn.disabled = true;
 }
 
@@ -3028,19 +3034,44 @@ els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramRenderer.render();
 });
 
-els.authSendLinkBtn.addEventListener("click", async () => {
+els.authSignInBtn.addEventListener("click", async () => {
   if (!requireConfiguredSupabase()) return;
   const email = els.authEmailInput.value.trim();
-  if (!email) {
-    window.alert("Enter your email first.");
+  const password = els.authPasswordInput.value;
+  if (!email || !password) {
+    window.alert("Enter both email and password.");
     return;
   }
   try {
-    await signInWithMagicLink(email);
-    els.accountStatus.textContent = `Magic link sent to ${email}.`;
+    await signInWithPassword(email, password);
+    els.accountStatus.textContent = `Signed in as ${email}.`;
+    els.authPasswordInput.value = "";
+    closeAllMenus();
   } catch (error) {
     console.error(error);
-    window.alert(error.message || "Could not send magic link.");
+    window.alert(error.message || "Could not sign in.");
+  }
+});
+
+els.authSignUpBtn.addEventListener("click", async () => {
+  if (!requireConfiguredSupabase()) return;
+  const email = els.authEmailInput.value.trim();
+  const password = els.authPasswordInput.value;
+  if (!email || !password) {
+    window.alert("Enter both email and password.");
+    return;
+  }
+  if (password.length < 6) {
+    window.alert("Use a password with at least 6 characters.");
+    return;
+  }
+  try {
+    await signUpWithPassword(email, password);
+    els.accountStatus.textContent = `Account created for ${email}. If email confirmation is enabled in Supabase, confirm it before signing in.`;
+    els.authPasswordInput.value = "";
+  } catch (error) {
+    console.error(error);
+    window.alert(error.message || "Could not create account.");
   }
 });
 
@@ -3048,6 +3079,7 @@ els.authSignOutBtn.addEventListener("click", async () => {
   if (!requireConfiguredSupabase()) return;
   try {
     await signOutSession();
+    els.authPasswordInput.value = "";
     closeAllMenus();
   } catch (error) {
     console.error(error);

@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import { SUPABASE_ANON_KEY, SUPABASE_REDIRECT_TO, SUPABASE_URL } from "./supabaseConfig.js";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./supabaseConfig.js";
 
 const HAS_PLACEHOLDER_URL = /YOUR-PROJECT-REF/.test(SUPABASE_URL);
 const HAS_PLACEHOLDER_KEY = /YOUR-SUPABASE-ANON-KEY/.test(SUPABASE_ANON_KEY);
@@ -52,13 +52,20 @@ export function onAuthStateChange(callback) {
   return supabase.auth.onAuthStateChange((_event, session) => callback(session || null));
 }
 
-export async function signInWithMagicLink(email) {
+export async function signInWithPassword(email, password) {
   const client = ensureClient();
-  const { error } = await client.auth.signInWithOtp({
+  const { error } = await client.auth.signInWithPassword({
     email,
-    options: {
-      emailRedirectTo: SUPABASE_REDIRECT_TO,
-    },
+    password,
+  });
+  if (error) throw error;
+}
+
+export async function signUpWithPassword(email, password) {
+  const client = ensureClient();
+  const { error } = await client.auth.signUp({
+    email,
+    password,
   });
   if (error) throw error;
 }
