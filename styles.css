@@ -1370,5 +1370,8 @@ body.help-active .print-workspace {
   .print-output-page canvas {
     width: 100%;
     height: auto;
+    display: block;
+    margin: 0;
+    vertical-align: top;
   }
 }
