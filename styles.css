@@ -994,10 +994,6 @@ button:active {
   filter: grayscale(1);
 }
 
-.print-paper-frame.greyscale img {
-  filter: grayscale(1);
-}
-
 .print-pages-output {
   display: none;
   width: 100%;
@@ -1320,26 +1316,20 @@ body.help-active .print-workspace {
     padding: 0 !important;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  .print-pages-output,
-  .print-pages-output * {
-    visibility: visible;
-  }
-
   .print-workspace {
-    position: absolute;
-    inset: 0;
+    position: static;
+    inset: auto;
+    display: block;
     background: #ffffff;
-    visibility: visible;
   }
 
   .print-workspace {
     page: print-landscape;
   }
 
+  .topbar,
+  .workspace,
+  .help-workspace,
   .print-page-strip,
   .print-toolbar {
     display: none !important;
@@ -1394,10 +1384,6 @@ body.help-active .print-workspace {
 
   #printCanvas,
   .print-output-page canvas {
-    display: none !important;
-  }
-
-  .print-output-page img {
     width: 10.5in;
     height: 8in;
     max-width: none;

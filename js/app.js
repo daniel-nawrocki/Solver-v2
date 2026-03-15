@@ -42,8 +42,6 @@ const WORKSPACE_TO_MODE = {
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
 const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
-const PRINT_EXPORT_WIDTH = 1100;
-const PRINT_EXPORT_HEIGHT = 850;
 const DIAGRAM_TOOL_MODES = new Set(["single", "box", "polygon", "markup", "text"]);
 const DIAGRAM_ANNOTATION_SIZE_MAP = {
   small: { strokeWidth: 2, textSize: 14 },
@@ -1170,10 +1168,8 @@ function resetPrintLabelLayouts() {
 function renderPrintPageToCanvas(page, canvas) {
   if (!page || !canvas) return;
   const context = canvas.getContext("2d");
-  canvas.width = PRINT_EXPORT_WIDTH;
-  canvas.height = PRINT_EXPORT_HEIGHT;
-  printRenderer.canvas.width = PRINT_EXPORT_WIDTH;
-  printRenderer.canvas.height = PRINT_EXPORT_HEIGHT;
+  canvas.width = printRenderer.canvas.width;
+  canvas.height = printRenderer.canvas.height;
   printRenderer.stateRef = page;
   printRenderer.applyViewState(page.viewport, { render: false });
   printRenderer.render();
@@ -1192,13 +1188,13 @@ function preparePrintablePages() {
     frame.className = "print-paper-frame";
     if (page.colorMode === "greyscale") frame.classList.add("greyscale");
     const canvas = document.createElement("canvas");
-    const image = document.createElement("img");
-    image.setAttribute("aria-label", `Print Page ${index + 1}`);
+    canvas.width = printRenderer.canvas.width;
+    canvas.height = printRenderer.canvas.height;
+    canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
+    frame.appendChild(canvas);
     wrapper.appendChild(frame);
     els.printPagesOutput.appendChild(wrapper);
     renderPrintPageToCanvas(page, canvas);
-    image.src = canvas.toDataURL("image/png");
-    frame.appendChild(image);
   });
   setPrintRendererPage(currentPage, { render: true });
 }
