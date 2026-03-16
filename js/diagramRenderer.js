@@ -103,6 +103,7 @@ export class DiagramRenderer {
     this.panY = 0;
     this.dragging = false;
     this.lastMouse = null;
+    this.dragMoved = false;
     this.pointerScreen = null;
     this.holeRadius = 5;
     this.rotationDeg = 0;
@@ -901,6 +902,7 @@ export class DiagramRenderer {
         return;
       }
       this.dragging = true;
+      this.dragMoved = false;
       this.lastMouse = { x: event.clientX, y: event.clientY };
     });
 
@@ -917,6 +919,7 @@ export class DiagramRenderer {
       }
       const dx = event.clientX - this.lastMouse.x;
       const dy = event.clientY - this.lastMouse.y;
+      if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.dragMoved = true;
       this.panX += dx;
       this.panY -= dy;
       this.lastMouse = { x: event.clientX, y: event.clientY };
@@ -929,9 +932,11 @@ export class DiagramRenderer {
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       this.pointerScreen = { x, y };
+      const didDrag = this.dragMoved;
       this.dragging = false;
+      this.dragMoved = false;
       this.lastMouse = null;
-      const upHandled = this.onPointerUp({ hole: this.findHoleAtScreen(x, y), event, x, y });
+      const upHandled = this.onPointerUp({ hole: this.findHoleAtScreen(x, y), event, x, y, didDrag });
       if (upHandled) return;
     });
 

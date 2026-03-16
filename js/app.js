@@ -2389,7 +2389,10 @@ function handleSolverHoleHover(hole) {
 
 function handleSolverPointerUp(payload) {
   const draft = solverState.ui.relationshipDraft;
-  if (!draft?.holeIds?.length) return;
+  if (!draft?.holeIds?.length) {
+    clearSolverSelectionFromBlankClick(payload);
+    return;
+  }
   if (draft.type === "offset") {
     finalizeOffsetRelationship(payload?.hole?.id || null);
     return;
@@ -2402,6 +2405,15 @@ function handleSolverPointerUp(payload) {
     return;
   }
   solverRenderer.render();
+}
+
+function clearSolverSelectionFromBlankClick(payload) {
+  const relationshipType = TOOL_TO_RELATIONSHIP_TYPE[solverState.ui.toolMode];
+  if (payload?.didDrag || payload?.hole || relationshipType || solverState.ui.toolMode === "origin") return false;
+  if (!solverState.selection.size) return false;
+  solverState.selection = new Set();
+  solverRenderer.render();
+  return true;
 }
 
 function editRelationship(edge) {
@@ -2576,7 +2588,7 @@ function handleDiagramPointerMove(payload) {
   return false;
 }
 
-function handleDiagramPointerUp() {
+function handleDiagramPointerUp(payload) {
   if (diagramState.ui.activeTool === "box" && diagramState.ui.selectionBoxDraft) {
     const draft = diagramState.ui.selectionBoxDraft;
     diagramState.ui.selectionBoxDraft = null;
@@ -2588,6 +2600,11 @@ function handleDiagramPointerUp() {
     diagramState.ui.currentStrokeDraft = null;
     if (draft.points.length > 1) diagramState.annotations.strokes.push(draft);
     diagramRenderer.render();
+    return true;
+  }
+  if (diagramState.ui.activeTool === "single" && !payload?.didDrag && !payload?.hole && diagramState.selection.size) {
+    diagramState.selection = new Set();
+    fullDiagramRefresh();
     return true;
   }
   return false;
