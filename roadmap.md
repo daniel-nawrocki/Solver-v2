@@ -73,6 +73,10 @@ Code-level status:
 - Timing overlap analysis rows were restyled into a cleaner horizontal bar-chart presentation while keeping the current bin-click highlight workflow.
 - Diagram print preview now includes a circular `Label Position` dial that rotates the default label anchor direction for all labels on the active print page.
 - Diagram polygon-selection drafts now store vertices in world coordinates so placed points stay fixed relative to holes during pan/zoom/scroll/rotation.
+- the planner now carries quarry geospatial metadata with assigned State Plane EPSG + unit defaults for the supported quarry list
+- hole import now builds a dual-coordinate foundation so each imported hole can retain local render coordinates, State Plane coordinates, and lat/long coordinates together
+- State Plane import is now treated as international feet (`ft`) and converted through the quarry EPSG definition internally
+- Diagram `Shot` metadata now shows the active quarry EPSG/unit and supports saving four ordered shot-corner hole assignments
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -91,6 +95,9 @@ What has not been fully verified yet:
 - whether Timing overlap-bin chart counts, labels, and click-to-highlight behavior feel clear enough on real solved timing graphs
 - whether the new print label-position dial feels intuitive enough while preserving drag-based fine tuning on dense diagrams
 - whether world-space polygon drafting now feels stable enough during aggressive pan/zoom/rotation in real use
+- whether all three supported quarry EPSG definitions convert accurately for real shot datasets in browser use
+- whether changing the selected quarry after import reprojects existing dual-coordinate hole data cleanly enough for real projects
+- whether shot-corner assignment UX should stay as four fixed slots or needs a more visual designation flow before print labeling is added
 
 ## Completed Work
 

@@ -1,3 +1,5 @@
+import { latLonToStatePlane, normalizeGeoContext, statePlaneToLatLon } from "./geo.js";
+
 export function parseCsvText(text) {
   const rows = [];
   let current = "";
@@ -71,82 +73,46 @@ function mapExtraFields(record, fieldColumns) {
   }, {});
 }
 
-function latLonToLocal(records, xColumn, yColumn, idColumn, fieldColumns = null) {
-  const points = records.map((record, idx) => {
-    const lon = toNumber(record[xColumn]);
-    const lat = toNumber(record[yColumn]);
+function buildImportedCoordinates(records, xColumn, yColumn, idColumn, fieldColumns = null, coordType = "stateplane", geoContext = null) {
+  const normalizedGeo = normalizeGeoContext(geoContext);
+  return records.map((record, idx) => {
+    const rawX = toNumber(record[xColumn]);
+    const rawY = toNumber(record[yColumn]);
+    if (rawX === null || rawY === null) return null;
+    let statePlane = null;
+    let latLon = null;
+    if (coordType === "latlon") {
+      latLon = { lon: rawX, lat: rawY };
+      statePlane = latLonToStatePlane(latLon, normalizedGeo);
+      if (!statePlane) return null;
+    } else {
+      statePlane = {
+        x: rawX,
+        y: rawY,
+        unit: normalizedGeo?.statePlaneUnit || "ft",
+        epsg: normalizedGeo?.statePlaneEpsg || null,
+      };
+      latLon = statePlaneToLatLon(statePlane, normalizedGeo);
+      if (!latLon) return null;
+    }
     return {
       id: inferId(record, idColumn, idx),
-      original: { x: lon, y: lat },
-      lat,
-      lon,
-      sourceIndex: idx,
-      extraFields: mapExtraFields(record, fieldColumns),
-    };
-  }).filter((p) => p.lat !== null && p.lon !== null);
-
-  if (!points.length) return [];
-
-  const lat0 = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-  const lon0 = points.reduce((sum, p) => sum + p.lon, 0) / points.length;
-  const R = 6371000;
-  const cosLat = Math.cos((lat0 * Math.PI) / 180);
-
-  return points.map((p) => {
-    const dx = ((p.lon - lon0) * Math.PI / 180) * R * cosLat;
-    const dy = ((p.lat - lat0) * Math.PI / 180) * R;
-    return {
-      id: p.id,
-      holeNumber: String(p.id),
-      original: { x: p.original.x, y: p.original.y },
-      x: dx,
-      y: dy,
+      holeNumber: String(inferId(record, idColumn, idx)),
+      original: { x: rawX, y: rawY },
+      statePlane,
+      latLon,
+      x: statePlane.x,
+      y: statePlane.y,
       rowId: null,
       orderInRow: null,
-      sourceIndex: p.sourceIndex,
-      ...p.extraFields,
-    };
-  });
-}
-
-function statePlaneToLocal(records, xColumn, yColumn, idColumn, fieldColumns = null) {
-  const points = records.map((record, idx) => {
-    const x = toNumber(record[xColumn]);
-    const y = toNumber(record[yColumn]);
-    return {
-      id: inferId(record, idColumn, idx),
-      original: { x, y },
-      x,
-      y,
       sourceIndex: idx,
-      extraFields: mapExtraFields(record, fieldColumns),
+      ...mapExtraFields(record, fieldColumns),
     };
-  }).filter((p) => p.x !== null && p.y !== null);
-
-  if (!points.length) return [];
-
-  const minX = Math.min(...points.map((p) => p.x));
-  const minY = Math.min(...points.map((p) => p.y));
-
-  return points.map((p) => ({
-    id: p.id,
-    holeNumber: String(p.id),
-    original: { x: p.original.x, y: p.original.y },
-    x: p.x - minX,
-    y: p.y - minY,
-    rowId: null,
-    orderInRow: null,
-    sourceIndex: p.sourceIndex,
-    ...p.extraFields,
-  }));
+  }).filter(Boolean);
 }
 
-export function buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn, fieldColumns = null }) {
+export function buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn, fieldColumns = null, geoContext = null }) {
   if (!records?.length) return [];
   if (!xColumn || !yColumn) return [];
-
-  if (coordType === "latlon") {
-    return latLonToLocal(records, xColumn, yColumn, idColumn, fieldColumns);
-  }
-  return statePlaneToLocal(records, xColumn, yColumn, idColumn, fieldColumns);
+  return buildImportedCoordinates(records, xColumn, yColumn, idColumn, fieldColumns, coordType, geoContext);
 }

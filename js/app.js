@@ -1,9 +1,11 @@
 import { parseCsvText, buildHolesFromMapping } from "./csvParser.js";
 import { DiagramRenderer } from "./diagramRenderer.js";
+import { latLonToStatePlane, normalizeGeoContext, statePlaneToLatLon, supportsStatePlaneEpsg } from "./geo.js";
 import { parseProjectDocument, serializeProjectDocument } from "./projectDocument.js";
 import {
   createCloudProject,
   deleteCloudProject,
+  getDefaultQuarries,
   getAuthSession,
   isSupabaseConfigured,
   listCloudProjects,
@@ -159,11 +161,14 @@ function createDiagramState() {
       interiorBurden: null,
       interiorSpacing: null,
       rockDensityTonsPerCubicYard: 2.3,
+      quarryStatePlaneEpsg: null,
+      quarryStatePlaneUnit: "ft",
     },
     annotations: {
       strokes: [],
       texts: [],
     },
+    shotCorners: [null, null, null, null],
     csvCache: null,
   };
 }
@@ -206,6 +211,8 @@ function createPrintPageState() {
       interiorBurden: null,
       interiorSpacing: null,
       rockDensityTonsPerCubicYard: 2.3,
+      quarryStatePlaneEpsg: null,
+      quarryStatePlaneUnit: "ft",
     },
     annotations: {
       strokes: [],
@@ -229,6 +236,11 @@ const projectState = {
   holes: [],
   holesById: new Map(),
   csvCache: null,
+  geo: {
+    quarryName: "",
+    statePlaneEpsg: null,
+    statePlaneUnit: "ft",
+  },
   view: {
     coordView: "collar",
     zoom: 1,
@@ -238,6 +250,7 @@ const projectState = {
   },
   diagram: {
     metadata: cloneDiagramMetadata(),
+    shotCorners: [null, null, null, null],
     annotations: cloneDiagramAnnotations(),
     ui: {
       showGrid: true,
@@ -418,9 +431,13 @@ const els = {
   diagramInteriorBurdenInput: document.getElementById("diagramInteriorBurdenInput"),
   diagramInteriorSpacingInput: document.getElementById("diagramInteriorSpacingInput"),
   diagramFaceStatus: document.getElementById("diagramFaceStatus"),
+  diagramGeoStatus: document.getElementById("diagramGeoStatus"),
   diagramAssignFaceBtn: document.getElementById("diagramAssignFaceBtn"),
   diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
   diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
+  diagramShotCornerStatusList: document.getElementById("diagramShotCornerStatusList"),
+  diagramSetShotCornerBtns: [...document.querySelectorAll("[data-shot-corner-set]")],
+  diagramClearShotCornersBtn: document.getElementById("diagramClearShotCornersBtn"),
   diagramRockDensityInput: document.getElementById("diagramRockDensityInput"),
   diagramVolumeIncludedStatus: document.getElementById("diagramVolumeIncludedStatus"),
   diagramVolumeCubicYardsStatus: document.getElementById("diagramVolumeCubicYardsStatus"),
@@ -750,6 +767,7 @@ function replaceProjectStateFromDocument(document) {
   appUi.suspendDirtyTracking = true;
   refreshProjectHoles(parsed.holes);
   projectState.csvCache = parsed.csvCache;
+  projectState.geo = cloneGeoMetadata(parsed.geo);
   projectState.view.coordView = parsed.view.coordView || "collar";
   projectState.view.zoom = Number(parsed.view.zoom) || 1;
   projectState.view.panX = Number(parsed.view.panX) || 0;
@@ -762,6 +780,7 @@ function replaceProjectStateFromDocument(document) {
     faceDesignationReturnTool: "single",
   };
   projectState.diagram.metadata = cloneDiagramMetadata(parsed.diagram.metadata);
+  projectState.diagram.shotCorners = cloneShotCorners(parsed.diagram.shotCorners);
   projectState.diagram.annotations = cloneDiagramAnnotations(parsed.diagram.annotations);
   projectState.timing.ui = {
     ...projectState.timing.ui,
@@ -773,6 +792,9 @@ function replaceProjectStateFromDocument(document) {
   projectState.timing.timingResults = cloneTimingResults(parsed.timing.timingResults);
   projectState.timing.solverMessage = parsed.timing.solverMessage || "";
   projectState.timing.timingVisualization = cloneTimingVisualizationState(parsed.timing.timingVisualization);
+  if (!projectState.geo.statePlaneEpsg && projectState.diagram.metadata.location) {
+    applyProjectGeoFromLocation(projectState.diagram.metadata.location);
+  }
   hydrateDiagramFromProject();
   hydrateSolverFromProject();
   renderCloudProjectUi();
@@ -916,11 +938,17 @@ async function refreshCloudProjects() {
 
 async function refreshQuarries() {
   if (!isSupabaseConfigured() || !isSignedIn()) {
-    appUi.quarries = [];
+    appUi.quarries = getDefaultQuarries();
+    if (!projectState.geo.statePlaneEpsg && (diagramState.metadata.location || projectState.diagram.metadata.location)) {
+      applyProjectGeoFromLocation(diagramState.metadata.location || projectState.diagram.metadata.location);
+    }
     renderQuarryOptions();
     return;
   }
   appUi.quarries = await listQuarries();
+  if (!projectState.geo.statePlaneEpsg && (diagramState.metadata.location || projectState.diagram.metadata.location)) {
+    applyProjectGeoFromLocation(diagramState.metadata.location || projectState.diagram.metadata.location);
+  }
   renderQuarryOptions();
 }
 
@@ -984,7 +1012,7 @@ async function syncAuthSession(session) {
       await refreshQuarries();
     } else {
       appUi.cloudProjects = [];
-      appUi.quarries = [];
+      appUi.quarries = getDefaultQuarries();
       renderCloudProjectUi();
       renderQuarryOptions();
     }
@@ -996,6 +1024,7 @@ async function syncAuthSession(session) {
 
 async function initializeCloudIntegration() {
   renderAuthUi();
+  appUi.quarries = getDefaultQuarries();
   renderCloudProjectUi();
   renderQuarryOptions();
   if (!isSupabaseConfigured()) return;
@@ -1026,10 +1055,53 @@ function cloneSelectedTiming(selectedTiming) {
 function cloneHole(hole) {
   return {
     ...hole,
-    collar: hole.collar ? { ...hole.collar, original: hole.collar.original ? { ...hole.collar.original } : hole.collar.original } : hole.collar,
-    toe: hole.toe ? { ...hole.toe, original: hole.toe.original ? { ...hole.toe.original } : hole.toe.original } : hole.toe,
+    collar: cloneHolePoint(hole.collar),
+    toe: cloneHolePoint(hole.toe),
     original: hole.original ? { ...hole.original } : hole.original,
+    coordinates: cloneCoordinateBundle(hole.coordinates),
   };
+}
+
+function cloneHolePoint(point = null) {
+  if (!point || typeof point !== "object") return point;
+  return {
+    ...point,
+    original: point.original ? { ...point.original } : point.original,
+    coordinates: cloneCoordinateBundle(point.coordinates),
+  };
+}
+
+function cloneCoordinateValue(point = null) {
+  if (!point || typeof point !== "object") return point;
+  return {
+    x: Number.isFinite(Number(point.x)) ? Number(point.x) : point.x ?? null,
+    y: Number.isFinite(Number(point.y)) ? Number(point.y) : point.y ?? null,
+    lat: Number.isFinite(Number(point.lat)) ? Number(point.lat) : point.lat ?? null,
+    lon: Number.isFinite(Number(point.lon)) ? Number(point.lon) : point.lon ?? null,
+    unit: point.unit || null,
+    epsg: Number.isFinite(Number(point.epsg)) ? Number(point.epsg) : point.epsg ?? null,
+  };
+}
+
+function cloneCoordinateBundle(bundle = null) {
+  if (!bundle || typeof bundle !== "object") return bundle;
+  return {
+    local: cloneCoordinateValue(bundle.local),
+    statePlane: cloneCoordinateValue(bundle.statePlane),
+    latLon: cloneCoordinateValue(bundle.latLon),
+  };
+}
+
+function cloneGeoMetadata(geo = {}) {
+  return {
+    quarryName: geo.quarryName || "",
+    statePlaneEpsg: Number.isFinite(Number(geo.statePlaneEpsg)) ? Number(geo.statePlaneEpsg) : null,
+    statePlaneUnit: geo.statePlaneUnit || "ft",
+  };
+}
+
+function cloneShotCorners(corners = []) {
+  return Array.isArray(corners) ? corners.map((corner) => (corner ? String(corner) : null)) : [null, null, null, null];
 }
 
 function cloneDiagramMetadata(metadata = {}) {
@@ -1043,6 +1115,8 @@ function cloneDiagramMetadata(metadata = {}) {
     interiorBurden: Number.isFinite(Number(metadata.interiorBurden)) ? Number(metadata.interiorBurden) : null,
     interiorSpacing: Number.isFinite(Number(metadata.interiorSpacing)) ? Number(metadata.interiorSpacing) : null,
     rockDensityTonsPerCubicYard: Number.isFinite(Number(metadata.rockDensityTonsPerCubicYard)) ? Number(metadata.rockDensityTonsPerCubicYard) : 2.3,
+    quarryStatePlaneEpsg: Number.isFinite(Number(metadata.quarryStatePlaneEpsg)) ? Number(metadata.quarryStatePlaneEpsg) : null,
+    quarryStatePlaneUnit: metadata.quarryStatePlaneUnit || "ft",
   };
 }
 
@@ -1196,7 +1270,9 @@ function hydrateDiagramFromProject() {
   diagramState.ui.pendingFaceDesignation = false;
   diagramState.ui.faceDesignationReturnTool = "single";
   diagramState.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
+  diagramState.shotCorners = cloneShotCorners(projectState.diagram.shotCorners);
   diagramState.annotations = cloneDiagramAnnotations(projectState.diagram.annotations);
+  sanitizeShotCorners(diagramState);
 }
 
 function persistTimingStateToProject() {
@@ -1226,6 +1302,7 @@ function persistTimingStateToProject() {
 function persistDiagramStateToProject() {
   refreshProjectHoles(diagramState.holes);
   projectState.csvCache = diagramState.csvCache;
+  projectState.geo = activeProjectGeo();
   projectState.view.coordView = diagramState.ui.coordView || "collar";
   updateProjectViewFromRenderer(diagramRenderer);
   projectState.diagram.ui.showGrid = diagramState.ui.showGrid !== false;
@@ -1240,6 +1317,7 @@ function persistDiagramStateToProject() {
   projectState.diagram.ui.pendingFaceDesignation = false;
   projectState.diagram.ui.faceDesignationReturnTool = "single";
   projectState.diagram.metadata = cloneDiagramMetadata(diagramState.metadata);
+  projectState.diagram.shotCorners = cloneShotCorners(diagramState.shotCorners);
   projectState.diagram.annotations = cloneDiagramAnnotations(diagramState.annotations);
   markProjectDirty();
 }
@@ -1274,12 +1352,19 @@ function applyProjectViewToMode(targetState, selectEl, renderer, targetView, vie
 function initializeProjectFromHoles(holes, csvCache = null) {
   refreshProjectHoles(holes);
   projectState.csvCache = csvCache;
+  projectState.geo = activeProjectGeo();
   projectState.view.coordView = "collar";
   projectState.view.zoom = 1;
   projectState.view.panX = 0;
   projectState.view.panY = 0;
   projectState.view.rotationDeg = 0;
   projectState.diagram.metadata = cloneDiagramMetadata();
+  Object.assign(projectState.diagram.metadata, {
+    location: diagramState.metadata.location || "",
+    quarryStatePlaneEpsg: activeProjectGeo().statePlaneEpsg,
+    quarryStatePlaneUnit: activeProjectGeo().statePlaneUnit,
+  });
+  projectState.diagram.shotCorners = [null, null, null, null];
   projectState.diagram.annotations = cloneDiagramAnnotations();
   projectState.diagram.ui.showGrid = true;
   projectState.diagram.ui.showOverlayText = false;
@@ -2012,6 +2097,73 @@ function quarryByName(name) {
   return appUi.quarries.find((quarry) => quarry.name === name) || null;
 }
 
+function activeProjectGeo() {
+  const fromProject = normalizeGeoContext(projectState.geo);
+  if (fromProject) {
+    return {
+      quarryName: projectState.geo.quarryName || diagramState.metadata.location || "",
+      statePlaneEpsg: fromProject.statePlaneEpsg,
+      statePlaneUnit: fromProject.statePlaneUnit,
+    };
+  }
+  const quarry = quarryByName(diagramState.metadata.location || projectState.diagram.metadata.location || "");
+  const normalized = normalizeGeoContext({
+    statePlaneEpsg: quarry?.state_plane_epsg,
+    statePlaneUnit: quarry?.state_plane_unit,
+  });
+  if (!normalized) return cloneGeoMetadata(projectState.geo);
+  return {
+    quarryName: quarry?.name || diagramState.metadata.location || "",
+    statePlaneEpsg: normalized.statePlaneEpsg,
+    statePlaneUnit: normalized.statePlaneUnit,
+  };
+}
+
+function applyProjectGeoFromLocation(locationName) {
+  const quarry = quarryByName(locationName);
+  const normalized = normalizeGeoContext({
+    statePlaneEpsg: quarry?.state_plane_epsg,
+    statePlaneUnit: quarry?.state_plane_unit || "ft",
+  });
+  projectState.geo = {
+    quarryName: locationName || "",
+    statePlaneEpsg: normalized?.statePlaneEpsg || null,
+    statePlaneUnit: normalized?.statePlaneUnit || "ft",
+  };
+  diagramState.metadata.quarryStatePlaneEpsg = projectState.geo.statePlaneEpsg;
+  diagramState.metadata.quarryStatePlaneUnit = projectState.geo.statePlaneUnit;
+  projectState.diagram.metadata.quarryStatePlaneEpsg = projectState.geo.statePlaneEpsg;
+  projectState.diagram.metadata.quarryStatePlaneUnit = projectState.geo.statePlaneUnit;
+}
+
+function requireProjectGeoForImport() {
+  const geo = activeProjectGeo();
+  if (!geo.statePlaneEpsg || !supportsStatePlaneEpsg(geo.statePlaneEpsg)) {
+    window.alert("Select a Shot location with an assigned EPSG before importing coordinates.");
+    openMenu("diagramShotMenu");
+    return null;
+  }
+  return geo;
+}
+
+function sanitizeShotCorners(targetState) {
+  const validIds = new Set((targetState.holes || []).map((hole) => hole.id));
+  targetState.shotCorners = cloneShotCorners(targetState.shotCorners).slice(0, 4);
+  while (targetState.shotCorners.length < 4) targetState.shotCorners.push(null);
+  targetState.shotCorners = targetState.shotCorners.map((cornerId) => (cornerId && validIds.has(cornerId) ? cornerId : null));
+}
+
+function shotCornerLabel(index) {
+  return `Corner ${index + 1}`;
+}
+
+function shotCornerStatusMarkup() {
+  return diagramState.shotCorners.map((cornerId, index) => {
+    const hole = cornerId ? diagramState.holesById.get(cornerId) : null;
+    return `<div>${shotCornerLabel(index)}: ${escapeHtml(hole?.holeNumber || hole?.id || "not set")}</div>`;
+  }).join("");
+}
+
 function applyQuarryDensityDefault(locationName) {
   const quarry = quarryByName(locationName);
   if (!quarry) return;
@@ -2055,9 +2207,18 @@ function renderDiagramShotPanel() {
   els.diagramInteriorBurdenInput.value = Number.isFinite(diagramState.metadata.interiorBurden) ? String(diagramState.metadata.interiorBurden) : "";
   els.diagramInteriorSpacingInput.value = Number.isFinite(diagramState.metadata.interiorSpacing) ? String(diagramState.metadata.interiorSpacing) : "";
   const count = faceHoleCount();
+  const geo = activeProjectGeo();
   els.diagramFaceStatus.textContent = diagramState.ui.pendingFaceDesignation
     ? `Face Holes: ${count} designated - draw a polygon to redefine the face`
     : `Face Holes: ${count} designated`;
+  els.diagramGeoStatus.textContent = geo.statePlaneEpsg
+    ? `State Plane EPSG: ${geo.statePlaneEpsg} | Unit: ${geo.statePlaneUnit}`
+    : "State Plane EPSG: not assigned";
+  els.diagramShotCornerStatusList.innerHTML = shotCornerStatusMarkup();
+  els.diagramSetShotCornerBtns.forEach((button) => {
+    button.disabled = selectedDiagramHoles().length !== 1;
+  });
+  els.diagramClearShotCornersBtn.disabled = !diagramState.shotCorners.some(Boolean);
   els.diagramAssignFaceBtn.classList.toggle("active", diagramState.ui.pendingFaceDesignation);
   els.diagramClearFaceBtn.disabled = !diagramState.holes.length || count === 0;
   els.diagramApplyPatternBtn.disabled = !diagramState.holes.length;
@@ -2426,10 +2587,25 @@ function rebuildHolesById(targetState) {
 }
 
 function normalizeHoleCoordinateSets(hole) {
+  const collarLocal = hole.collar?.coordinates?.local || hole.coordinates?.local || null;
   if (!hole.collar || !Number.isFinite(hole.collar.x) || !Number.isFinite(hole.collar.y)) {
-    hole.collar = { x: Number.isFinite(hole.x) ? hole.x : 0, y: Number.isFinite(hole.y) ? hole.y : 0, original: hole.original || null };
+    hole.collar = {
+      x: Number.isFinite(collarLocal?.x) ? collarLocal.x : (Number.isFinite(hole.x) ? hole.x : 0),
+      y: Number.isFinite(collarLocal?.y) ? collarLocal.y : (Number.isFinite(hole.y) ? hole.y : 0),
+      original: hole.original || null,
+      coordinates: cloneCoordinateBundle(hole.coordinates),
+    };
+  }
+  if (hole.collar?.coordinates?.local) {
+    hole.collar.x = hole.collar.coordinates.local.x;
+    hole.collar.y = hole.collar.coordinates.local.y;
+  }
+  if (hole.toe?.coordinates?.local) {
+    hole.toe.x = hole.toe.coordinates.local.x;
+    hole.toe.y = hole.toe.coordinates.local.y;
   }
   if (hole.toe && (!Number.isFinite(hole.toe.x) || !Number.isFinite(hole.toe.y))) hole.toe = null;
+  if (!hole.coordinates && hole.collar?.coordinates) hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
 }
 
 function ensureDiagramHoleFields(hole) {
@@ -3028,6 +3204,7 @@ function applyDiagramImportedHoles(holes) {
   diagramState.ui.coordView = "collar";
   diagramState.ui.pendingFaceDesignation = false;
   diagramState.ui.faceDesignationReturnTool = "single";
+  diagramState.shotCorners = [null, null, null, null];
   rebuildHolesById(diagramState);
   applyCoordinateView(diagramState, els.diagramCoordViewSelect, diagramRenderer, "collar");
   fullDiagramRefresh({ fit: true });
@@ -3107,6 +3284,25 @@ function clearFaceDesignation() {
   fullDiagramRefresh();
 }
 
+function setShotCorner(index) {
+  const selected = selectedDiagramHoles();
+  if (selected.length !== 1) {
+    window.alert("Select exactly one hole to assign a shot corner.");
+    return;
+  }
+  const holeId = selected[0].id;
+  diagramState.shotCorners = diagramState.shotCorners.map((cornerId, cornerIndex) => {
+    if (cornerIndex === index) return holeId;
+    return cornerId === holeId ? null : cornerId;
+  });
+  fullDiagramRefresh();
+}
+
+function clearShotCorners() {
+  diagramState.shotCorners = [null, null, null, null];
+  fullDiagramRefresh();
+}
+
 function applyDefaultDiameterToDiagramSelection() {
   const defaultDiameter = diagramState.metadata.defaultDiameter;
   if (!Number.isFinite(defaultDiameter)) {
@@ -3137,6 +3333,9 @@ function applyDiagramMetadataPatch(field, value) {
   } else {
     diagramState.metadata[field] = value;
   }
+  if (field === "location") {
+    applyProjectGeoFromLocation(diagramState.metadata.location);
+  }
   syncDiagramDefaultDiameterStatus();
   renderDiagramShotPanel();
   renderDiagramVolumePanel();
@@ -3145,10 +3344,71 @@ function applyDiagramMetadataPatch(field, value) {
   persistDiagramStateToProject();
 }
 
-function buildToeMap(records, coordType, xColumn, yColumn, idColumn) {
+function deriveLocalizedHoleCoordinates(holes) {
+  const statePlanePoints = [];
+  holes.forEach((hole) => {
+    const collarPoint = hole.collar?.coordinates?.statePlane || hole.coordinates?.statePlane || null;
+    const toePoint = hole.toe?.coordinates?.statePlane || null;
+    if (Number.isFinite(collarPoint?.x) && Number.isFinite(collarPoint?.y)) statePlanePoints.push(collarPoint);
+    if (Number.isFinite(toePoint?.x) && Number.isFinite(toePoint?.y)) statePlanePoints.push(toePoint);
+  });
+  if (!statePlanePoints.length) return holes;
+  const minX = Math.min(...statePlanePoints.map((point) => point.x));
+  const minY = Math.min(...statePlanePoints.map((point) => point.y));
+  holes.forEach((hole) => {
+    [hole.collar, hole.toe].forEach((point) => {
+      if (!point?.coordinates?.statePlane) return;
+      point.coordinates.local = {
+        x: point.coordinates.statePlane.x - minX,
+        y: point.coordinates.statePlane.y - minY,
+      };
+      point.x = point.coordinates.local.x;
+      point.y = point.coordinates.local.y;
+    });
+    if (hole.collar?.coordinates) hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
+    hole.x = hole.collar?.x ?? hole.x;
+    hole.y = hole.collar?.y ?? hole.y;
+  });
+  return holes;
+}
+
+function reprojectPointForGeo(point, geo) {
+  if (!point?.coordinates?.latLon) return point;
+  const statePlane = latLonToStatePlane(point.coordinates.latLon, geo);
+  if (!statePlane) return point;
+  point.coordinates.statePlane = {
+    x: statePlane.x,
+    y: statePlane.y,
+    unit: geo.statePlaneUnit,
+    epsg: geo.statePlaneEpsg,
+  };
+  return point;
+}
+
+function reprojectDiagramHolesForGeo(geo) {
+  if (!geo?.statePlaneEpsg) return;
+  diagramState.holes.forEach((hole) => {
+    reprojectPointForGeo(hole.collar, geo);
+    if (hole.collar?.coordinates) hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
+    reprojectPointForGeo(hole.toe, geo);
+  });
+  deriveLocalizedHoleCoordinates(diagramState.holes);
+  applyCoordinateView(diagramState, els.diagramCoordViewSelect, diagramRenderer, diagramState.ui.coordView, { fit: false });
+  refreshProjectHoles(diagramState.holes);
+  hydrateSolverFromProject();
+}
+
+function buildToeMap(records, coordType, xColumn, yColumn, idColumn, geoContext) {
   if (!xColumn || !yColumn) return new Map();
-  const toeHoles = buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn });
-  return new Map(toeHoles.map((hole) => [hole.sourceIndex, { x: hole.x, y: hole.y, original: hole.original }]));
+  const toeHoles = buildHolesFromMapping({ records, coordType, xColumn, yColumn, idColumn, geoContext });
+  return new Map(toeHoles.map((hole) => [hole.sourceIndex, {
+    original: hole.original,
+    coordinates: {
+      local: null,
+      statePlane: cloneCoordinateValue(hole.statePlane),
+      latLon: cloneCoordinateValue(hole.latLon),
+    },
+  }]));
 }
 
 els.csvInput.addEventListener("change", async () => {
@@ -3162,6 +3422,8 @@ els.csvInput.addEventListener("change", async () => {
 
 els.importMappedBtn.addEventListener("click", () => {
   if (!solverState.csvCache) return;
+  const geoContext = requireProjectGeoForImport();
+  if (!geoContext) return;
   const { headers, records } = solverState.csvCache;
   if (!headers.length || !records.length) return;
   const idColumn = els.idColumnSelect.value || null;
@@ -3177,6 +3439,7 @@ els.importMappedBtn.addEventListener("click", () => {
     xColumn: els.xColumnSelect.value,
     yColumn: els.yColumnSelect.value,
     idColumn,
+    geoContext,
     fieldColumns: {
       angle: els.solverAngleColumnSelect.value || null,
       bearing: els.solverBearingColumnSelect.value || null,
@@ -3184,15 +3447,26 @@ els.importMappedBtn.addEventListener("click", () => {
     },
   });
   if (!holes.length) {
-    window.alert("No valid collar coordinates found for selected columns.");
+    window.alert("No valid collar coordinates found for selected columns and quarry EPSG.");
     return;
   }
-  const toeBySource = buildToeMap(records, els.coordTypeSelect.value, toeXColumn, toeYColumn, idColumn);
+  const toeBySource = buildToeMap(records, els.coordTypeSelect.value, toeXColumn, toeYColumn, idColumn, geoContext);
   holes.forEach((hole) => {
-    hole.collar = { x: hole.x, y: hole.y, original: hole.original };
+    hole.collar = {
+      x: hole.x,
+      y: hole.y,
+      original: hole.original,
+      coordinates: {
+        local: null,
+        statePlane: cloneCoordinateValue(hole.statePlane),
+        latLon: cloneCoordinateValue(hole.latLon),
+      },
+    };
     hole.toe = toeBySource.get(hole.sourceIndex) || null;
+    hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
     normalizeDiagramHoleFields(hole, { roundBearingAndDepth: true });
   });
+  deriveLocalizedHoleCoordinates(holes);
   uniqueHoleIds(holes, records, idColumn);
   initializeProjectFromHoles(holes, solverState.csvCache);
   applyImportedHoles(holes);
@@ -3211,6 +3485,8 @@ els.diagramCsvInput.addEventListener("change", async () => {
 
 els.diagramImportMappedBtn.addEventListener("click", () => {
   if (!diagramState.csvCache) return;
+  const geoContext = requireProjectGeoForImport();
+  if (!geoContext) return;
   const { headers, records } = diagramState.csvCache;
   if (!headers.length || !records.length) return;
   const idColumn = els.diagramIdColumnSelect.value || null;
@@ -3226,6 +3502,7 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
     xColumn: els.diagramXColumnSelect.value,
     yColumn: els.diagramYColumnSelect.value,
     idColumn,
+    geoContext,
     fieldColumns: {
       angle: els.diagramAngleColumnSelect.value || null,
       bearing: els.diagramBearingColumnSelect.value || null,
@@ -3233,15 +3510,26 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
     },
   });
   if (!holes.length) {
-    window.alert("No valid collar coordinates found for selected columns.");
+    window.alert("No valid collar coordinates found for selected columns and quarry EPSG.");
     return;
   }
-  const toeBySource = buildToeMap(records, els.diagramCoordTypeSelect.value, toeXColumn, toeYColumn, idColumn);
+  const toeBySource = buildToeMap(records, els.diagramCoordTypeSelect.value, toeXColumn, toeYColumn, idColumn, geoContext);
   holes.forEach((hole) => {
-    hole.collar = { x: hole.x, y: hole.y, original: hole.original };
+    hole.collar = {
+      x: hole.x,
+      y: hole.y,
+      original: hole.original,
+      coordinates: {
+        local: null,
+        statePlane: cloneCoordinateValue(hole.statePlane),
+        latLon: cloneCoordinateValue(hole.latLon),
+      },
+    };
     hole.toe = toeBySource.get(hole.sourceIndex) || null;
+    hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
     normalizeDiagramHoleFields(hole, { roundBearingAndDepth: true });
   });
+  deriveLocalizedHoleCoordinates(holes);
   uniqueHoleIds(holes, records, idColumn);
   initializeProjectFromHoles(holes, diagramState.csvCache);
   applyDiagramImportedHoles(holes);
@@ -3251,8 +3539,17 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
 els.diagramShotNumberInput.addEventListener("input", () => applyDiagramMetadataPatch("shotNumber", els.diagramShotNumberInput.value.trim()));
 els.diagramShotLocationSelect.addEventListener("change", () => {
   const location = els.diagramShotLocationSelect.value;
+  const previousGeo = activeProjectGeo();
   applyDiagramMetadataPatch("location", location);
   applyQuarryDensityDefault(location);
+  applyProjectGeoFromLocation(location);
+  if (
+    diagramState.holes.length
+    && previousGeo.statePlaneEpsg
+    && previousGeo.statePlaneEpsg !== projectState.geo.statePlaneEpsg
+  ) {
+    reprojectDiagramHolesForGeo(projectState.geo);
+  }
   renderDiagramShotPanel();
   renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
@@ -3269,6 +3566,13 @@ els.diagramRockDensityInput.addEventListener("change", () => applyDiagramMetadat
 els.diagramAssignFaceBtn.addEventListener("click", () => startFaceDesignation());
 els.diagramClearFaceBtn.addEventListener("click", () => clearFaceDesignation());
 els.diagramApplyPatternBtn.addEventListener("click", () => applyPatternAssignment());
+els.diagramSetShotCornerBtns.forEach((button) => {
+  button.addEventListener("click", () => {
+    const index = Number(button.getAttribute("data-shot-corner-set"));
+    if (Number.isInteger(index) && index >= 0 && index < 4) setShotCorner(index);
+  });
+});
+els.diagramClearShotCornersBtn.addEventListener("click", () => clearShotCorners());
 
 els.gridToggle.addEventListener("change", () => {
   solverState.ui.showGrid = els.gridToggle.checked;

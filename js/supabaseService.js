@@ -15,6 +15,46 @@ const supabase = IS_CONFIGURED
     })
   : null;
 
+const QUARRY_GEO_DEFAULTS = [
+  { name: "Laurel Hill", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Texas", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Barricks", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Northeast", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Savage", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Churchville", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Medford", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Beaver Creek", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Rockville", state_plane_epsg: 6487, state_plane_unit: "ft" },
+  { name: "Inwood", state_plane_epsg: 6600, state_plane_unit: "ft" },
+  { name: "Quikrete", state_plane_epsg: 6600, state_plane_unit: "ft" },
+  { name: "Millville", state_plane_epsg: 6600, state_plane_unit: "ft" },
+  { name: "Middletown", state_plane_epsg: 6592, state_plane_unit: "ft" },
+];
+
+function normalizeQuarryName(name) {
+  return String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+}
+
+function withQuarryDefaults(quarry = {}) {
+  const fallback = QUARRY_GEO_DEFAULTS.find((entry) => normalizeQuarryName(entry.name) === normalizeQuarryName(quarry.name)) || null;
+  return {
+    ...fallback,
+    ...quarry,
+    state_plane_epsg: Number(quarry.state_plane_epsg ?? fallback?.state_plane_epsg) || null,
+    state_plane_unit: String(quarry.state_plane_unit ?? fallback?.state_plane_unit ?? "ft"),
+  };
+}
+
+export function getDefaultQuarries() {
+  return QUARRY_GEO_DEFAULTS.map((entry, index) => withQuarryDefaults({
+    id: `default-${index + 1}`,
+    name: entry.name,
+    default_rock_density: null,
+    active: true,
+    sort_order: index + 1,
+  }));
+}
+
 function ensureClient() {
   if (!supabase) throw new Error("Supabase is not configured.");
   return supabase;
@@ -143,13 +183,16 @@ export async function deleteCloudProject(projectId) {
 
 export async function listQuarries() {
   const client = ensureClient();
-  let query = client
+  const buildQuery = (selectColumns) => client
     .from("quarries")
-    .select("id, name, default_rock_density, active, sort_order")
+    .select(selectColumns)
     .eq("active", true)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
-  const { data, error } = await query;
+  let { data, error } = await buildQuery("id, name, default_rock_density, active, sort_order, state_plane_epsg, state_plane_unit");
+  if (error) {
+    ({ data, error } = await buildQuery("id, name, default_rock_density, active, sort_order"));
+  }
   if (error) throw error;
-  return data || [];
+  return (data || []).map(withQuarryDefaults);
 }

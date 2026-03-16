@@ -391,6 +391,7 @@
                 <option value="Texas">Texas</option>
               </select>
             </label>
+            <div id="diagramGeoStatus" class="status-note">State Plane EPSG: not assigned</div>
             <label>Bench
               <input id="diagramBenchInput" type="text" placeholder="Enter bench">
             </label>
@@ -432,6 +433,22 @@
               <button id="diagramClearFaceBtn" type="button">Clear Face</button>
             </div>
             <button id="diagramApplyPatternBtn" type="button">Apply Pattern</button>
+            <h3 class="subsection-title">Shot Corners</h3>
+            <div id="diagramShotCornerStatusList" class="list">
+              <div>Corner 1: not set</div>
+              <div>Corner 2: not set</div>
+              <div>Corner 3: not set</div>
+              <div>Corner 4: not set</div>
+            </div>
+            <div class="row-actions row-actions-wrap">
+              <button type="button" data-shot-corner-set="0">Set Corner 1</button>
+              <button type="button" data-shot-corner-set="1">Set Corner 2</button>
+            </div>
+            <div class="row-actions row-actions-wrap">
+              <button type="button" data-shot-corner-set="2">Set Corner 3</button>
+              <button type="button" data-shot-corner-set="3">Set Corner 4</button>
+            </div>
+            <button id="diagramClearShotCornersBtn" type="button">Clear Shot Corners</button>
           </section>
         </div>
 

@@ -14,7 +14,9 @@ create table if not exists public.quarries (
   name text not null unique,
   default_rock_density numeric not null,
   active boolean not null default true,
-  sort_order integer
+  sort_order integer,
+  state_plane_epsg integer,
+  state_plane_unit text not null default 'ft'
 );
 
 create or replace function public.set_updated_at()

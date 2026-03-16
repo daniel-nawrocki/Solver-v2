@@ -1,9 +1,40 @@
+function cloneCoordinateValue(point = null) {
+  if (!point || typeof point !== "object") return point;
+  return {
+    x: Number.isFinite(Number(point.x)) ? Number(point.x) : point.x ?? null,
+    y: Number.isFinite(Number(point.y)) ? Number(point.y) : point.y ?? null,
+    lat: Number.isFinite(Number(point.lat)) ? Number(point.lat) : point.lat ?? null,
+    lon: Number.isFinite(Number(point.lon)) ? Number(point.lon) : point.lon ?? null,
+    unit: point.unit || null,
+    epsg: Number.isFinite(Number(point.epsg)) ? Number(point.epsg) : point.epsg ?? null,
+  };
+}
+
+function cloneCoordinateBundle(bundle = null) {
+  if (!bundle || typeof bundle !== "object") return bundle;
+  return {
+    local: cloneCoordinateValue(bundle.local),
+    statePlane: cloneCoordinateValue(bundle.statePlane),
+    latLon: cloneCoordinateValue(bundle.latLon),
+  };
+}
+
+function clonePointReference(point = null) {
+  if (!point || typeof point !== "object") return point;
+  return {
+    ...point,
+    original: point.original ? { ...point.original } : point.original,
+    coordinates: cloneCoordinateBundle(point.coordinates),
+  };
+}
+
 function cloneHole(hole = {}) {
   return {
     ...hole,
-    collar: hole.collar ? { ...hole.collar, original: hole.collar.original ? { ...hole.collar.original } : hole.collar.original } : hole.collar,
-    toe: hole.toe ? { ...hole.toe, original: hole.toe.original ? { ...hole.toe.original } : hole.toe.original } : hole.toe,
+    collar: clonePointReference(hole.collar),
+    toe: clonePointReference(hole.toe),
     original: hole.original ? { ...hole.original } : hole.original,
+    coordinates: cloneCoordinateBundle(hole.coordinates),
   };
 }
 
@@ -45,11 +76,24 @@ function cloneTimingResults(results = []) {
   }));
 }
 
+function cloneGeo(geo = {}) {
+  return {
+    quarryName: geo.quarryName || "",
+    statePlaneEpsg: Number.isFinite(Number(geo.statePlaneEpsg)) ? Number(geo.statePlaneEpsg) : null,
+    statePlaneUnit: geo.statePlaneUnit || "ft",
+  };
+}
+
+function cloneShotCorners(corners = []) {
+  return Array.isArray(corners) ? corners.map((corner) => (corner ? String(corner) : null)) : [null, null, null, null];
+}
+
 export function serializeProjectDocument(projectState) {
   return {
-    version: 1,
+    version: 2,
     holes: (projectState.holes || []).map(cloneHole),
     csvCache: cloneCsvCache(projectState.csvCache),
+    geo: cloneGeo(projectState.geo),
     view: {
       coordView: projectState.view?.coordView || "collar",
       zoom: Number(projectState.view?.zoom) || 1,
@@ -60,6 +104,7 @@ export function serializeProjectDocument(projectState) {
     diagram: {
       ui: { ...(projectState.diagram?.ui || {}) },
       metadata: { ...(projectState.diagram?.metadata || {}) },
+      shotCorners: cloneShotCorners(projectState.diagram?.shotCorners || []),
       annotations: cloneAnnotations(projectState.diagram?.annotations || {}),
     },
     timing: {
@@ -91,6 +136,7 @@ export function parseProjectDocument(document) {
     version: Number(document.version) || 1,
     holes: Array.isArray(document.holes) ? document.holes.map(cloneHole) : [],
     csvCache: cloneCsvCache(document.csvCache),
+    geo: cloneGeo(document.geo),
     view: {
       coordView: document.view?.coordView || "collar",
       zoom: Number(document.view?.zoom) || 1,
@@ -101,6 +147,7 @@ export function parseProjectDocument(document) {
     diagram: {
       ui: { ...(document.diagram?.ui || {}) },
       metadata: { ...(document.diagram?.metadata || {}) },
+      shotCorners: cloneShotCorners(document.diagram?.shotCorners || []),
       annotations: cloneAnnotations(document.diagram?.annotations || {}),
     },
     timing: {
