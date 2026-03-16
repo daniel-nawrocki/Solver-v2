@@ -644,6 +644,16 @@
         <label id="printBearingArrowLengthWrap" class="hidden">Arrow Length
           <input id="printBearingArrowLengthInput" type="range" min="8" max="48" step="1" value="16">
         </label>
+        <div id="printLabelAngleWrap" class="print-label-angle-wrap hidden">
+          <span class="print-label-angle-title">Label Position</span>
+          <div id="printLabelAngleDial" class="print-label-angle-dial" role="slider" tabindex="0"
+            aria-label="Print Label Position" aria-valuemin="0" aria-valuemax="360" aria-valuenow="315">
+            <div class="print-label-angle-ring"></div>
+            <div id="printLabelAnglePointer" class="print-label-angle-pointer"></div>
+            <div class="print-label-angle-center"></div>
+          </div>
+          <span id="printLabelAngleValue" class="print-label-angle-value">315°</span>
+        </div>
         <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show
           Depth</label>
       </div>

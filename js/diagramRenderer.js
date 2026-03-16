@@ -428,8 +428,8 @@ export class DiagramRenderer {
     }
 
     if (polygonDraft?.points?.length) {
-      const points = [...polygonDraft.points];
-      if (polygonDraft.hoverPoint) points.push(polygonDraft.hoverPoint);
+      const points = polygonDraft.points.map((point) => this.worldToScreen(point.x, point.y));
+      if (polygonDraft.hoverPoint) points.push(this.worldToScreen(polygonDraft.hoverPoint.x, polygonDraft.hoverPoint.y));
       this.ctx.save();
       this.ctx.strokeStyle = "rgba(47, 125, 246, 0.8)";
       this.ctx.fillStyle = "rgba(47, 125, 246, 0.10)";
@@ -444,16 +444,18 @@ export class DiagramRenderer {
       if (polygonDraft.points.length >= 3) {
         this.ctx.beginPath();
         polygonDraft.points.forEach((point, index) => {
-          if (index === 0) this.ctx.moveTo(point.x, point.y);
-          else this.ctx.lineTo(point.x, point.y);
+          const screenPoint = this.worldToScreen(point.x, point.y);
+          if (index === 0) this.ctx.moveTo(screenPoint.x, screenPoint.y);
+          else this.ctx.lineTo(screenPoint.x, screenPoint.y);
         });
         this.ctx.closePath();
         this.ctx.fill();
       }
       this.ctx.setLineDash([]);
       polygonDraft.points.forEach((point) => {
+        const screenPoint = this.worldToScreen(point.x, point.y);
         this.ctx.beginPath();
-        this.ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+        this.ctx.arc(screenPoint.x, screenPoint.y, 3, 0, Math.PI * 2);
         this.ctx.fillStyle = "rgba(47, 125, 246, 0.95)";
         this.ctx.fill();
       });
@@ -549,9 +551,15 @@ export class DiagramRenderer {
     const point = this.worldToScreen(hole.x, hole.y);
     const lines = this.diagramPrintLabelLines(hole);
     const metrics = this.measureDiagramPrintLabel(lines);
+    const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
+    const angleDeg = Number.isFinite(configuredAngle) ? configuredAngle : 315;
+    const radians = (angleDeg * Math.PI) / 180;
+    const radius = Math.max(22, 14 + Math.max(metrics.width, metrics.height) * 0.45);
+    const centerX = point.x + (Math.cos(radians) * radius);
+    const centerY = point.y + (Math.sin(radians) * radius);
     const defaultRect = {
-      left: point.x + 8,
-      top: point.y - (metrics.paddingY + Math.max(10, Math.round(11 * this.textScale())) + 2),
+      left: centerX - (metrics.width / 2),
+      top: centerY - (metrics.height / 2),
       width: metrics.width,
       height: metrics.height,
     };

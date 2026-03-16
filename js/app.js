@@ -187,6 +187,7 @@ function createPrintPageState() {
       showBearingArrows: true,
       bearingArrowWeight: 1,
       bearingArrowLength: 16,
+      labelAngleDeg: 315,
       showDepthLabels: true,
       labelEditMode: false,
       hoverLabelHoleId: null,
@@ -294,6 +295,10 @@ const printSession = {
   activePageIndex: -1,
 };
 
+const printLabelDialState = {
+  dragging: false,
+};
+
 const els = {
   homeWorkspace: document.getElementById("homeWorkspace"),
   delaySolverWorkspace: document.getElementById("delaySolverWorkspace"),
@@ -379,6 +384,10 @@ const els = {
   timingOverlapAnalysisPanel: document.getElementById("timingOverlapAnalysisPanel"),
   timingOverlapSummary: document.getElementById("timingOverlapSummary"),
   timingOverlapChart: document.getElementById("timingOverlapChart"),
+  printLabelAngleWrap: document.getElementById("printLabelAngleWrap"),
+  printLabelAngleDial: document.getElementById("printLabelAngleDial"),
+  printLabelAnglePointer: document.getElementById("printLabelAnglePointer"),
+  printLabelAngleValue: document.getElementById("printLabelAngleValue"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
   holeRelationNegativeToolBtn: document.getElementById("holeRelationNegativeToolBtn"),
@@ -1399,6 +1408,40 @@ function cloneLabelLayoutMap(layoutMap = new Map()) {
   return new Map([...layoutMap.entries()].map(([holeId, offset]) => [holeId, { ...offset }]));
 }
 
+function normalizeDialAngle(angle) {
+  const numeric = Number(angle);
+  if (!Number.isFinite(numeric)) return 315;
+  return ((numeric % 360) + 360) % 360;
+}
+
+function updatePrintLabelAngleDial(angle) {
+  const normalized = normalizeDialAngle(angle);
+  els.printLabelAngleDial.style.setProperty("--dial-angle", `${normalized}deg`);
+  els.printLabelAngleDial.setAttribute("aria-valuenow", String(Math.round(normalized)));
+  els.printLabelAngleValue.textContent = `${Math.round(normalized)}°`;
+}
+
+function activePrintLabelAngle() {
+  return normalizeDialAngle(activePrintPage()?.ui?.labelAngleDeg);
+}
+
+function setActivePrintLabelAngle(angle) {
+  const page = activePrintPage();
+  if (!page || page.ui.workspaceMode !== "diagram") return;
+  page.ui.labelAngleDeg = normalizeDialAngle(angle);
+  updatePrintLabelAngleDial(page.ui.labelAngleDeg);
+  printRenderer.render();
+  renderPrintPageTabs();
+}
+
+function pointerDialAngle(clientX, clientY) {
+  const rect = els.printLabelAngleDial.getBoundingClientRect();
+  const centerX = rect.left + (rect.width / 2);
+  const centerY = rect.top + (rect.height / 2);
+  const radians = Math.atan2(clientY - centerY, clientX - centerX);
+  return normalizeDialAngle((radians * 180) / Math.PI);
+}
+
 function clonePrintPage(page) {
   const holes = page.holes.map(cloneHole);
   return {
@@ -1475,6 +1518,7 @@ function createSolverPrintPage(selectedTiming) {
   page.ui.showBearingArrows = false;
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
+  page.ui.labelAngleDeg = 315;
   page.ui.showDepthLabels = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
@@ -1506,6 +1550,7 @@ function createSolverPrintPageFromProject() {
   page.ui.showBearingArrows = false;
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
+  page.ui.labelAngleDeg = 315;
   page.ui.showDepthLabels = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
@@ -1536,6 +1581,7 @@ function createDiagramPrintPage() {
   page.ui.showBearingArrows = diagramState.ui.showBearingArrows;
   page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   page.ui.bearingArrowLength = Number(els.printBearingArrowLengthInput.value) || 16;
+  page.ui.labelAngleDeg = activePrintLabelAngle();
   page.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
@@ -1611,6 +1657,7 @@ function syncPrintControls() {
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowLengthWrap.classList.toggle("hidden", !diagramMode);
+  els.printLabelAngleWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
   els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !labelModeEnabled);
@@ -1620,6 +1667,7 @@ function syncPrintControls() {
   els.printBearingToggle.checked = page.ui.showBearingLabels !== false;
   els.printBearingArrowWeightInput.value = String(page.ui.bearingArrowWeight || 1);
   els.printBearingArrowLengthInput.value = String(page.ui.bearingArrowLength || 16);
+  updatePrintLabelAngleDial(page.ui.labelAngleDeg);
   els.printDepthToggle.checked = page.ui.showDepthLabels !== false;
   applyPrintPageChrome(page);
 }
@@ -1843,6 +1891,14 @@ function handlePrintPointerUp() {
   page.dragPointerDelta = null;
   printRenderer.render();
   return true;
+}
+
+function startPrintLabelDialInteraction(event) {
+  const page = activePrintPage();
+  if (!page || page.ui.workspaceMode !== "diagram") return;
+  printLabelDialState.dragging = true;
+  event.preventDefault();
+  setActivePrintLabelAngle(pointerDialAngle(event.clientX, event.clientY));
 }
 
 function normalizeAngleValue(value) {
@@ -2692,7 +2748,7 @@ function finalizeDiagramPolygonSelection() {
   const draft = diagramState.ui.selectionPolygonDraft;
   if (!draft?.points?.length || draft.points.length < 3) return;
   const holeIds = diagramState.holes
-    .filter((hole) => pointInPolygon(diagramScreenPoint(hole), draft.points))
+    .filter((hole) => pointInPolygon({ x: hole.x, y: hole.y }, draft.points))
     .map((hole) => hole.id);
   if (diagramState.ui.pendingFaceDesignation) {
     const faceIdSet = new Set(holeIds);
@@ -2722,16 +2778,17 @@ function handleDiagramPointerDown(payload) {
     return true;
   }
   if (mode === "polygon") {
+    const worldPoint = pointToWorld(diagramRenderer, payload);
     const existing = diagramState.ui.selectionPolygonDraft;
     if (!existing) {
       diagramState.ui.selectionPolygonDraft = {
-        points: [{ x: payload.x, y: payload.y }],
-        hoverPoint: { x: payload.x, y: payload.y },
+        points: [{ x: worldPoint.x, y: worldPoint.y }],
+        hoverPoint: { x: worldPoint.x, y: worldPoint.y },
         addMode: payload.event.shiftKey,
       };
     } else {
-      existing.points.push({ x: payload.x, y: payload.y });
-      existing.hoverPoint = { x: payload.x, y: payload.y };
+      existing.points.push({ x: worldPoint.x, y: worldPoint.y });
+      existing.hoverPoint = { x: worldPoint.x, y: worldPoint.y };
     }
     diagramRenderer.render();
     return true;
@@ -2772,7 +2829,8 @@ function handleDiagramPointerMove(payload) {
   }
   if (diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") {
     if (diagramState.ui.selectionPolygonDraft) {
-      diagramState.ui.selectionPolygonDraft.hoverPoint = { x: payload.x, y: payload.y };
+      const worldPoint = pointToWorld(diagramRenderer, payload);
+      diagramState.ui.selectionPolygonDraft.hoverPoint = { x: worldPoint.x, y: worldPoint.y };
       diagramRenderer.render();
     }
     return true;
@@ -3504,6 +3562,26 @@ els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSettings());
 els.printBearingArrowLengthInput.addEventListener("input", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
+els.printLabelAngleDial.addEventListener("mousedown", (event) => startPrintLabelDialInteraction(event));
+els.printLabelAngleDial.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+    event.preventDefault();
+    setActivePrintLabelAngle(activePrintLabelAngle() + 5);
+  } else if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+    event.preventDefault();
+    setActivePrintLabelAngle(activePrintLabelAngle() - 5);
+  } else if (event.key === "Home") {
+    event.preventDefault();
+    setActivePrintLabelAngle(270);
+  }
+});
+window.addEventListener("mousemove", (event) => {
+  if (!printLabelDialState.dragging) return;
+  setActivePrintLabelAngle(pointerDialAngle(event.clientX, event.clientY));
+});
+window.addEventListener("mouseup", () => {
+  printLabelDialState.dragging = false;
+});
 els.printActionBtn.addEventListener("click", () => {
   preparePrintablePages();
   window.print();

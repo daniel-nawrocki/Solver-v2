@@ -70,6 +70,9 @@ Code-level status:
 - repo documentation now includes a tracked end-user guide source at `HOW_TO_USE.md` plus a generated `Daniel Fire - How to Use.pdf`
 - Timing Results now includes an `Overlap Analysis` view with fixed `8 ms` firing-bin bars and click-to-highlight timing holes for the selected bin.
 - timing-result ranking now prioritizes lower peak fixed-`8 ms` bin density, then lower overlap-group count, then shorter total duration.
+- Timing overlap analysis rows were restyled into a cleaner horizontal bar-chart presentation while keeping the current bin-click highlight workflow.
+- Diagram print preview now includes a circular `Label Position` dial that rotates the default label anchor direction for all labels on the active print page.
+- Diagram polygon-selection drafts now store vertices in world coordinates so placed points stay fixed relative to holes during pan/zoom/scroll/rotation.
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -86,6 +89,8 @@ What has not been fully verified yet:
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 - whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
 - whether Timing overlap-bin chart counts, labels, and click-to-highlight behavior feel clear enough on real solved timing graphs
+- whether the new print label-position dial feels intuitive enough while preserving drag-based fine tuning on dense diagrams
+- whether world-space polygon drafting now feels stable enough during aggressive pan/zoom/rotation in real use
 
 ## Completed Work
 
@@ -456,6 +461,22 @@ Current rule:
 - overlap highlighting is analysis-only UI state and is not persisted across sessions/mode hydration
 - the previous sliding-window `peak in 8ms` ordering is no longer the primary ranking model
 
+### 23. Timing Chart Refresh + Print Label Dial + Stable Polygon Drafts
+Implemented in code.
+
+What was added:
+- Timing overlap analysis now renders as a cleaner horizontal bar-chart style list while keeping the existing bin-click highlight interaction
+- Diagram print preview now includes a circular `Label Position` dial in the print controls
+- the dial applies to all labels on the active Diagram print page and uses continuous `360°` placement
+- label drag offsets are still preserved and now apply on top of the dial-based default label direction
+- `Reset Labels` still clears custom drag offsets while respecting the current dial angle
+- Diagram polygon-selection and face-designation drafts now store vertices/hover points in world coordinates instead of screen coordinates
+
+Current rule:
+- changing the print label dial does not clear existing manual label drag offsets
+- duplicated print pages preserve the current label dial angle because it is part of per-page print state
+- polygon draft points should now remain fixed relative to holes during pan/zoom/rotation until the draft is completed or cancelled
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -488,6 +509,8 @@ Important recent context:
 - shared-project mode switching, import parity, and print timing-page behavior all need manual browser verification
 - centered mode-toggle layout still needs manual responsive/browser verification
 - Timing overlap chart interactions and overlap-based result ordering still need manual browser verification with real timing graphs
+- print label dial interaction and dial-plus-drag label placement still need manual browser verification
+- world-space polygon drafting still needs manual browser verification across zoom/pan/rotation
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -566,6 +589,16 @@ Important recent context:
     - highlight reset on timing-result switch
     - overlap-group counts in result summaries
     - overlap-based timing-result ordering against expected field preferences
+  - Diagram print label-position dial:
+    - dial visibility on Diagram print pages only
+    - continuous `360°` label repositioning
+    - drag offsets preserved after dial changes
+    - `Reset Labels` honoring the current dial angle
+    - per-page independent dial angle across duplicated/switched print pages
+  - polygon drafting stability:
+    - placed polygon vertices remain fixed relative to holes during pan/zoom/rotation
+    - hover segment stability during navigation
+    - selection and face-designation completion still target the intended holes
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded
