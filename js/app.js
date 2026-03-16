@@ -2595,9 +2595,6 @@ function closeDiagramHolePopup() {
 
 function openDiagramHolePopup(hole) {
   if (!hole) return;
-  diagramState.selection = new Set([hole.id]);
-  renderDiagramPropertiesPanel();
-  diagramRenderer.render();
   diagramState.ui.holePopupHoleId = hole.id;
   els.diagramHolePopupTitle.textContent = `Hole ${hole.holeNumber || hole.id}`;
   els.diagramHolePopupStatus.textContent = `Editing ${hole.holeNumber || hole.id}`;
