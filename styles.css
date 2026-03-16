@@ -589,22 +589,24 @@ button:active {
 
 .timing-overlap-column-wrap {
   position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  display: block;
   height: var(--timing-overlap-plot-height);
   min-height: var(--timing-overlap-plot-height);
   padding: 0 1px;
 }
 
 .timing-overlap-column {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 0;
   display: block;
-  width: min(100%, 26px);
   border: 2px solid rgba(77, 112, 241, 0.92);
   border-bottom-width: 3px;
   border-radius: 2px 2px 0 0;
   background: linear-gradient(180deg, rgba(115, 140, 246, 0.7) 0%, rgba(115, 140, 246, 0.48) 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  min-height: 3px;
 }
 
 .timing-overlap-bar.active .timing-overlap-column {
