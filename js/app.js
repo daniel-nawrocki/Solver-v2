@@ -1402,11 +1402,15 @@ function renderTimingOverlapAnalysis() {
           ${bins.map((bin, index) => {
             const active = activeBin?.key === bin.key ? "active" : "";
             const height = maxCount > 0 ? Math.max(0, (bin.count / maxCount) * 100) : 0;
+            const clampedHeight = Math.min(100, Math.max(0, height));
+            const y = 100 - clampedHeight;
             const showTick = index % tickStep === 0 || index === bins.length - 1;
             return `
               <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}" title="${escapeHtml(`${bin.label}: ${bin.count} hole${bin.count === 1 ? "" : "s"}`)}">
                 <span class="timing-overlap-column-wrap">
-                  <span class="timing-overlap-column" style="height:${height.toFixed(2)}%"></span>
+                  <svg class="timing-overlap-column-svg" viewBox="0 0 24 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                    <rect class="timing-overlap-column" x="2" y="${y.toFixed(2)}" width="20" height="${clampedHeight.toFixed(2)}" rx="1.5" ry="1.5"></rect>
+                  </svg>
                 </span>
                 <span class="timing-overlap-count">${escapeHtml(String(bin.count))}</span>
                 <span class="timing-overlap-label">${showTick ? escapeHtml(bin.label) : ""}</span>

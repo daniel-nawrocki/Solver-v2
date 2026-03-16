@@ -595,23 +595,23 @@ button:active {
   padding: 0 1px;
 }
 
-.timing-overlap-column {
-  position: absolute;
-  left: 1px;
-  right: 1px;
-  bottom: 0;
+.timing-overlap-column-svg {
   display: block;
-  border: 2px solid rgba(77, 112, 241, 0.92);
-  border-bottom-width: 3px;
-  border-radius: 2px 2px 0 0;
-  background: linear-gradient(180deg, rgba(115, 140, 246, 0.7) 0%, rgba(115, 140, 246, 0.48) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  min-height: 3px;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.timing-overlap-column {
+  fill: rgba(115, 140, 246, 0.58);
+  stroke: rgba(77, 112, 241, 0.96);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .timing-overlap-bar.active .timing-overlap-column {
-  border-color: rgba(14, 165, 233, 0.96);
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.82) 0%, rgba(59, 130, 246, 0.58) 100%);
+  fill: rgba(59, 130, 246, 0.72);
+  stroke: rgba(14, 165, 233, 0.98);
 }
 
 .timing-overlap-count {
