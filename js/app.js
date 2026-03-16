@@ -1401,12 +1401,12 @@ function renderTimingOverlapAnalysis() {
         <div class="timing-overlap-bars">
           ${bins.map((bin, index) => {
             const active = activeBin?.key === bin.key ? "active" : "";
-            const height = Math.max(10, Math.round((bin.count / maxCount) * 100));
+            const height = maxCount > 0 ? Math.max(0, (bin.count / maxCount) * 100) : 0;
             const showTick = index % tickStep === 0 || index === bins.length - 1;
             return `
               <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}" title="${escapeHtml(`${bin.label}: ${bin.count} hole${bin.count === 1 ? "" : "s"}`)}">
                 <span class="timing-overlap-column-wrap">
-                  <span class="timing-overlap-column" style="height:${height}%"></span>
+                  <span class="timing-overlap-column" style="height:${height.toFixed(2)}%"></span>
                 </span>
                 <span class="timing-overlap-count">${escapeHtml(String(bin.count))}</span>
                 <span class="timing-overlap-label">${showTick ? escapeHtml(bin.label) : ""}</span>

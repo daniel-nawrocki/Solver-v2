@@ -598,7 +598,6 @@ button:active {
 
 .timing-overlap-column {
   width: min(100%, 26px);
-  min-height: 8px;
   border: 2px solid rgba(77, 112, 241, 0.92);
   border-bottom-width: 3px;
   border-radius: 2px 2px 0 0;
