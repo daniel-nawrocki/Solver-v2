@@ -557,7 +557,6 @@ export class DiagramRenderer {
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
     const valueSize = Math.max(8, Math.round(10 * this.textScale()));
     return [
-      { text: `Corner ${cornerIndex + 1}`, color: "#111827", weight: 700, size: Math.max(9, Math.round(11 * this.textScale())) },
       { text: `Lat ${Number(lat).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
       { text: `Lon ${Number(lon).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
     ];

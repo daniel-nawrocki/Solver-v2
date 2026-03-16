@@ -324,49 +324,6 @@
     <main class="canvas-wrap">
       <div class="menu-bar" aria-label="Diagram Maker Menus">
         <div class="top-menu">
-          <button class="menu-toggle" type="button" data-menu-toggle="diagramImportMenu">Import</button>
-          <section id="diagramImportMenu" class="menu-panel panel hidden">
-            <h2>CSV Import</h2>
-            <label class="file-btn">Choose CSV
-              <input id="diagramCsvInput" type="file" accept=".csv,text/csv" hidden>
-            </label>
-            <div id="diagramMappingPanel" class="mapping-panel hidden">
-              <label>Coordinate Type
-                <select id="diagramCoordTypeSelect">
-                  <option value="stateplane">State Plane (X/Y)</option>
-                  <option value="latlon">Latitude / Longitude</option>
-                </select>
-              </label>
-              <label>X Column
-                <select id="diagramXColumnSelect"></select>
-              </label>
-              <label>Y Column
-                <select id="diagramYColumnSelect"></select>
-              </label>
-              <label>Toe X Column (Optional)
-                <select id="diagramToeXColumnSelect"></select>
-              </label>
-              <label>Toe Y Column (Optional)
-                <select id="diagramToeYColumnSelect"></select>
-              </label>
-              <label>Hole ID Column
-                <select id="diagramIdColumnSelect"></select>
-              </label>
-              <label>Angle Column (Optional)
-                <select id="diagramAngleColumnSelect"></select>
-              </label>
-              <label>Bearing Column (Optional)
-                <select id="diagramBearingColumnSelect"></select>
-              </label>
-              <label>Depth / Length Column (Optional)
-                <select id="diagramDepthColumnSelect"></select>
-              </label>
-              <button id="diagramImportMappedBtn" type="button">Import</button>
-            </div>
-          </section>
-        </div>
-
-        <div class="top-menu">
           <button class="menu-toggle" type="button" data-menu-toggle="diagramShotMenu">Shot</button>
           <section id="diagramShotMenu" class="menu-panel panel hidden">
             <h2>Shot Metadata</h2>
@@ -449,6 +406,49 @@
               <button type="button" data-shot-corner-set="3">Set Corner 4</button>
             </div>
             <button id="diagramClearShotCornersBtn" type="button">Clear Shot Corners</button>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramImportMenu">Import</button>
+          <section id="diagramImportMenu" class="menu-panel panel hidden">
+            <h2>CSV Import</h2>
+            <label class="file-btn">Choose CSV
+              <input id="diagramCsvInput" type="file" accept=".csv,text/csv" hidden>
+            </label>
+            <div id="diagramMappingPanel" class="mapping-panel hidden">
+              <label>Coordinate Type
+                <select id="diagramCoordTypeSelect">
+                  <option value="stateplane">State Plane (X/Y)</option>
+                  <option value="latlon">Latitude / Longitude</option>
+                </select>
+              </label>
+              <label>X Column
+                <select id="diagramXColumnSelect"></select>
+              </label>
+              <label>Y Column
+                <select id="diagramYColumnSelect"></select>
+              </label>
+              <label>Toe X Column (Optional)
+                <select id="diagramToeXColumnSelect"></select>
+              </label>
+              <label>Toe Y Column (Optional)
+                <select id="diagramToeYColumnSelect"></select>
+              </label>
+              <label>Hole ID Column
+                <select id="diagramIdColumnSelect"></select>
+              </label>
+              <label>Angle Column (Optional)
+                <select id="diagramAngleColumnSelect"></select>
+              </label>
+              <label>Bearing Column (Optional)
+                <select id="diagramBearingColumnSelect"></select>
+              </label>
+              <label>Depth / Length Column (Optional)
+                <select id="diagramDepthColumnSelect"></select>
+              </label>
+              <button id="diagramImportMappedBtn" type="button">Import</button>
+            </div>
           </section>
         </div>
 
