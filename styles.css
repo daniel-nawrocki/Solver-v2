@@ -501,75 +501,134 @@ button:active {
 }
 
 .timing-overlap-chart {
-  display: grid;
-  gap: 8px;
+  display: block;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed rgba(159, 179, 201, 0.45);
 }
 
+.timing-overlap-plot {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.timing-overlap-yaxis {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  align-items: space-between;
+  padding: 4px 0 24px;
+  font-size: 11px;
+  color: #5a6d83;
+  font-variant-numeric: tabular-nums;
+}
+
+.timing-overlap-yaxis span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.timing-overlap-canvas {
+  position: relative;
+  min-height: 170px;
+  padding: 8px 0 0;
+}
+
+.timing-overlap-grid {
+  position: absolute;
+  inset: 0 0 24px 0;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  pointer-events: none;
+}
+
+.timing-overlap-grid span {
+  border-top: 1px solid rgba(194, 206, 220, 0.7);
+}
+
+.timing-overlap-grid span:last-child {
+  border-bottom: 2px solid rgba(184, 198, 214, 0.9);
+}
+
+.timing-overlap-bars {
+  position: relative;
+  z-index: 1;
+  min-height: 170px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0 2px;
+}
+
 .timing-overlap-bar {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
+  grid-template-rows: minmax(110px, 1fr) auto auto;
+  align-items: end;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 22px;
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  border-color: rgba(184, 198, 214, 0.75);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
 }
 
-.timing-overlap-bar.active {
-  border-color: rgba(14, 165, 233, 0.8);
-  background: linear-gradient(180deg, rgba(236, 249, 255, 0.98) 0%, rgba(214, 241, 255, 0.94) 100%);
-  color: #0c4a6e;
-  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.12);
+.timing-overlap-bar:hover,
+.timing-overlap-bar:focus-visible {
+  transform: none;
+  box-shadow: none;
+  border: none;
 }
 
-.timing-overlap-label {
-  white-space: nowrap;
-  color: #32485f;
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.timing-overlap-bar.active .timing-overlap-label {
-  color: #0c4a6e;
-}
-
-.timing-overlap-meter {
+.timing-overlap-column-wrap {
   position: relative;
-  height: 16px;
-  overflow: hidden;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(203, 213, 225, 0.45) 0%, rgba(226, 232, 240, 0.58) 100%);
-  border: 1px solid rgba(203, 213, 225, 0.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 110px;
+  padding: 0 1px;
 }
 
-.timing-overlap-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #2f7df6 0%, #0ea5e9 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+.timing-overlap-column {
+  width: min(100%, 26px);
+  min-height: 8px;
+  border: 2px solid rgba(77, 112, 241, 0.92);
+  border-bottom-width: 3px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, rgba(115, 140, 246, 0.7) 0%, rgba(115, 140, 246, 0.48) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
-.timing-overlap-bar.active .timing-overlap-fill {
-  background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+.timing-overlap-bar.active .timing-overlap-column {
+  border-color: rgba(14, 165, 233, 0.96);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.82) 0%, rgba(59, 130, 246, 0.58) 100%);
 }
 
 .timing-overlap-count {
-  white-space: nowrap;
+  min-height: 14px;
+  font-size: 11px;
+  font-weight: 800;
   color: #1f3148;
   font-variant-numeric: tabular-nums;
+}
+
+.timing-overlap-label {
+  min-height: 28px;
+  font-size: 9px;
+  line-height: 1.15;
+  color: #4a6076;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.timing-overlap-bar.active .timing-overlap-count,
+.timing-overlap-bar.active .timing-overlap-label {
+  color: #0c4a6e;
 }
 
 .timing-visualization-row {

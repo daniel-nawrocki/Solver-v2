@@ -892,11 +892,15 @@ export class DiagramRenderer {
     this.setRotation(0);
   }
 
+  holeHitRadius() {
+    return this.isDiagramMode() ? this.holeRadius + 4 : this.holeRadius + 12;
+  }
+
   findHoleAtScreen(x, y) {
     if (!this.stateRef?.holes?.length) return null;
     for (const hole of this.stateRef.holes) {
       const point = this.worldToScreen(hole.x, hole.y);
-      if (Math.hypot(x - point.x, y - point.y) <= this.holeRadius + 4) return hole;
+      if (Math.hypot(x - point.x, y - point.y) <= this.holeHitRadius()) return hole;
     }
     return null;
   }

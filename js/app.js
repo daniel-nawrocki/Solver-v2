@@ -1384,17 +1384,36 @@ function renderTimingOverlapAnalysis() {
 
   const maxCount = bins.reduce((max, bin) => Math.max(max, bin.count), 1);
   els.timingOverlapSummary.textContent = `Peak 8ms bin: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount}`;
-  els.timingOverlapChart.innerHTML = bins.map((bin) => {
-    const active = activeBin?.key === bin.key ? "active" : "";
-    const width = Math.max(6, Math.round((bin.count / maxCount) * 100));
-    return `
-      <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}">
-        <span class="timing-overlap-label">${escapeHtml(bin.label)}</span>
-        <span class="timing-overlap-meter"><span class="timing-overlap-fill" style="width:${width}%"></span></span>
-        <span class="timing-overlap-count">${escapeHtml(`${bin.count} hole${bin.count === 1 ? "" : "s"}`)}</span>
-      </button>
-    `;
-  }).join("");
+  const tickStep = Math.max(1, Math.ceil(bins.length / 8));
+  const yTicks = [maxCount, Math.max(1, Math.round(maxCount / 2)), 0];
+  els.timingOverlapChart.innerHTML = `
+    <div class="timing-overlap-plot">
+      <div class="timing-overlap-yaxis">
+        ${yTicks.map((tick) => `<span>${escapeHtml(String(tick))}</span>`).join("")}
+      </div>
+      <div class="timing-overlap-canvas">
+        <div class="timing-overlap-grid">
+          ${yTicks.map(() => '<span></span>').join("")}
+        </div>
+        <div class="timing-overlap-bars">
+          ${bins.map((bin, index) => {
+            const active = activeBin?.key === bin.key ? "active" : "";
+            const height = Math.max(10, Math.round((bin.count / maxCount) * 100));
+            const showTick = index % tickStep === 0 || index === bins.length - 1;
+            return `
+              <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}" title="${escapeHtml(`${bin.label}: ${bin.count} hole${bin.count === 1 ? "" : "s"}`)}">
+                <span class="timing-overlap-column-wrap">
+                  <span class="timing-overlap-column" style="height:${height}%"></span>
+                </span>
+                <span class="timing-overlap-count">${escapeHtml(String(bin.count))}</span>
+                <span class="timing-overlap-label">${showTick ? escapeHtml(bin.label) : ""}</span>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function syncManualTimingFromInputs() {
