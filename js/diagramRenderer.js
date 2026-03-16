@@ -104,6 +104,7 @@ export class DiagramRenderer {
     this.dragging = false;
     this.lastMouse = null;
     this.dragMoved = false;
+    this.pointerCaptureActive = false;
     this.pointerScreen = null;
     this.holeRadius = 5;
     this.rotationDeg = 0;
@@ -547,6 +548,21 @@ export class DiagramRenderer {
     };
   }
 
+  diagramPrintCornerCoordinateLines(hole) {
+    if (!this.isDiagramPrintMode() || this.stateRef?.ui?.showCornerCoordinates !== true) return [];
+    const cornerIndex = (this.stateRef?.shotCorners || []).findIndex((cornerId) => cornerId === hole.id);
+    if (cornerIndex < 0) return [];
+    const lat = hole.collar?.coordinates?.latLon?.lat ?? hole.coordinates?.latLon?.lat;
+    const lon = hole.collar?.coordinates?.latLon?.lon ?? hole.coordinates?.latLon?.lon;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
+    const valueSize = Math.max(8, Math.round(10 * this.textScale()));
+    return [
+      { text: `Corner ${cornerIndex + 1}`, color: "#111827", weight: 700, size: Math.max(9, Math.round(11 * this.textScale())) },
+      { text: `Lat ${Number(lat).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
+      { text: `Lon ${Number(lon).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
+    ];
+  }
+
   getDiagramPrintLabelLayout(hole, { ignoreOffset = false } = {}) {
     const point = this.worldToScreen(hole.x, hole.y);
     const lines = this.diagramPrintLabelLines(hole);
@@ -576,6 +592,46 @@ export class DiagramRenderer {
       height: defaultRect.height,
     };
     return {
+      kind: "hole",
+      hole,
+      point,
+      lines,
+      metrics,
+      defaultRect,
+      rect,
+    };
+  }
+
+  getDiagramPrintCornerLabelLayout(hole, { ignoreOffset = false } = {}) {
+    const point = this.worldToScreen(hole.x, hole.y);
+    const lines = this.diagramPrintCornerCoordinateLines(hole);
+    const metrics = this.measureDiagramPrintLabel(lines);
+    const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
+    const angleDeg = Number.isFinite(configuredAngle) ? configuredAngle : 315;
+    const configuredDistance = Number(this.stateRef?.ui?.labelDistancePx);
+    const edgeGapPx = (Number.isFinite(configuredDistance) ? Math.max(0, Math.min(20, configuredDistance)) : 8) + 18;
+    const radians = (angleDeg * Math.PI) / 180;
+    const ux = Math.sin(radians);
+    const uy = -Math.cos(radians);
+    const projection = Math.abs(ux) * (metrics.width / 2) + Math.abs(uy) * (metrics.height / 2);
+    const radius = this.holeRadius + edgeGapPx + projection;
+    const centerX = point.x + (ux * radius);
+    const centerY = point.y + (uy * radius);
+    const defaultRect = {
+      left: centerX - (metrics.width / 2),
+      top: centerY - (metrics.height / 2),
+      width: metrics.width,
+      height: metrics.height,
+    };
+    const offset = !ignoreOffset ? this.stateRef?.cornerLabelLayoutByHoleId?.get(hole.id) : null;
+    const rect = {
+      left: defaultRect.left + (offset?.offsetX || 0),
+      top: defaultRect.top + (offset?.offsetY || 0),
+      width: defaultRect.width,
+      height: defaultRect.height,
+    };
+    return {
+      kind: "corner",
       hole,
       point,
       lines,
@@ -589,6 +645,11 @@ export class DiagramRenderer {
     if (!this.isDiagramPrintMode()) return null;
     for (let index = this.stateRef.holes.length - 1; index >= 0; index -= 1) {
       const hole = this.stateRef.holes[index];
+      const cornerLayout = this.getDiagramPrintCornerLabelLayout(hole);
+      if (cornerLayout.lines.length) {
+        const { rect } = cornerLayout;
+        if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) return cornerLayout;
+      }
       const layout = this.getDiagramPrintLabelLayout(hole);
       const { rect } = layout;
       if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) return layout;
@@ -617,7 +678,7 @@ export class DiagramRenderer {
   drawDiagramPrintLabelBox(layout) {
     const { hole, rect, lines, metrics } = layout;
     const isHovered = this.stateRef?.ui?.hoverLabelHoleId === hole.id;
-    const isDragging = this.stateRef?.dragLabelHoleId === hole.id;
+    const isDragging = this.stateRef?.dragLabelHoleId === hole.id && (this.stateRef?.dragLabelKind || "hole") === (layout.kind || "hole");
     if (this.stateRef?.ui?.labelEditMode === true) {
       this.ctx.save();
       this.ctx.shadowColor = "rgba(15, 23, 42, 0.10)";
@@ -652,6 +713,8 @@ export class DiagramRenderer {
     this.stateRef.holes.forEach((hole) => {
       const layout = this.getDiagramPrintLabelLayout(hole);
       if (layout.lines.length) this.drawDiagramPrintLabelBox(layout);
+      const cornerLayout = this.getDiagramPrintCornerLabelLayout(hole);
+      if (cornerLayout.lines.length) this.drawDiagramPrintLabelBox(cornerLayout);
     });
   }
 
@@ -926,6 +989,7 @@ export class DiagramRenderer {
   attachEvents() {
     this.canvas.addEventListener("mousedown", (event) => {
       if (event.button !== 0) return;
+      this.pointerCaptureActive = true;
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -964,6 +1028,8 @@ export class DiagramRenderer {
     });
 
     window.addEventListener("mouseup", (event) => {
+      if (!this.pointerCaptureActive) return;
+      this.pointerCaptureActive = false;
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;

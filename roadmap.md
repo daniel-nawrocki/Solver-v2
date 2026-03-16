@@ -77,6 +77,8 @@ Code-level status:
 - hole import now builds a dual-coordinate foundation so each imported hole can retain local render coordinates, State Plane coordinates, and lat/long coordinates together
 - State Plane import is now treated as international feet (`ft`) and converted through the quarry EPSG definition internally
 - Diagram `Shot` metadata now shows the active quarry EPSG/unit and supports saving four ordered shot-corner hole assignments
+- Diagram print preview now has a separate `Show Corner Coords` toggle that renders saved shot-corner lat/long boxes independently from normal hole labels
+- shot-corner print coordinate boxes are draggable in print label-edit mode and keep their own independent layout offsets
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -98,6 +100,7 @@ What has not been fully verified yet:
 - whether all three supported quarry EPSG definitions convert accurately for real shot datasets in browser use
 - whether changing the selected quarry after import reprojects existing dual-coordinate hole data cleanly enough for real projects
 - whether shot-corner assignment UX should stay as four fixed slots or needs a more visual designation flow before print labeling is added
+- whether corner-coordinate print boxes need their own placement defaults or additional styling on dense diagrams
 
 ## Completed Work
 

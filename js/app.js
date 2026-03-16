@@ -195,11 +195,14 @@ function createPrintPageState() {
       labelAngleDeg: 315,
       labelDistancePx: 8,
       showDepthLabels: true,
+      showCornerCoordinates: false,
       labelEditMode: false,
       hoverLabelHoleId: null,
     },
     labelLayoutByHoleId: new Map(),
+    cornerLabelLayoutByHoleId: new Map(),
     dragLabelHoleId: null,
+    dragLabelKind: null,
     dragPointerDelta: null,
     metadata: {
       shotNumber: "",
@@ -218,6 +221,7 @@ function createPrintPageState() {
       strokes: [],
       texts: [],
     },
+    shotCorners: [null, null, null, null],
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
     viewport: {
@@ -519,6 +523,8 @@ const els = {
   printBearingArrowLengthInput: document.getElementById("printBearingArrowLengthInput"),
   printDepthToggleWrap: document.getElementById("printDepthToggleWrap"),
   printDepthToggle: document.getElementById("printDepthToggle"),
+  printCornerCoordsToggleWrap: document.getElementById("printCornerCoordsToggleWrap"),
+  printCornerCoordsToggle: document.getElementById("printCornerCoordsToggle"),
   helpWorkspace: document.getElementById("helpWorkspace"),
   helpBackBtn: document.getElementById("helpBackBtn"),
 };
@@ -1607,10 +1613,13 @@ function clonePrintPage(page) {
       hoverLabelHoleId: null,
     },
     labelLayoutByHoleId: cloneLabelLayoutMap(page.labelLayoutByHoleId),
+    cornerLabelLayoutByHoleId: cloneLabelLayoutMap(page.cornerLabelLayoutByHoleId),
     dragLabelHoleId: null,
+    dragLabelKind: null,
     dragPointerDelta: null,
     metadata: cloneDiagramMetadata(page.metadata),
     annotations: cloneDiagramAnnotations(page.annotations),
+    shotCorners: cloneShotCorners(page.shotCorners),
     relationships: {
       originHoleId: page.relationships?.originHoleId || null,
       edges: (page.relationships?.edges || []).map((edge) => ({ ...edge })),
@@ -1674,13 +1683,16 @@ function createSolverPrintPage(selectedTiming) {
   page.ui.labelAngleDeg = 315;
   page.ui.labelDistancePx = 8;
   page.ui.showDepthLabels = false;
+  page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
   page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   page.ui.orientation = "landscape";
   page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
   page.metadata = cloneDiagramMetadata();
   page.annotations = cloneDiagramAnnotations();
+  page.shotCorners = [null, null, null, null];
   page.colorMode = "color";
   return page;
 }
@@ -1707,13 +1719,16 @@ function createSolverPrintPageFromProject() {
   page.ui.labelAngleDeg = 315;
   page.ui.labelDistancePx = 8;
   page.ui.showDepthLabels = false;
+  page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
   page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   page.ui.orientation = "landscape";
   page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
   page.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
   page.annotations = cloneDiagramAnnotations();
+  page.shotCorners = cloneShotCorners(projectState.diagram.shotCorners);
   page.viewport.rotationDeg = Number(projectState.view.rotationDeg) || 0;
   page.colorMode = "color";
   return page;
@@ -1739,13 +1754,16 @@ function createDiagramPrintPage() {
   page.ui.labelAngleDeg = activePrintLabelAngle();
   page.ui.labelDistancePx = activePrintLabelDistance();
   page.ui.showDepthLabels = diagramState.ui.showDepthLabels;
+  page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
   page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   page.ui.orientation = "landscape";
   page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
   page.metadata = cloneDiagramMetadata(diagramState.metadata);
   page.annotations = cloneDiagramAnnotations(diagramState.annotations);
+  page.shotCorners = cloneShotCorners(diagramState.shotCorners);
   page.colorMode = "color";
   return page;
 }
@@ -1815,6 +1833,7 @@ function syncPrintControls() {
   els.printBearingArrowLengthWrap.classList.toggle("hidden", !diagramMode);
   els.printLabelAngleWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
+  els.printCornerCoordsToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
   els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !labelModeEnabled);
   els.printEditLabelsBtn.classList.toggle("active", diagramMode && labelModeEnabled);
@@ -1826,6 +1845,7 @@ function syncPrintControls() {
   updatePrintLabelAngleDial(page.ui.labelAngleDeg);
   updatePrintLabelDistance(page.ui.labelDistancePx);
   els.printDepthToggle.checked = page.ui.showDepthLabels !== false;
+  els.printCornerCoordsToggle.checked = page.ui.showCornerCoordinates === true;
   applyPrintPageChrome(page);
 }
 
@@ -1944,6 +1964,7 @@ function applyPrintSettings() {
   page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   page.ui.bearingArrowLength = Number(els.printBearingArrowLengthInput.value) || 16;
   page.ui.showDepthLabels = els.printDepthToggle.checked;
+  page.ui.showCornerCoordinates = els.printCornerCoordsToggle.checked;
   page.ui.orientation = "landscape";
   page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
   applyPrintPageChrome(page);
@@ -1962,6 +1983,7 @@ function setPrintEditMode(enabled) {
   page.ui.labelEditMode = enabled === true;
   page.ui.hoverLabelHoleId = null;
   page.dragLabelHoleId = null;
+  page.dragLabelKind = null;
   page.dragPointerDelta = null;
   syncPrintControls();
   printRenderer.render();
@@ -1971,7 +1993,9 @@ function resetPrintLabelLayouts() {
   const page = activePrintPage();
   if (!page) return;
   page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
   page.dragLabelHoleId = null;
+  page.dragLabelKind = null;
   page.dragPointerDelta = null;
   page.ui.hoverLabelHoleId = null;
   printRenderer.render();
@@ -2017,6 +2041,7 @@ function handlePrintPointerDown(payload) {
   const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   if (!hit) return false;
   page.dragLabelHoleId = hit.hole.id;
+  page.dragLabelKind = hit.kind || "hole";
   page.dragPointerDelta = {
     x: payload.x - hit.rect.left,
     y: payload.y - hit.rect.top,
@@ -2038,8 +2063,11 @@ function handlePrintPointerMove(payload) {
   if (!isDiagramPrintEditing() || !page.dragLabelHoleId || !page.dragPointerDelta) return false;
   const hole = page.holesById.get(page.dragLabelHoleId);
   if (!hole) return false;
-  const defaultLayout = printRenderer.getDiagramPrintLabelLayout(hole, { ignoreOffset: true });
-  page.labelLayoutByHoleId.set(hole.id, {
+  const defaultLayout = page.dragLabelKind === "corner"
+    ? printRenderer.getDiagramPrintCornerLabelLayout(hole, { ignoreOffset: true })
+    : printRenderer.getDiagramPrintLabelLayout(hole, { ignoreOffset: true });
+  const layoutMap = page.dragLabelKind === "corner" ? page.cornerLabelLayoutByHoleId : page.labelLayoutByHoleId;
+  layoutMap.set(hole.id, {
     offsetX: payload.x - page.dragPointerDelta.x - defaultLayout.rect.left,
     offsetY: payload.y - page.dragPointerDelta.y - defaultLayout.rect.top,
   });
@@ -2051,6 +2079,7 @@ function handlePrintPointerUp() {
   const page = activePrintPage();
   if (!page || !page.dragLabelHoleId) return false;
   page.dragLabelHoleId = null;
+  page.dragLabelKind = null;
   page.dragPointerDelta = null;
   printRenderer.render();
   return true;
@@ -3985,6 +4014,7 @@ els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSettings());
 els.printBearingArrowLengthInput.addEventListener("input", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
+els.printCornerCoordsToggle.addEventListener("change", () => applyPrintSettings());
 els.printLabelAngleDial.addEventListener("mousedown", (event) => startPrintLabelDialInteraction(event));
 els.printLabelDistanceInput.addEventListener("input", () => setActivePrintLabelDistance(els.printLabelDistanceInput.value));
 els.printLabelAngleDial.addEventListener("keydown", (event) => {
