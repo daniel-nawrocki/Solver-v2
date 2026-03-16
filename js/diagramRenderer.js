@@ -554,11 +554,14 @@ export class DiagramRenderer {
     const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
     const angleDeg = Number.isFinite(configuredAngle) ? configuredAngle : 315;
     const configuredDistance = Number(this.stateRef?.ui?.labelDistancePx);
-    const distancePx = Number.isFinite(configuredDistance) ? configuredDistance : 0;
+    const edgeGapPx = Number.isFinite(configuredDistance) ? Math.max(0, Math.min(20, configuredDistance)) : 8;
     const radians = (angleDeg * Math.PI) / 180;
-    const radius = Math.max(22, 14 + Math.max(metrics.width, metrics.height) * 0.45) + distancePx;
-    const centerX = point.x + (Math.sin(radians) * radius);
-    const centerY = point.y - (Math.cos(radians) * radius);
+    const ux = Math.sin(radians);
+    const uy = -Math.cos(radians);
+    const projection = Math.abs(ux) * (metrics.width / 2) + Math.abs(uy) * (metrics.height / 2);
+    const radius = this.holeRadius + edgeGapPx + projection;
+    const centerX = point.x + (ux * radius);
+    const centerY = point.y + (uy * radius);
     const defaultRect = {
       left: centerX - (metrics.width / 2),
       top: centerY - (metrics.height / 2),

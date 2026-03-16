@@ -188,7 +188,7 @@ function createPrintPageState() {
       bearingArrowWeight: 1,
       bearingArrowLength: 16,
       labelAngleDeg: 315,
-      labelDistancePx: 0,
+      labelDistancePx: 8,
       showDepthLabels: true,
       labelEditMode: false,
       hoverLabelHoleId: null,
@@ -1448,13 +1448,13 @@ function activePrintLabelAngle() {
 }
 
 function updatePrintLabelDistance(distance) {
-  const normalized = Math.max(0, Number(distance) || 0);
+  const normalized = Math.max(0, Math.min(20, Number(distance) || 0));
   els.printLabelDistanceInput.value = String(normalized);
   els.printLabelDistanceValue.textContent = `${Math.round(normalized)} px`;
 }
 
 function activePrintLabelDistance() {
-  return Math.max(0, Number(activePrintPage()?.ui?.labelDistancePx) || 0);
+  return Math.max(0, Math.min(20, Number(activePrintPage()?.ui?.labelDistancePx) || 0));
 }
 
 function setActivePrintLabelAngle(angle) {
@@ -1469,7 +1469,7 @@ function setActivePrintLabelAngle(angle) {
 function setActivePrintLabelDistance(distance) {
   const page = activePrintPage();
   if (!page || page.ui.workspaceMode !== "diagram") return;
-  page.ui.labelDistancePx = Math.max(0, Number(distance) || 0);
+  page.ui.labelDistancePx = Math.max(0, Math.min(20, Number(distance) || 0));
   updatePrintLabelDistance(page.ui.labelDistancePx);
   printRenderer.render();
   renderPrintPageTabs();
@@ -1560,7 +1560,7 @@ function createSolverPrintPage(selectedTiming) {
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
   page.ui.labelAngleDeg = 315;
-  page.ui.labelDistancePx = 0;
+  page.ui.labelDistancePx = 8;
   page.ui.showDepthLabels = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
@@ -1593,7 +1593,7 @@ function createSolverPrintPageFromProject() {
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
   page.ui.labelAngleDeg = 315;
-  page.ui.labelDistancePx = 0;
+  page.ui.labelDistancePx = 8;
   page.ui.showDepthLabels = false;
   page.ui.labelEditMode = false;
   page.ui.hoverLabelHoleId = null;
