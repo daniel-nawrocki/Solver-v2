@@ -1057,9 +1057,16 @@ function cloneSelectedTiming(selectedTiming) {
     delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
     peakBinCount: Number.isFinite(selectedTiming.peakBinCount) ? selectedTiming.peakBinCount : derived.peakBinCount,
     overlapGroupCount: Number.isFinite(selectedTiming.overlapGroupCount) ? selectedTiming.overlapGroupCount : derived.overlapGroupCount,
+    fixedPeakBinCount: Number.isFinite(selectedTiming.fixedPeakBinCount) ? selectedTiming.fixedPeakBinCount : derived.fixedPeakBinCount,
+    fixedOverlapGroupCount: Number.isFinite(selectedTiming.fixedOverlapGroupCount)
+      ? selectedTiming.fixedOverlapGroupCount
+      : derived.fixedOverlapGroupCount,
     overlapBins: Array.isArray(selectedTiming.overlapBins) && selectedTiming.overlapBins.length
       ? selectedTiming.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
       : derived.overlapBins,
+    overlapGroups: Array.isArray(selectedTiming.overlapGroups) && selectedTiming.overlapGroups.length
+      ? selectedTiming.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
+      : derived.overlapGroups,
   }];
 }
 
@@ -1192,9 +1199,16 @@ function cloneTimingResults(results = []) {
       delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
       peakBinCount: Number.isFinite(result.peakBinCount) ? result.peakBinCount : derived.peakBinCount,
       overlapGroupCount: Number.isFinite(result.overlapGroupCount) ? result.overlapGroupCount : derived.overlapGroupCount,
+      fixedPeakBinCount: Number.isFinite(result.fixedPeakBinCount) ? result.fixedPeakBinCount : derived.fixedPeakBinCount,
+      fixedOverlapGroupCount: Number.isFinite(result.fixedOverlapGroupCount)
+        ? result.fixedOverlapGroupCount
+        : derived.fixedOverlapGroupCount,
       overlapBins: Array.isArray(result.overlapBins) && result.overlapBins.length
         ? result.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
         : derived.overlapBins,
+      overlapGroups: Array.isArray(result.overlapGroups) && result.overlapGroups.length
+        ? result.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
+        : derived.overlapGroups,
     };
   });
 }
@@ -1494,7 +1508,11 @@ function renderTimingOverlapAnalysis() {
   }
 
   const maxCount = bins.reduce((max, bin) => Math.max(max, bin.count), 1);
-  els.timingOverlapSummary.textContent = `Peak 8ms bin: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount}`;
+  const fixedPeak = Number.isFinite(result.fixedPeakBinCount) ? result.fixedPeakBinCount : maxCount;
+  const fixedGroups = Number.isFinite(result.fixedOverlapGroupCount)
+    ? result.fixedOverlapGroupCount
+    : bins.filter((bin) => bin.isOverlapGroup).length;
+  els.timingOverlapSummary.textContent = `Any 8ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount} | Fixed-bin chart peak: ${fixedPeak} | Fixed-bin overlaps: ${fixedGroups}`;
   const tickStep = Math.max(1, Math.ceil(bins.length / 8));
   const yTicks = buildTimingOverlapTicks(maxCount);
   els.timingOverlapChart.innerHTML = `
