@@ -37,8 +37,12 @@ function summarizeDelayCounts(holeTimes) {
 function buildOverlapBins(holeTimes, windowMs = 8) {
   if (!holeTimes?.size) return [];
   const bins = new Map();
+  let minValue = Infinity;
+  let maxValue = -Infinity;
   for (const [holeId, value] of holeTimes.entries()) {
     if (!Number.isFinite(value)) continue;
+    minValue = Math.min(minValue, value);
+    maxValue = Math.max(maxValue, value);
     const startMs = Math.floor(value / windowMs) * windowMs;
     const existing = bins.get(startMs) || {
       key: String(startMs),
@@ -53,13 +57,27 @@ function buildOverlapBins(holeTimes, windowMs = 8) {
     existing.count += 1;
     bins.set(startMs, existing);
   }
-  return [...bins.values()]
-    .sort((a, b) => a.startMs - b.startMs)
-    .map((bin) => ({
-      ...bin,
-      holeIds: [...bin.holeIds],
-      isOverlapGroup: bin.count > 1,
-    }));
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return [];
+  const minStart = Math.floor(minValue / windowMs) * windowMs;
+  const maxStart = Math.floor(maxValue / windowMs) * windowMs;
+  const normalized = [];
+  for (let startMs = minStart; startMs <= maxStart; startMs += windowMs) {
+    const existing = bins.get(startMs) || {
+      key: String(startMs),
+      startMs,
+      endMs: startMs + windowMs,
+      label: binLabel(startMs, startMs + windowMs),
+      holeIds: [],
+      count: 0,
+      isOverlapGroup: false,
+    };
+    normalized.push({
+      ...existing,
+      holeIds: [...existing.holeIds],
+      isOverlapGroup: existing.count > 1,
+    });
+  }
+  return normalized;
 }
 
 export function deriveTimingAnalysis(holeTimes, windowMs = 8) {
