@@ -804,6 +804,10 @@ function replaceProjectStateFromDocument(document) {
   if (!projectState.geo.statePlaneEpsg && projectState.diagram.metadata.location) {
     applyProjectGeoFromLocation(projectState.diagram.metadata.location);
   }
+  if (projectState.geo.statePlaneEpsg) {
+    projectState.holes.forEach((hole) => refreshHoleDerivedCoordinatesForGeo(hole, projectState.geo));
+    refreshProjectHoles(projectState.holes);
+  }
   hydrateDiagramFromProject();
   hydrateSolverFromProject();
   renderCloudProjectUi();
@@ -3451,12 +3455,29 @@ function reprojectPointForGeo(point, geo) {
   return point;
 }
 
+function refreshPointLatLonFromStatePlane(point, geo) {
+  if (!point?.coordinates?.statePlane) return point;
+  const latLon = statePlaneToLatLon(point.coordinates.statePlane, geo);
+  if (!latLon) return point;
+  point.coordinates.latLon = {
+    lat: latLon.lat,
+    lon: latLon.lon,
+  };
+  return point;
+}
+
+function refreshHoleDerivedCoordinatesForGeo(hole, geo) {
+  refreshPointLatLonFromStatePlane(hole.collar, geo);
+  refreshPointLatLonFromStatePlane(hole.toe, geo);
+  if (hole.collar?.coordinates) hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
+}
+
 function reprojectDiagramHolesForGeo(geo) {
   if (!geo?.statePlaneEpsg) return;
   diagramState.holes.forEach((hole) => {
     reprojectPointForGeo(hole.collar, geo);
-    if (hole.collar?.coordinates) hole.coordinates = cloneCoordinateBundle(hole.collar.coordinates);
     reprojectPointForGeo(hole.toe, geo);
+    refreshHoleDerivedCoordinatesForGeo(hole, geo);
   });
   deriveLocalizedHoleCoordinates(diagramState.holes);
   applyCoordinateView(diagramState, els.diagramCoordViewSelect, diagramRenderer, diagramState.ui.coordView, { fit: false });

@@ -4,9 +4,9 @@ const FEET_TO_METERS = 0.3048;
 const METERS_TO_FEET = 1 / FEET_TO_METERS;
 
 const PROJECTION_DEFINITIONS = {
-  6487: "+proj=lcc +lat_0=37.6666666666667 +lon_0=-77.5 +lat_1=38.0333333333333 +lat_2=39.2 +x_0=3500000 +y_0=2000000 +datum=NAD83 +units=m +no_defs +type=crs",
+  6487: "+proj=lcc +lat_0=37.6666666666667 +lon_0=-77 +lat_1=39.45 +lat_2=38.3 +x_0=400000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs",
   6592: "+proj=lcc +lat_0=36.3333333333333 +lon_0=-78.5 +lat_1=36.7666666666667 +lat_2=37.9666666666667 +x_0=3500000 +y_0=2000000 +datum=NAD83 +units=m +no_defs +type=crs",
-  6600: "+proj=lcc +lat_0=39 +lon_0=-79.5 +lat_1=39.45 +lat_2=40.25 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +type=crs",
+  6600: "+proj=lcc +lat_0=38.5 +lon_0=-79.5 +lat_1=40.25 +lat_2=39 +x_0=600000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs",
 };
 
 function normalizeEpsg(epsg) {
