@@ -623,6 +623,17 @@
       <label>Stem Height
         <input id="diagramHolePopupStemHeightInput" type="number" step="0.01">
       </label>
+      <h3 class="subsection-title">Shot Corner</h3>
+      <div id="diagramHolePopupCornerStatus" class="status-note">This hole is not assigned to a shot corner.</div>
+      <div class="row-actions row-actions-wrap">
+        <button type="button" data-hole-popup-corner-set="0">Set Corner 1</button>
+        <button type="button" data-hole-popup-corner-set="1">Set Corner 2</button>
+      </div>
+      <div class="row-actions row-actions-wrap">
+        <button type="button" data-hole-popup-corner-set="2">Set Corner 3</button>
+        <button type="button" data-hole-popup-corner-set="3">Set Corner 4</button>
+      </div>
+      <button id="diagramHolePopupClearCornerBtn" type="button">Clear This Corner</button>
       <div class="row-actions">
         <button id="diagramHolePopupSaveBtn" type="button">Apply</button>
         <button id="diagramHolePopupCancelBtn" type="button">Cancel</button>

@@ -487,6 +487,9 @@ const els = {
   diagramHolePopupBearingInput: document.getElementById("diagramHolePopupBearingInput"),
   diagramHolePopupDepthInput: document.getElementById("diagramHolePopupDepthInput"),
   diagramHolePopupStemHeightInput: document.getElementById("diagramHolePopupStemHeightInput"),
+  diagramHolePopupCornerStatus: document.getElementById("diagramHolePopupCornerStatus"),
+  diagramHolePopupSetCornerBtns: [...document.querySelectorAll("[data-hole-popup-corner-set]")],
+  diagramHolePopupClearCornerBtn: document.getElementById("diagramHolePopupClearCornerBtn"),
   diagramHolePopupSaveBtn: document.getElementById("diagramHolePopupSaveBtn"),
   diagramHolePopupCancelBtn: document.getElementById("diagramHolePopupCancelBtn"),
   printWorkspace: document.getElementById("printWorkspace"),
@@ -2900,6 +2903,18 @@ function closeDiagramHolePopup() {
   diagramState.ui.holePopupHoleId = null;
 }
 
+function renderDiagramHolePopupCornerControls(hole) {
+  const assignedIndex = diagramState.shotCorners.findIndex((cornerId) => cornerId === hole.id);
+  els.diagramHolePopupCornerStatus.textContent = assignedIndex >= 0
+    ? `This hole is assigned to ${shotCornerLabel(assignedIndex)}.`
+    : "This hole is not assigned to a shot corner.";
+  els.diagramHolePopupSetCornerBtns.forEach((button) => {
+    const index = Number(button.getAttribute("data-hole-popup-corner-set"));
+    button.classList.toggle("active", index === assignedIndex);
+  });
+  els.diagramHolePopupClearCornerBtn.disabled = assignedIndex < 0;
+}
+
 function openDiagramHolePopup(hole) {
   if (!hole) return;
   diagramState.ui.holePopupHoleId = hole.id;
@@ -2907,6 +2922,7 @@ function openDiagramHolePopup(hole) {
   els.diagramHolePopupStatus.textContent = `Editing ${hole.holeNumber || hole.id}`;
   setDiagramPropertyInputsFromHole(diagramHolePopupInputMap(), hole);
   els.diagramHolePopupAngleInput.placeholder = "0, 5, 10, 15, 20, 25, or 30";
+  renderDiagramHolePopupCornerControls(hole);
   els.diagramHolePopupBackdrop.classList.remove("hidden");
   els.diagramHolePopupBackdrop.setAttribute("aria-hidden", "false");
   els.diagramHolePopupBurdenInput.focus();
@@ -2931,6 +2947,27 @@ function applyDiagramHolePopupChanges() {
   Object.assign(hole, result.patch);
   closeDiagramHolePopup();
   fullDiagramRefresh();
+}
+
+function setShotCornerFromPopup(index) {
+  const holeId = diagramState.ui.holePopupHoleId;
+  const hole = holeId ? diagramState.holesById.get(holeId) : null;
+  if (!hole) return;
+  diagramState.shotCorners = diagramState.shotCorners.map((cornerId, cornerIndex) => {
+    if (cornerIndex === index) return hole.id;
+    return cornerId === hole.id ? null : cornerId;
+  });
+  fullDiagramRefresh();
+  renderDiagramHolePopupCornerControls(hole);
+}
+
+function clearShotCornerFromPopup() {
+  const holeId = diagramState.ui.holePopupHoleId;
+  const hole = holeId ? diagramState.holesById.get(holeId) : null;
+  if (!hole) return;
+  diagramState.shotCorners = diagramState.shotCorners.map((cornerId) => (cornerId === hole.id ? null : cornerId));
+  fullDiagramRefresh();
+  renderDiagramHolePopupCornerControls(hole);
 }
 
 function setDiagramToolMode(mode) {
@@ -3648,6 +3685,13 @@ els.diagramClearTextBtn.addEventListener("click", () => {
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramHolePopupSaveBtn.addEventListener("click", () => applyDiagramHolePopupChanges());
 els.diagramHolePopupCancelBtn.addEventListener("click", () => closeDiagramHolePopup());
+els.diagramHolePopupSetCornerBtns.forEach((button) => {
+  button.addEventListener("click", () => {
+    const index = Number(button.getAttribute("data-hole-popup-corner-set"));
+    if (Number.isInteger(index) && index >= 0 && index < 4) setShotCornerFromPopup(index);
+  });
+});
+els.diagramHolePopupClearCornerBtn.addEventListener("click", () => clearShotCornerFromPopup());
 els.diagramApplyDefaultDiameterBtn.addEventListener("click", () => applyDefaultDiameterToDiagramSelection());
 els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramState.selection = new Set();
