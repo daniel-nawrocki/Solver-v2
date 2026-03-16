@@ -945,22 +945,18 @@ export class DiagramRenderer {
     });
 
     this.canvas.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       const hole = this.findHoleAtScreen(x, y);
       if (hole) {
         const handled = this.onHoleContextMenu(hole, event, { x, y });
-        if (handled !== false) event.preventDefault();
         return;
       }
       const canvasHandled = this.onCanvasContextMenu({ x, y, event, hole: null });
-      if (canvasHandled) {
-        event.preventDefault();
-        return;
-      }
-      const relationship = this.findRelationshipAtScreen(x, y);
-      if (relationship) event.preventDefault();
+      if (canvasHandled) return;
+      this.findRelationshipAtScreen(x, y);
     });
 
     this.canvas.addEventListener("wheel", (event) => {
