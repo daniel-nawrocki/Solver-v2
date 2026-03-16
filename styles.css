@@ -786,6 +786,31 @@ button:active {
   max-height: calc(100vh - 235px);
 }
 
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 115;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(4px);
+}
+
+.dialog-panel {
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 36px rgba(15, 32, 56, 0.2);
+}
+
+.dialog-panel h2 {
+  margin-bottom: var(--space-3);
+}
+
 .floating-toolkit {
   position: fixed;
   left: 50%;

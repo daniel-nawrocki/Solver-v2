@@ -145,6 +145,7 @@ function createDiagramState() {
       currentStrokeDraft: null,
       pendingFaceDesignation: false,
       faceDesignationReturnTool: "single",
+      holePopupHoleId: null,
     },
     metadata: {
       shotNumber: "",
@@ -437,6 +438,19 @@ const els = {
   diagramStemHeightInput: document.getElementById("diagramStemHeightInput"),
   diagramApplyPropertiesBtn: document.getElementById("diagramApplyPropertiesBtn"),
   diagramClearSelectionBtn: document.getElementById("diagramClearSelectionBtn"),
+  diagramHolePopupBackdrop: document.getElementById("diagramHolePopupBackdrop"),
+  diagramHolePopup: document.getElementById("diagramHolePopup"),
+  diagramHolePopupTitle: document.getElementById("diagramHolePopupTitle"),
+  diagramHolePopupStatus: document.getElementById("diagramHolePopupStatus"),
+  diagramHolePopupBurdenInput: document.getElementById("diagramHolePopupBurdenInput"),
+  diagramHolePopupSpacingInput: document.getElementById("diagramHolePopupSpacingInput"),
+  diagramHolePopupDiameterInput: document.getElementById("diagramHolePopupDiameterInput"),
+  diagramHolePopupAngleInput: document.getElementById("diagramHolePopupAngleInput"),
+  diagramHolePopupBearingInput: document.getElementById("diagramHolePopupBearingInput"),
+  diagramHolePopupDepthInput: document.getElementById("diagramHolePopupDepthInput"),
+  diagramHolePopupStemHeightInput: document.getElementById("diagramHolePopupStemHeightInput"),
+  diagramHolePopupSaveBtn: document.getElementById("diagramHolePopupSaveBtn"),
+  diagramHolePopupCancelBtn: document.getElementById("diagramHolePopupCancelBtn"),
   printWorkspace: document.getElementById("printWorkspace"),
   printPageStrip: document.getElementById("printPageStrip"),
   printPageTabs: document.getElementById("printPageTabs"),
@@ -485,7 +499,7 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
   onPointerDown: handleDiagramPointerDown,
   onPointerMove: handleDiagramPointerMove,
   onDoubleClick: () => false,
-  onHoleContextMenu: () => {},
+  onHoleContextMenu: handleDiagramHoleContextMenu,
   onCanvasContextMenu: handleDiagramCanvasContextMenu,
   onViewChange: handleDiagramRendererViewChange,
 });
@@ -560,6 +574,7 @@ function setActiveWorkspace(workspaceId) {
     diagramState.ui.pendingFaceDesignation = false;
     diagramState.ui.selectionPolygonDraft = null;
   }
+  if (workspaceId !== "diagramMaker") closeDiagramHolePopup();
   closeAllMenus();
   closeHelpWorkspace();
   closePrintWorkspace();
@@ -618,6 +633,9 @@ function initMenuToggles() {
   els.menuPanels.forEach((panel) => {
     panel.addEventListener("click", (event) => event.stopPropagation());
   });
+
+  els.diagramHolePopup.addEventListener("click", (event) => event.stopPropagation());
+  els.diagramHolePopupBackdrop.addEventListener("click", () => closeDiagramHolePopup());
 
   document.addEventListener("click", () => closeAllMenus());
   document.addEventListener("keydown", (event) => {
@@ -2429,6 +2447,101 @@ function selectedDiagramHoles() {
   return [...diagramState.selection].map((id) => diagramState.holesById.get(id)).filter(Boolean);
 }
 
+function diagramPropertyInputMap() {
+  return {
+    burden: els.diagramBurdenInput,
+    spacing: els.diagramSpacingInput,
+    diameter: els.diagramDiameterInput,
+    angle: els.diagramAngleInput,
+    bearing: els.diagramBearingInput,
+    depth: els.diagramDepthInput,
+    stemHeight: els.diagramStemHeightInput,
+  };
+}
+
+function diagramHolePopupInputMap() {
+  return {
+    burden: els.diagramHolePopupBurdenInput,
+    spacing: els.diagramHolePopupSpacingInput,
+    diameter: els.diagramHolePopupDiameterInput,
+    angle: els.diagramHolePopupAngleInput,
+    bearing: els.diagramHolePopupBearingInput,
+    depth: els.diagramHolePopupDepthInput,
+    stemHeight: els.diagramHolePopupStemHeightInput,
+  };
+}
+
+function setDiagramPropertyInputsFromHole(inputs, hole) {
+  Object.entries(inputs).forEach(([field, input]) => {
+    const value = hole?.[field];
+    input.value = Number.isFinite(value) ? String(value) : "";
+  });
+}
+
+function collectDiagramPropertyPatchFromInputs(fieldToInput) {
+  const patch = {};
+  let invalidAngle = false;
+  Object.entries(fieldToInput).forEach(([field, input]) => {
+    const raw = input.value.trim();
+    if (!raw) return;
+    if (field === "angle") {
+      const angle = parseEditableAngleValue(raw);
+      if (angle === null) {
+        invalidAngle = true;
+        return;
+      }
+      patch[field] = angle;
+      return;
+    }
+    const value = Number(raw);
+    if (Number.isFinite(value)) patch[field] = value;
+  });
+  return { patch, invalidAngle };
+}
+
+function closeDiagramHolePopup() {
+  if (els.diagramHolePopupBackdrop.classList.contains("hidden")) return;
+  els.diagramHolePopupBackdrop.classList.add("hidden");
+  els.diagramHolePopupBackdrop.setAttribute("aria-hidden", "true");
+  diagramState.ui.holePopupHoleId = null;
+}
+
+function openDiagramHolePopup(hole) {
+  if (!hole) return;
+  diagramState.selection = new Set([hole.id]);
+  renderDiagramPropertiesPanel();
+  diagramRenderer.render();
+  diagramState.ui.holePopupHoleId = hole.id;
+  els.diagramHolePopupTitle.textContent = `Hole ${hole.holeNumber || hole.id}`;
+  els.diagramHolePopupStatus.textContent = `Editing ${hole.holeNumber || hole.id}`;
+  setDiagramPropertyInputsFromHole(diagramHolePopupInputMap(), hole);
+  els.diagramHolePopupAngleInput.placeholder = "0, 5, 10, 15, 20, 25, or 30";
+  els.diagramHolePopupBackdrop.classList.remove("hidden");
+  els.diagramHolePopupBackdrop.setAttribute("aria-hidden", "false");
+  els.diagramHolePopupBurdenInput.focus();
+}
+
+function applyDiagramHolePopupChanges() {
+  const holeId = diagramState.ui.holePopupHoleId;
+  const hole = diagramState.holesById.get(holeId);
+  if (!hole) {
+    closeDiagramHolePopup();
+    return;
+  }
+  const result = collectDiagramPropertyPatchFromInputs(diagramHolePopupInputMap());
+  if (result.invalidAngle) {
+    window.alert("Angle must be 0 or one of: 5, 10, 15, 20, 25, 30.");
+    return;
+  }
+  if (!Object.keys(result.patch).length) {
+    window.alert("Enter at least one property value to apply.");
+    return;
+  }
+  Object.assign(hole, result.patch);
+  closeDiagramHolePopup();
+  fullDiagramRefresh();
+}
+
 function setDiagramToolMode(mode) {
   const nextMode = normalizeAnnotationTool(mode);
   diagramState.ui.activeTool = nextMode;
@@ -2618,17 +2731,21 @@ function handleDiagramCanvasContextMenu() {
   return false;
 }
 
+function handleDiagramHoleContextMenu(hole) {
+  if ((diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") && diagramState.ui.selectionPolygonDraft?.points?.length >= 3) {
+    finalizeDiagramPolygonSelection();
+    return true;
+  }
+  if (diagramState.ui.currentStrokeDraft) return true;
+  closeAllMenus();
+  openDiagramHolePopup(hole);
+  return true;
+}
+
 function renderDiagramPropertiesPanel() {
   const selected = selectedDiagramHoles();
-  const inputs = [
-    els.diagramBurdenInput,
-    els.diagramSpacingInput,
-    els.diagramDiameterInput,
-    els.diagramAngleInput,
-    els.diagramBearingInput,
-    els.diagramDepthInput,
-    els.diagramStemHeightInput,
-  ];
+  const fieldToInput = diagramPropertyInputMap();
+  const inputs = Object.values(fieldToInput);
   if (!selected.length) {
     els.diagramSelectionStatus.textContent = "Selection: no holes selected";
     els.diagramSelectionList.innerHTML = "<div>Select a hole to edit its properties, or shift-select multiple holes.</div>";
@@ -2649,16 +2766,6 @@ function renderDiagramPropertiesPanel() {
     : `Selection: ${selected.length} holes selected`;
   els.diagramSelectionList.innerHTML = selected.slice(0, 8).map((hole) => `<div>${escapeHtml(hole.holeNumber || hole.id)}</div>`).join("")
     + (selected.length > 8 ? `<div>+${selected.length - 8} more</div>` : "");
-
-  const fieldToInput = {
-    burden: els.diagramBurdenInput,
-    spacing: els.diagramSpacingInput,
-    diameter: els.diagramDiameterInput,
-    angle: els.diagramAngleInput,
-    bearing: els.diagramBearingInput,
-    depth: els.diagramDepthInput,
-    stemHeight: els.diagramStemHeightInput,
-  };
 
   Object.entries(fieldToInput).forEach(([field, input]) => {
     const firstValue = selected[0][field];
@@ -2710,33 +2817,7 @@ function applyDiagramImportedHoles(holes) {
 }
 
 function collectDiagramPropertyPatch() {
-  const patch = {};
-  let invalidAngle = false;
-  const fieldToInput = {
-    burden: els.diagramBurdenInput,
-    spacing: els.diagramSpacingInput,
-    diameter: els.diagramDiameterInput,
-    angle: els.diagramAngleInput,
-    bearing: els.diagramBearingInput,
-    depth: els.diagramDepthInput,
-    stemHeight: els.diagramStemHeightInput,
-  };
-  Object.entries(fieldToInput).forEach(([field, input]) => {
-    const raw = input.value.trim();
-    if (!raw) return;
-    if (field === "angle") {
-      const angle = parseEditableAngleValue(raw);
-      if (angle === null) {
-        invalidAngle = true;
-        return;
-      }
-      patch[field] = angle;
-      return;
-    }
-    const value = Number(raw);
-    if (Number.isFinite(value)) patch[field] = value;
-  });
-  return { patch, invalidAngle };
+  return collectDiagramPropertyPatchFromInputs(diagramPropertyInputMap());
 }
 
 function applyDiagramPropertyPatchToSelection(result) {
@@ -3044,6 +3125,8 @@ els.diagramClearTextBtn.addEventListener("click", () => {
   diagramRenderer.render();
 });
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
+els.diagramHolePopupSaveBtn.addEventListener("click", () => applyDiagramHolePopupChanges());
+els.diagramHolePopupCancelBtn.addEventListener("click", () => closeDiagramHolePopup());
 els.diagramApplyDefaultDiameterBtn.addEventListener("click", () => applyDefaultDiameterToDiagramSelection());
 els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramState.selection = new Set();
@@ -3321,6 +3404,10 @@ window.addEventListener("beforeprint", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !els.diagramHolePopupBackdrop.classList.contains("hidden")) {
+    closeDiagramHolePopup();
+    return;
+  }
   if (isDiagramWorkspaceActive() && (diagramState.ui.pendingFaceDesignation || diagramState.ui.activeTool === "polygon") && event.key === "Enter") {
     finalizeDiagramPolygonSelection();
     return;
