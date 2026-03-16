@@ -782,6 +782,10 @@ button:active {
   backdrop-filter: blur(10px);
 }
 
+#diagramImportMenu {
+  max-height: calc(100vh - 235px);
+}
+
 .floating-toolkit {
   position: fixed;
   left: 50%;
