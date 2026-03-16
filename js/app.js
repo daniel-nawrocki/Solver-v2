@@ -655,8 +655,16 @@ function initMenuToggles() {
     panel.addEventListener("click", (event) => event.stopPropagation());
   });
 
-  els.diagramHolePopup.addEventListener("click", (event) => event.stopPropagation());
-  els.diagramHolePopupBackdrop.addEventListener("click", () => closeDiagramHolePopup());
+els.diagramHolePopup.addEventListener("click", (event) => event.stopPropagation());
+els.diagramHolePopup.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+});
+els.diagramHolePopupBackdrop.addEventListener("click", () => closeDiagramHolePopup());
+els.diagramHolePopupBackdrop.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+});
 
   document.addEventListener("click", () => closeAllMenus());
   document.addEventListener("keydown", (event) => {
