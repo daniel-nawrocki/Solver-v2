@@ -110,6 +110,7 @@ body {
 .topbar-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   flex: 1 1 0;
   justify-content: flex-end;
@@ -156,7 +157,7 @@ body {
 
 .topbar-actions button {
   width: auto;
-  min-width: 156px;
+  min-width: 120px;
 }
 
 .corner-dock {
@@ -481,17 +482,21 @@ button:active {
   align-items: flex-end;
   justify-content: center;
   padding: 4px 8px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .timing-visualization-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 }
 
 .timing-visualization-row button {
   flex: 0 0 auto;
-  min-width: 118px;
+  min-width: 108px;
   padding: 7px 12px;
   font-size: 10px;
 }
@@ -507,7 +512,7 @@ button:active {
 }
 
 .timing-visualization-row select {
-  min-width: 64px;
+  min-width: 60px;
   padding: 6px 8px;
   font-size: 10px;
 }
@@ -1515,6 +1520,14 @@ body.help-active .print-workspace {
     justify-content: flex-start;
   }
 
+  .timing-visualization-controls {
+    align-items: flex-start;
+  }
+
+  .timing-visualization-row {
+    justify-content: flex-start;
+  }
+
   .topbar-actions button {
     min-width: 0;
     flex: 1 1 140px;
@@ -1592,6 +1605,7 @@ body.help-active .print-workspace {
   .topbar,
   .workspace,
   .help-workspace,
+  .corner-dock,
   .print-page-strip,
   .print-toolbar {
     display: none !important;

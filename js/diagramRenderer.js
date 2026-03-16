@@ -38,9 +38,9 @@ function formatPatternPair(burden, spacing) {
 
 function angleColor(value) {
   switch (Math.round(value)) {
-    case 5: return "#f59e0b";
+    case 5: return "#f97316";
     case 10: return "#22c55e";
-    case 15: return "#eab308";
+    case 15: return "#ffdd00";
     case 20: return "#ef4444";
     case 25: return "#3b82f6";
     case 30: return "#ec4899";
@@ -652,13 +652,28 @@ export class DiagramRenderer {
       const point = this.worldToScreen(hole.x, hole.y);
       const selected = this.stateRef.selection.has(hole.id);
       const isOrigin = !diagramMode && hole.id === originHoleId;
+      const useSelectionHighlight = diagramMode && selected;
       const time = preview ? preview.holeTimes.get(hole.id) : null;
+
+      if (useSelectionHighlight) {
+        this.ctx.beginPath();
+        this.ctx.arc(point.x, point.y, this.holeRadius + 4, 0, Math.PI * 2);
+        this.ctx.fillStyle = "rgba(239, 68, 68, 0.20)";
+        this.ctx.fill();
+      }
+
       this.ctx.beginPath();
       this.ctx.arc(point.x, point.y, this.holeRadius, 0, Math.PI * 2);
-      this.ctx.fillStyle = preview ? timingColor(time, minT, maxT) : diagramMode ? "#3c4f66" : "#475569";
+      this.ctx.fillStyle = preview
+        ? timingColor(time, minT, maxT)
+        : useSelectionHighlight
+          ? "#ef4444"
+          : diagramMode
+            ? "#3c4f66"
+            : "#475569";
       this.ctx.fill();
-      this.ctx.lineWidth = isOrigin ? 4 : selected ? 3 : 1;
-      this.ctx.strokeStyle = isOrigin ? "#f59e0b" : selected ? "#0f172a" : "#dbe4ee";
+      this.ctx.lineWidth = isOrigin ? 4 : useSelectionHighlight ? 2.5 : selected ? 3 : 1;
+      this.ctx.strokeStyle = isOrigin ? "#f59e0b" : useSelectionHighlight ? "#991b1b" : selected ? "#0f172a" : "#dbe4ee";
       this.ctx.stroke();
 
       if (isOrigin) {
