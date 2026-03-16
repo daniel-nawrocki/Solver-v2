@@ -1388,14 +1388,14 @@ function renderTimingOverlapAnalysis() {
   const maxCount = bins.reduce((max, bin) => Math.max(max, bin.count), 1);
   els.timingOverlapSummary.textContent = `Peak 8ms bin: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount}`;
   const tickStep = Math.max(1, Math.ceil(bins.length / 8));
-  const yTicks = [maxCount, Math.max(1, Math.round(maxCount / 2)), 0];
+  const yTicks = buildTimingOverlapTicks(maxCount);
   els.timingOverlapChart.innerHTML = `
     <div class="timing-overlap-plot">
-      <div class="timing-overlap-yaxis">
+      <div class="timing-overlap-yaxis" style="grid-template-rows:repeat(${yTicks.length}, 1fr)">
         ${yTicks.map((tick) => `<span>${escapeHtml(String(tick))}</span>`).join("")}
       </div>
       <div class="timing-overlap-canvas">
-        <div class="timing-overlap-grid">
+        <div class="timing-overlap-grid" style="grid-template-rows:repeat(${yTicks.length}, 1fr)">
           ${yTicks.map(() => '<span></span>').join("")}
         </div>
         <div class="timing-overlap-bars">
@@ -1417,6 +1417,18 @@ function renderTimingOverlapAnalysis() {
       </div>
     </div>
   `;
+}
+
+function buildTimingOverlapTicks(maxCount) {
+  if (maxCount <= 1) return [1, 0];
+  if (maxCount <= 3) {
+    return Array.from({ length: maxCount + 1 }, (_, index) => maxCount - index);
+  }
+  const tickCount = 4;
+  return Array.from({ length: tickCount }, (_, index) => {
+    const ratio = (tickCount - 1 - index) / (tickCount - 1);
+    return Math.round(maxCount * ratio);
+  });
 }
 
 function syncManualTimingFromInputs() {
