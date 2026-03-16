@@ -493,13 +493,62 @@ export class DiagramRenderer {
       if (!item?.text || !item.anchor) return;
       const size = diagramAnnotationSizeConfig(item.size);
       const anchor = this.worldToScreen(item.anchor.x, item.anchor.y);
+      const fontSize = Math.max(10, Math.round(size.textSize * this.textScale()));
+      const isSelected = this.stateRef.ui?.selectedTextId === item.id;
+      this.ctx.save();
+      this.ctx.font = canvasUiFont(fontSize, 700);
+      const metrics = this.ctx.measureText(item.text);
+      const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+      const descent = metrics.actualBoundingBoxDescent || fontSize * 0.25;
+      const boxLeft = anchor.x - 4;
+      const boxTop = anchor.y - ascent - 3;
+      const boxWidth = metrics.width + 8;
+      const boxHeight = ascent + descent + 6;
+      if (isSelected) {
+        this.ctx.fillStyle = "rgba(47, 125, 246, 0.10)";
+        this.ctx.strokeStyle = "rgba(47, 125, 246, 0.72)";
+        this.ctx.lineWidth = 1.2;
+        this.ctx.beginPath();
+        this.ctx.roundRect(boxLeft, boxTop, boxWidth, boxHeight, 6);
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+      this.ctx.restore();
       this.ctx.save();
       this.ctx.fillStyle = item.color || "#000000";
-      this.ctx.font = canvasUiFont(Math.max(10, Math.round(size.textSize * this.textScale())), 700);
+      this.ctx.font = canvasUiFont(fontSize, 700);
       this.ctx.textBaseline = "alphabetic";
       this.ctx.fillText(item.text, anchor.x, anchor.y);
       this.ctx.restore();
     });
+  }
+
+  findDiagramTextAtScreen(x, y) {
+    if (!this.isDiagramMode()) return null;
+    const texts = this.stateRef.annotations?.texts || [];
+    for (let index = texts.length - 1; index >= 0; index -= 1) {
+      const item = texts[index];
+      if (!item?.text || !item.anchor) continue;
+      const size = diagramAnnotationSizeConfig(item.size);
+      const anchor = this.worldToScreen(item.anchor.x, item.anchor.y);
+      const fontSize = Math.max(10, Math.round(size.textSize * this.textScale()));
+      this.ctx.save();
+      this.ctx.font = canvasUiFont(fontSize, 700);
+      const metrics = this.ctx.measureText(item.text);
+      this.ctx.restore();
+      const ascent = metrics.actualBoundingBoxAscent || fontSize * 0.8;
+      const descent = metrics.actualBoundingBoxDescent || fontSize * 0.25;
+      const rect = {
+        left: anchor.x - 4,
+        top: anchor.y - ascent - 3,
+        width: metrics.width + 8,
+        height: ascent + descent + 6,
+      };
+      if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) {
+        return { item, rect };
+      }
+    }
+    return null;
   }
 
   isDiagramPrintMode() {

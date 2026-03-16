@@ -54,6 +54,7 @@ function cloneAnnotations(annotations = {}) {
       points: (stroke.points || []).map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0 })),
     })),
     texts: (annotations.texts || []).map((item) => ({
+      id: item.id || `text-${Math.random().toString(36).slice(2, 10)}`,
       text: item.text || "",
       color: item.color || "#000000",
       size: item.size || "medium",

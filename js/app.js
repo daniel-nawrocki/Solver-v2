@@ -147,6 +147,9 @@ function createDiagramState() {
       annotationColor: "#000000",
       annotationSize: "medium",
       currentStrokeDraft: null,
+      selectedTextId: null,
+      dragTextId: null,
+      dragTextPointerDelta: null,
       pendingFaceDesignation: false,
       faceDesignationReturnTool: "single",
       holePopupHoleId: null,
@@ -406,8 +409,6 @@ const els = {
   printLabelAngleDial: document.getElementById("printLabelAngleDial"),
   printLabelAnglePointer: document.getElementById("printLabelAnglePointer"),
   printLabelAngleValue: document.getElementById("printLabelAngleValue"),
-  printLabelDistanceInput: document.getElementById("printLabelDistanceInput"),
-  printLabelDistanceValue: document.getElementById("printLabelDistanceValue"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
   holeRelationNegativeToolBtn: document.getElementById("holeRelationNegativeToolBtn"),
@@ -439,9 +440,6 @@ const els = {
   diagramAssignFaceBtn: document.getElementById("diagramAssignFaceBtn"),
   diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
   diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
-  diagramShotCornerStatusList: document.getElementById("diagramShotCornerStatusList"),
-  diagramSetShotCornerBtns: [...document.querySelectorAll("[data-shot-corner-set]")],
-  diagramClearShotCornersBtn: document.getElementById("diagramClearShotCornersBtn"),
   diagramRockDensityInput: document.getElementById("diagramRockDensityInput"),
   diagramVolumeIncludedStatus: document.getElementById("diagramVolumeIncludedStatus"),
   diagramVolumeCubicYardsStatus: document.getElementById("diagramVolumeCubicYardsStatus"),
@@ -1141,6 +1139,7 @@ function cloneDiagramAnnotations(annotations = {}) {
       points: (stroke.points || []).map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0 })),
     })),
     texts: (annotations.texts || []).map((item) => ({
+      id: item.id || `text-${Math.random().toString(36).slice(2, 10)}`,
       text: item.text || "",
       color: item.color || "#000000",
       size: item.size || "medium",
@@ -1280,6 +1279,9 @@ function hydrateDiagramFromProject() {
   diagramState.ui.annotationColor = projectState.diagram.ui.annotationColor || "#000000";
   diagramState.ui.annotationSize = projectState.diagram.ui.annotationSize || "medium";
   diagramState.ui.currentStrokeDraft = null;
+  diagramState.ui.selectedTextId = null;
+  diagramState.ui.dragTextId = null;
+  diagramState.ui.dragTextPointerDelta = null;
   diagramState.ui.pendingFaceDesignation = false;
   diagramState.ui.faceDesignationReturnTool = "single";
   diagramState.metadata = cloneDiagramMetadata(projectState.diagram.metadata);
@@ -1570,9 +1572,7 @@ function activePrintLabelAngle() {
 }
 
 function updatePrintLabelDistance(distance) {
-  const normalized = Math.max(0, Math.min(20, Number(distance) || 0));
-  els.printLabelDistanceInput.value = String(normalized);
-  els.printLabelDistanceValue.textContent = `${Math.round(normalized)} px`;
+  return Math.max(0, Math.min(20, Number(distance) || 0));
 }
 
 function activePrintLabelDistance() {
@@ -1592,7 +1592,6 @@ function setActivePrintLabelDistance(distance) {
   const page = activePrintPage();
   if (!page || page.ui.workspaceMode !== "diagram") return;
   page.ui.labelDistancePx = Math.max(0, Math.min(20, Number(distance) || 0));
-  updatePrintLabelDistance(page.ui.labelDistancePx);
   printRenderer.render();
   renderPrintPageTabs();
 }
@@ -1847,7 +1846,6 @@ function syncPrintControls() {
   els.printBearingArrowWeightInput.value = String(page.ui.bearingArrowWeight || 1);
   els.printBearingArrowLengthInput.value = String(page.ui.bearingArrowLength || 16);
   updatePrintLabelAngleDial(page.ui.labelAngleDeg);
-  updatePrintLabelDistance(page.ui.labelDistancePx);
   els.printDepthToggle.checked = page.ui.showDepthLabels !== false;
   els.printCornerCoordsToggle.checked = page.ui.showCornerCoordinates === true;
   applyPrintPageChrome(page);
@@ -2193,13 +2191,6 @@ function shotCornerLabel(index) {
   return `Corner ${index + 1}`;
 }
 
-function shotCornerStatusMarkup() {
-  return diagramState.shotCorners.map((cornerId, index) => {
-    const hole = cornerId ? diagramState.holesById.get(cornerId) : null;
-    return `<div>${shotCornerLabel(index)}: ${escapeHtml(hole?.holeNumber || hole?.id || "not set")}</div>`;
-  }).join("");
-}
-
 function applyQuarryDensityDefault(locationName) {
   const quarry = quarryByName(locationName);
   if (!quarry) return;
@@ -2250,11 +2241,6 @@ function renderDiagramShotPanel() {
   els.diagramGeoStatus.textContent = geo.statePlaneEpsg
     ? `State Plane EPSG: ${geo.statePlaneEpsg} | Unit: ${geo.statePlaneUnit}`
     : "State Plane EPSG: not assigned";
-  els.diagramShotCornerStatusList.innerHTML = shotCornerStatusMarkup();
-  els.diagramSetShotCornerBtns.forEach((button) => {
-    button.disabled = selectedDiagramHoles().length !== 1;
-  });
-  els.diagramClearShotCornersBtn.disabled = !diagramState.shotCorners.some(Boolean);
   els.diagramAssignFaceBtn.classList.toggle("active", diagramState.ui.pendingFaceDesignation);
   els.diagramClearFaceBtn.disabled = !diagramState.holes.length || count === 0;
   els.diagramApplyPatternBtn.disabled = !diagramState.holes.length;
@@ -2299,6 +2285,10 @@ function renderDiagramVolumePanel() {
 
 function annotationSizeConfig(size) {
   return DIAGRAM_ANNOTATION_SIZE_MAP[size] || DIAGRAM_ANNOTATION_SIZE_MAP.medium;
+}
+
+function generateDiagramTextId() {
+  return `text-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
 function normalizeAnnotationTool(tool) {
@@ -2944,6 +2934,11 @@ function renderDiagramHolePopupCornerControls(hole) {
   els.diagramHolePopupSetCornerBtns.forEach((button) => {
     const index = Number(button.getAttribute("data-hole-popup-corner-set"));
     button.classList.toggle("active", index === assignedIndex);
+    const cornerHoleId = diagramState.shotCorners[index] || null;
+    const cornerHole = cornerHoleId ? diagramState.holesById.get(cornerHoleId) : null;
+    button.textContent = cornerHole
+      ? `${shotCornerLabel(index)}: ${cornerHole.holeNumber || cornerHole.id}`
+      : `Set ${shotCornerLabel(index)}`;
   });
   els.diagramHolePopupClearCornerBtn.disabled = assignedIndex < 0;
 }
@@ -3009,6 +3004,11 @@ function setDiagramToolMode(mode) {
   diagramState.ui.selectionBoxDraft = null;
   diagramState.ui.selectionPolygonDraft = null;
   if (nextMode !== "markup") diagramState.ui.currentStrokeDraft = null;
+  if (nextMode !== "text") {
+    diagramState.ui.selectedTextId = null;
+    diagramState.ui.dragTextId = null;
+    diagramState.ui.dragTextPointerDelta = null;
+  }
   els.diagramSingleSelectToolBtn.classList.toggle("active", nextMode === "single");
   els.diagramBoxSelectToolBtn.classList.toggle("active", nextMode === "box");
   els.diagramPolygonSelectToolBtn.classList.toggle("active", nextMode === "polygon");
@@ -3125,18 +3125,33 @@ function handleDiagramPointerDown(payload) {
     return true;
   }
   if (mode === "text") {
+    const hit = diagramRenderer.findDiagramTextAtScreen(payload.x, payload.y);
+    if (hit?.item) {
+      const worldPoint = pointToWorld(diagramRenderer, payload);
+      diagramState.ui.selectedTextId = hit.item.id;
+      diagramState.ui.dragTextId = hit.item.id;
+      diagramState.ui.dragTextPointerDelta = {
+        x: worldPoint.x - hit.item.anchor.x,
+        y: worldPoint.y - hit.item.anchor.y,
+      };
+      diagramRenderer.render();
+      return true;
+    }
     const text = window.prompt("Enter text for the diagram.");
     if (text === null || !text.trim()) {
       diagramRenderer.render();
       return true;
     }
+    const id = generateDiagramTextId();
     diagramState.annotations.texts.push({
+      id,
       text: text.trim(),
       color: diagramState.ui.annotationColor,
       size: diagramState.ui.annotationSize,
       anchor: pointToWorld(diagramRenderer, payload),
     });
-    diagramRenderer.render();
+    diagramState.ui.selectedTextId = id;
+    fullDiagramRefresh();
     return true;
   }
   return false;
@@ -3161,6 +3176,17 @@ function handleDiagramPointerMove(payload) {
     diagramRenderer.render();
     return true;
   }
+  if (diagramState.ui.activeTool === "text" && diagramState.ui.dragTextId) {
+    const item = diagramState.annotations.texts.find((text) => text.id === diagramState.ui.dragTextId);
+    if (!item) return true;
+    const worldPoint = pointToWorld(diagramRenderer, payload);
+    item.anchor = {
+      x: worldPoint.x - (diagramState.ui.dragTextPointerDelta?.x || 0),
+      y: worldPoint.y - (diagramState.ui.dragTextPointerDelta?.y || 0),
+    };
+    diagramRenderer.render();
+    return true;
+  }
   return false;
 }
 
@@ -3176,6 +3202,12 @@ function handleDiagramPointerUp(payload) {
     diagramState.ui.currentStrokeDraft = null;
     if (draft.points.length > 1) diagramState.annotations.strokes.push(draft);
     diagramRenderer.render();
+    return true;
+  }
+  if (diagramState.ui.activeTool === "text" && diagramState.ui.dragTextId) {
+    diagramState.ui.dragTextId = null;
+    diagramState.ui.dragTextPointerDelta = null;
+    fullDiagramRefresh();
     return true;
   }
   if (diagramState.ui.activeTool === "single" && !payload?.didDrag && !payload?.hole && diagramState.selection.size) {
@@ -3351,25 +3383,6 @@ function clearFaceDesignation() {
   diagramState.ui.pendingFaceDesignation = false;
   diagramState.ui.selectionPolygonDraft = null;
   renderDiagramShotPanel();
-  fullDiagramRefresh();
-}
-
-function setShotCorner(index) {
-  const selected = selectedDiagramHoles();
-  if (selected.length !== 1) {
-    window.alert("Select exactly one hole to assign a shot corner.");
-    return;
-  }
-  const holeId = selected[0].id;
-  diagramState.shotCorners = diagramState.shotCorners.map((cornerId, cornerIndex) => {
-    if (cornerIndex === index) return holeId;
-    return cornerId === holeId ? null : cornerId;
-  });
-  fullDiagramRefresh();
-}
-
-function clearShotCorners() {
-  diagramState.shotCorners = [null, null, null, null];
   fullDiagramRefresh();
 }
 
@@ -3653,13 +3666,6 @@ els.diagramRockDensityInput.addEventListener("change", () => applyDiagramMetadat
 els.diagramAssignFaceBtn.addEventListener("click", () => startFaceDesignation());
 els.diagramClearFaceBtn.addEventListener("click", () => clearFaceDesignation());
 els.diagramApplyPatternBtn.addEventListener("click", () => applyPatternAssignment());
-els.diagramSetShotCornerBtns.forEach((button) => {
-  button.addEventListener("click", () => {
-    const index = Number(button.getAttribute("data-shot-corner-set"));
-    if (Number.isInteger(index) && index >= 0 && index < 4) setShotCorner(index);
-  });
-});
-els.diagramClearShotCornersBtn.addEventListener("click", () => clearShotCorners());
 
 els.gridToggle.addEventListener("change", () => {
   solverState.ui.showGrid = els.gridToggle.checked;
@@ -3730,7 +3736,10 @@ els.diagramClearMarkupBtn.addEventListener("click", () => {
 });
 els.diagramClearTextBtn.addEventListener("click", () => {
   diagramState.annotations.texts = [];
-  diagramRenderer.render();
+  diagramState.ui.selectedTextId = null;
+  diagramState.ui.dragTextId = null;
+  diagramState.ui.dragTextPointerDelta = null;
+  fullDiagramRefresh();
 });
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramHolePopupSaveBtn.addEventListener("click", () => applyDiagramHolePopupChanges());
@@ -4037,7 +4046,6 @@ els.printBearingArrowLengthInput.addEventListener("input", () => applyPrintSetti
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printCornerCoordsToggle.addEventListener("change", () => applyPrintSettings());
 els.printLabelAngleDial.addEventListener("mousedown", (event) => startPrintLabelDialInteraction(event));
-els.printLabelDistanceInput.addEventListener("input", () => setActivePrintLabelDistance(els.printLabelDistanceInput.value));
 els.printLabelAngleDial.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
     event.preventDefault();
@@ -4050,7 +4058,6 @@ els.printLabelAngleDial.addEventListener("keydown", (event) => {
     setActivePrintLabelAngle(270);
   }
 });
-els.printLabelDistanceInput.addEventListener("keydown", (event) => event.stopPropagation());
 window.addEventListener("mousemove", (event) => {
   if (!printLabelDialState.dragging) return;
   setActivePrintLabelAngle(pointerDialAngle(event.clientX, event.clientY));

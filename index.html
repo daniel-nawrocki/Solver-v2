@@ -390,22 +390,6 @@
               <button id="diagramClearFaceBtn" type="button">Clear Face</button>
             </div>
             <button id="diagramApplyPatternBtn" type="button">Apply Pattern</button>
-            <h3 class="subsection-title">Shot Corners</h3>
-            <div id="diagramShotCornerStatusList" class="list">
-              <div>Corner 1: not set</div>
-              <div>Corner 2: not set</div>
-              <div>Corner 3: not set</div>
-              <div>Corner 4: not set</div>
-            </div>
-            <div class="row-actions row-actions-wrap">
-              <button type="button" data-shot-corner-set="0">Set Corner 1</button>
-              <button type="button" data-shot-corner-set="1">Set Corner 2</button>
-            </div>
-            <div class="row-actions row-actions-wrap">
-              <button type="button" data-shot-corner-set="2">Set Corner 3</button>
-              <button type="button" data-shot-corner-set="3">Set Corner 4</button>
-            </div>
-            <button id="diagramClearShotCornersBtn" type="button">Clear Shot Corners</button>
           </section>
         </div>
 
@@ -664,12 +648,12 @@
           Relationships</label>
         <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show
           Depth</label>
-        <label id="printCornerCoordsToggleWrap" class="hidden"><input id="printCornerCoordsToggle" type="checkbox"> Show
-          Corner Coords</label>
         <label id="printAngleToggleWrap" class="hidden"><input id="printAngleToggle" type="checkbox" checked> Show
           Angle</label>
         <label id="printBearingToggleWrap" class="hidden"><input id="printBearingToggle" type="checkbox" checked> Show
           Bearing</label>
+        <label id="printCornerCoordsToggleWrap" class="hidden"><input id="printCornerCoordsToggle" type="checkbox"> Show
+          Hole Coordinates</label>
         <label id="printBearingArrowWeightWrap" class="hidden">Arrow Weight
           <input id="printBearingArrowWeightInput" type="range" min="1" max="3" step="0.1" value="1">
         </label>
@@ -678,10 +662,6 @@
         </label>
         <div id="printLabelAngleWrap" class="print-label-angle-wrap hidden">
           <span class="print-label-angle-title">Label Position</span>
-          <div class="print-label-distance-wrap">
-            <input id="printLabelDistanceInput" class="print-label-distance-slider" type="range" min="0" max="20" step="1" value="8"
-              aria-label="Print Label Distance">
-          </div>
           <div id="printLabelAngleDial" class="print-label-angle-dial" role="slider" tabindex="0"
             aria-label="Print Label Position" aria-valuemin="0" aria-valuemax="360" aria-valuenow="315">
             <div class="print-label-angle-ring"></div>
@@ -690,7 +670,6 @@
           </div>
           <div class="print-label-angle-readout">
             <span id="printLabelAngleValue" class="print-label-angle-value">315 deg</span>
-            <span id="printLabelDistanceValue" class="print-label-distance-value">8 px</span>
           </div>
         </div>
       </div>
