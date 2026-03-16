@@ -1352,6 +1352,23 @@ button:active {
   white-space: nowrap;
 }
 
+.print-label-distance-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  padding: 0 2px;
+}
+
+.print-label-distance-slider {
+  width: 64px;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
 .print-label-angle-dial {
   --dial-angle: 315deg;
   position: relative;
@@ -1409,11 +1426,26 @@ button:active {
 }
 
 .print-label-angle-value {
-  min-width: 46px;
+  min-width: 54px;
   font-size: 11px;
   font-weight: 800;
   color: #1f3148;
-  text-align: right;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.print-label-angle-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.print-label-distance-value {
+  min-width: 54px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #5a6d83;
+  text-align: left;
   font-variant-numeric: tabular-nums;
 }
 

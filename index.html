@@ -646,13 +646,20 @@
         </label>
         <div id="printLabelAngleWrap" class="print-label-angle-wrap hidden">
           <span class="print-label-angle-title">Label Position</span>
+          <div class="print-label-distance-wrap">
+            <input id="printLabelDistanceInput" class="print-label-distance-slider" type="range" min="0" max="80" step="1" value="0"
+              aria-label="Print Label Distance">
+          </div>
           <div id="printLabelAngleDial" class="print-label-angle-dial" role="slider" tabindex="0"
             aria-label="Print Label Position" aria-valuemin="0" aria-valuemax="360" aria-valuenow="315">
             <div class="print-label-angle-ring"></div>
             <div id="printLabelAnglePointer" class="print-label-angle-pointer"></div>
             <div class="print-label-angle-center"></div>
           </div>
-          <span id="printLabelAngleValue" class="print-label-angle-value">315°</span>
+          <div class="print-label-angle-readout">
+            <span id="printLabelAngleValue" class="print-label-angle-value">315 deg</span>
+            <span id="printLabelDistanceValue" class="print-label-distance-value">0 px</span>
+          </div>
         </div>
         <label id="printDepthToggleWrap" class="hidden"><input id="printDepthToggle" type="checkbox" checked> Show
           Depth</label>
