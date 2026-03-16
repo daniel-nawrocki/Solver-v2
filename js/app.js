@@ -18,7 +18,7 @@ import {
   updateCloudProject,
 } from "./supabaseService.js";
 import { initTimingControls } from "./timingControls.js";
-import { solveTimingCombinations, formatTimingResult, validateTimingGraph, buildManualTimingResult } from "./timingSolver.js";
+import { solveTimingCombinations, formatTimingResult, validateTimingGraph, buildManualTimingResult, deriveTimingAnalysis } from "./timingSolver.js";
 import {
   addRelationship,
   clearRelationships,
@@ -91,6 +91,8 @@ function createSolverState() {
       toolMode: "origin",
       coordView: "collar",
       activeTimingPreviewIndex: -1,
+      showOverlapAnalysis: false,
+      activeOverlapBinKey: null,
       relationshipDraft: null,
       timingVisualization: {
         speedMultiplier: 1,
@@ -257,6 +259,8 @@ const projectState = {
       timingMode: "solver",
       toolMode: "origin",
       activeTimingPreviewIndex: -1,
+      showOverlapAnalysis: false,
+      activeOverlapBinKey: null,
     },
     timing: {
       holeToHole: { min: 16, max: 34 },
@@ -370,6 +374,11 @@ const els = {
   solveTimingBtn: document.getElementById("solveTimingBtn"),
   timingResults: document.getElementById("timingResults"),
   timingResultsMenuWrap: document.getElementById("timingResultsMenuWrap"),
+  timingOverlapAnalysisBtn: document.getElementById("timingOverlapAnalysisBtn"),
+  timingOverlapClearBtn: document.getElementById("timingOverlapClearBtn"),
+  timingOverlapAnalysisPanel: document.getElementById("timingOverlapAnalysisPanel"),
+  timingOverlapSummary: document.getElementById("timingOverlapSummary"),
+  timingOverlapChart: document.getElementById("timingOverlapChart"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
   holeRelationNegativeToolBtn: document.getElementById("holeRelationNegativeToolBtn"),
@@ -979,11 +988,18 @@ async function initializeCloudIntegration() {
 
 function cloneSelectedTiming(selectedTiming) {
   if (!selectedTiming) return [];
+  const holeTimes = new Map(selectedTiming.holeTimes);
+  const derived = deriveTimingAnalysis(holeTimes, 8);
   return [{
     ...selectedTiming,
-    holeTimes: new Map(selectedTiming.holeTimes),
+    holeTimes,
     offsetAssignments: selectedTiming.offsetAssignments ? new Map(selectedTiming.offsetAssignments) : new Map(),
     delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
+    peakBinCount: Number.isFinite(selectedTiming.peakBinCount) ? selectedTiming.peakBinCount : derived.peakBinCount,
+    overlapGroupCount: Number.isFinite(selectedTiming.overlapGroupCount) ? selectedTiming.overlapGroupCount : derived.overlapGroupCount,
+    overlapBins: Array.isArray(selectedTiming.overlapBins) && selectedTiming.overlapBins.length
+      ? selectedTiming.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+      : derived.overlapBins,
   }];
 }
 
@@ -1060,12 +1076,21 @@ function cloneManualTiming(manualTiming = {}) {
 }
 
 function cloneTimingResults(results = []) {
-  return results.map((result) => ({
-    ...result,
-    holeTimes: result.holeTimes ? new Map(result.holeTimes) : new Map(),
-    offsetAssignments: result.offsetAssignments ? new Map(result.offsetAssignments) : new Map(),
-    delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
-  }));
+  return results.map((result) => {
+    const holeTimes = result.holeTimes ? new Map(result.holeTimes) : new Map();
+    const derived = deriveTimingAnalysis(holeTimes, 8);
+    return {
+      ...result,
+      holeTimes,
+      offsetAssignments: result.offsetAssignments ? new Map(result.offsetAssignments) : new Map(),
+      delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
+      peakBinCount: Number.isFinite(result.peakBinCount) ? result.peakBinCount : derived.peakBinCount,
+      overlapGroupCount: Number.isFinite(result.overlapGroupCount) ? result.overlapGroupCount : derived.overlapGroupCount,
+      overlapBins: Array.isArray(result.overlapBins) && result.overlapBins.length
+        ? result.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+        : derived.overlapBins,
+    };
+  });
 }
 
 function cloneTimingVisualizationState(playback = {}) {
@@ -1081,6 +1106,11 @@ function cloneTimingVisualizationState(playback = {}) {
     resultIndexAtStart: -1,
     frameRequestId: null,
   };
+}
+
+function resetTimingOverlapAnalysis({ preservePanel = false } = {}) {
+  solverState.ui.activeOverlapBinKey = null;
+  if (!preservePanel) solverState.ui.showOverlapAnalysis = false;
 }
 
 function refreshProjectHoles(holes = []) {
@@ -1116,6 +1146,8 @@ function hydrateSolverFromProject() {
   solverState.ui.activeTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
     ? projectState.timing.ui.activeTimingPreviewIndex
     : -1;
+  solverState.ui.showOverlapAnalysis = false;
+  solverState.ui.activeOverlapBinKey = null;
   solverState.ui.relationshipDraft = null;
   solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
   timingControlsApi?.syncFromState?.();
@@ -1160,6 +1192,8 @@ function persistTimingStateToProject() {
   projectState.timing.ui.activeTimingPreviewIndex = Number.isInteger(solverState.ui.activeTimingPreviewIndex)
     ? solverState.ui.activeTimingPreviewIndex
     : -1;
+  delete projectState.timing.ui.showOverlapAnalysis;
+  delete projectState.timing.ui.activeOverlapBinKey;
   projectState.timing.timing = cloneTimingRanges(solverState.timing);
   projectState.timing.manualTiming = cloneManualTiming(solverState.manualTiming);
   projectState.timing.relationships = cloneRelationshipsState(solverState.relationships);
@@ -1292,6 +1326,7 @@ function setTimingMode(mode) {
   const nextMode = mode === "manual" ? "manual" : "solver";
   if (solverState.ui.timingMode === nextMode) return;
   resetTimingVisualization();
+  resetTimingOverlapAnalysis();
   solverState.ui.timingMode = nextMode;
   solverState.timingResults = [];
   solverState.ui.activeTimingPreviewIndex = -1;
@@ -1306,6 +1341,51 @@ function manualDelayCountsMarkup(result) {
     .map((entry) => `<div class="timing-delay-count-row"><span>${escapeHtml(`${entry.time}ms`)}</span><strong>${escapeHtml(`${entry.count} hole${entry.count === 1 ? "" : "s"}`)}</strong></div>`)
     .join("");
   return `<div class="timing-delay-counts">${rows}</div>`;
+}
+
+function currentTimingOverlapBin() {
+  const result = selectedTimingResult();
+  if (!result || !solverState.ui.activeOverlapBinKey) return null;
+  return (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey) || null;
+}
+
+function renderTimingOverlapAnalysis() {
+  const result = selectedTimingResult();
+  const hasResult = Boolean(result);
+  const showPanel = hasResult && solverState.ui.showOverlapAnalysis === true;
+  const bins = result?.overlapBins || [];
+  const activeBin = currentTimingOverlapBin();
+
+  els.timingOverlapAnalysisBtn.classList.toggle("hidden", !hasResult);
+  els.timingOverlapClearBtn.classList.toggle("hidden", !hasResult);
+  els.timingOverlapAnalysisBtn.textContent = showPanel ? "Hide Analysis" : "Overlap Analysis";
+  els.timingOverlapClearBtn.disabled = !activeBin;
+  els.timingOverlapAnalysisPanel.classList.toggle("hidden", !showPanel);
+  if (!showPanel) {
+    els.timingOverlapSummary.textContent = "Select a timing result to inspect overlap bins.";
+    els.timingOverlapChart.innerHTML = "";
+    return;
+  }
+
+  if (!bins.length) {
+    els.timingOverlapSummary.textContent = "No firing bins are available for the active timing result.";
+    els.timingOverlapChart.innerHTML = "";
+    return;
+  }
+
+  const maxCount = bins.reduce((max, bin) => Math.max(max, bin.count), 1);
+  els.timingOverlapSummary.textContent = `Peak 8ms bin: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount}`;
+  els.timingOverlapChart.innerHTML = bins.map((bin) => {
+    const active = activeBin?.key === bin.key ? "active" : "";
+    const width = Math.max(6, Math.round((bin.count / maxCount) * 100));
+    return `
+      <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}">
+        <span class="timing-overlap-label">${escapeHtml(bin.label)}</span>
+        <span class="timing-overlap-meter"><span class="timing-overlap-fill" style="width:${width}%"></span></span>
+        <span class="timing-overlap-count">${escapeHtml(`${bin.count} hole${bin.count === 1 ? "" : "s"}`)}</span>
+      </button>
+    `;
+  }).join("");
 }
 
 function syncManualTimingFromInputs() {
@@ -1345,6 +1425,9 @@ function clonePrintPage(page) {
       holeTimes: new Map(timing.holeTimes),
       offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
       delayCounts: Array.isArray(timing.delayCounts) ? timing.delayCounts.map((entry) => ({ ...entry })) : [],
+      overlapBins: Array.isArray(timing.overlapBins)
+        ? timing.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+        : [],
     })),
     viewport: {
       zoom: Number(page.viewport?.zoom) || 1,
@@ -2080,6 +2163,7 @@ function startTimingVisualization() {
 
 function resetTimingResults(message = "") {
   resetTimingVisualization();
+  resetTimingOverlapAnalysis();
   solverState.timingResults = [];
   solverState.ui.activeTimingPreviewIndex = -1;
   solverState.solverMessage = message;
@@ -2277,6 +2361,8 @@ function renderTimingResults() {
   }
   if (!solverState.timingResults.length) {
     els.timingResults.innerHTML = `<div>${escapeHtml(solverState.solverMessage || defaultTimingMessage())}</div>`;
+    resetTimingOverlapAnalysis();
+    renderTimingOverlapAnalysis();
     renderTimingVisualizationControls();
     return;
   }
@@ -2285,6 +2371,7 @@ function renderTimingResults() {
     const counts = result.mode === "manual" ? manualDelayCountsMarkup(result) : "";
     return `<button class="timing-item ${active}" data-timing-index="${index}"><span>${escapeHtml(formatTimingResult(result, index))}</span>${counts}</button>`;
   }).join("");
+  renderTimingOverlapAnalysis();
   renderTimingVisualizationControls();
 }
 
@@ -3347,8 +3434,33 @@ els.timingResults.addEventListener("click", (event) => {
   const index = Number(target.getAttribute("data-timing-index"));
   if (!Number.isFinite(index)) return;
   resetTimingVisualization();
+  resetTimingOverlapAnalysis({ preservePanel: true });
   solverState.ui.activeTimingPreviewIndex = index;
   renderTimingResults();
+  solverRenderer.render();
+});
+
+els.timingOverlapAnalysisBtn.addEventListener("click", () => {
+  if (!selectedTimingResult()) return;
+  solverState.ui.showOverlapAnalysis = !solverState.ui.showOverlapAnalysis;
+  if (!solverState.ui.showOverlapAnalysis) solverState.ui.activeOverlapBinKey = null;
+  renderTimingOverlapAnalysis();
+  solverRenderer.render();
+});
+
+els.timingOverlapClearBtn.addEventListener("click", () => {
+  if (!solverState.ui.activeOverlapBinKey) return;
+  solverState.ui.activeOverlapBinKey = null;
+  renderTimingOverlapAnalysis();
+  solverRenderer.render();
+});
+
+els.timingOverlapChart.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-overlap-bin]");
+  if (!button) return;
+  const key = button.getAttribute("data-overlap-bin");
+  solverState.ui.activeOverlapBinKey = solverState.ui.activeOverlapBinKey === key ? null : key;
+  renderTimingOverlapAnalysis();
   solverRenderer.render();
 });
 

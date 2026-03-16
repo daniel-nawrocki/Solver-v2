@@ -39,6 +39,9 @@ function cloneTimingResults(results = []) {
       ? result.offsetAssignments.map((entry) => [...entry])
       : Array.from(result.offsetAssignments || []),
     delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
+    overlapBins: Array.isArray(result.overlapBins)
+      ? result.overlapBins.map((bin) => ({ ...bin, holeIds: Array.isArray(bin.holeIds) ? [...bin.holeIds] : [] }))
+      : [],
   }));
 }
 

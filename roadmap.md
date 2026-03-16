@@ -68,6 +68,8 @@ Code-level status:
 - Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
 - print CSS was simplified so print preview now outputs one sheet per page tab without the extra blank/overflow pages seen in browser PDF export.
 - repo documentation now includes a tracked end-user guide source at `HOW_TO_USE.md` plus a generated `Daniel Fire - How to Use.pdf`
+- Timing Results now includes an `Overlap Analysis` view with fixed `8 ms` firing-bin bars and click-to-highlight timing holes for the selected bin.
+- timing-result ranking now prioritizes lower peak fixed-`8 ms` bin density, then lower overlap-group count, then shorter total duration.
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -83,6 +85,7 @@ What has not been fully verified yet:
 - whether the new `Volume` menu totals and density workflow feel clear enough in real use
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 - whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
+- whether Timing overlap-bin chart counts, labels, and click-to-highlight behavior feel clear enough on real solved timing graphs
 
 ## Completed Work
 
@@ -429,6 +432,30 @@ Current rule:
 - regenerate it by running `python tools\generate_how_to_use_pdf.py`
 - the in-app Help page is still older content and does not yet match the PDF guide
 
+### 22. Timing Overlap Analysis + Overlap-Based Result Ranking
+Implemented in code.
+
+What was added:
+- Timing Results now includes an `Overlap Analysis` toggle below the result list
+- the analysis view builds fixed `8 ms` firing bins from the active timing result
+- each bin shows:
+  - period label
+  - hole count
+  - scaled count bar
+- clicking a bin highlights only the holes firing in that selected `8 ms` period on the timing canvas
+- `Clear Highlight` removes the active overlap-bin highlight without clearing the selected timing result
+- switching timing results clears the active overlap highlight while keeping the analysis panel available
+- timing-result ranking now sorts by:
+  - lowest peak fixed `8 ms` bin count
+  - lowest overlap-group count
+  - shortest total duration
+  - smallest combined base delays as fallback
+
+Current rule:
+- overlap groups are counted by fixed `8 ms` bins with more than one firing hole
+- overlap highlighting is analysis-only UI state and is not persisted across sessions/mode hydration
+- the previous sliding-window `peak in 8ms` ordering is no longer the primary ranking model
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -460,6 +487,7 @@ Important recent context:
 - Real browser print dialogs still need confirmation that blank interstitial pages are gone.
 - shared-project mode switching, import parity, and print timing-page behavior all need manual browser verification
 - centered mode-toggle layout still needs manual responsive/browser verification
+- Timing overlap chart interactions and overlap-based result ordering still need manual browser verification with real timing graphs
 
 ## High-Priority Next Steps
 - verify end-to-end behavior in browser:
@@ -530,6 +558,14 @@ Important recent context:
     - right-click polygon completion
     - `Enter` polygon completion
     - no unwanted panning while selection tools are active
+  - Timing Results overlap analysis:
+    - analysis toggle visibility after timing solve
+    - fixed `8 ms` bin chart labels and counts
+    - active-bin hole highlighting
+    - `Clear Highlight` behavior
+    - highlight reset on timing-result switch
+    - overlap-group counts in result summaries
+    - overlap-based timing-result ordering against expected field preferences
 - add Diagram Maker save/load support
 - add Diagram Maker-specific CSV/export options if needed
 - improve Diagram Maker labels and visual hierarchy if metadata gets crowded

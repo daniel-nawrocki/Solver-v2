@@ -12,16 +12,14 @@ function generateValues(min, max, maxSamples = 15) {
   return values;
 }
 
-function maxHolesInWindow(times, windowMs = 8) {
-  if (!times.length) return 0;
-  const sorted = [...times].sort((a, b) => a - b);
-  let start = 0;
-  let maxCount = 1;
-  for (let end = 0; end < sorted.length; end += 1) {
-    while (sorted[end] - sorted[start] > windowMs) start += 1;
-    maxCount = Math.max(maxCount, end - start + 1);
-  }
-  return maxCount;
+function formatBinNumber(value) {
+  if (!Number.isFinite(value)) return "0";
+  const rounded = Math.round(value * 1000) / 1000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function binLabel(startMs, endMs) {
+  return `${formatBinNumber(startMs)}-${formatBinNumber(endMs)}ms`;
 }
 
 function summarizeDelayCounts(holeTimes) {
@@ -34,6 +32,45 @@ function summarizeDelayCounts(holeTimes) {
   return [...counts.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([time, count]) => ({ time, count }));
+}
+
+function buildOverlapBins(holeTimes, windowMs = 8) {
+  if (!holeTimes?.size) return [];
+  const bins = new Map();
+  for (const [holeId, value] of holeTimes.entries()) {
+    if (!Number.isFinite(value)) continue;
+    const startMs = Math.floor(value / windowMs) * windowMs;
+    const existing = bins.get(startMs) || {
+      key: String(startMs),
+      startMs,
+      endMs: startMs + windowMs,
+      label: binLabel(startMs, startMs + windowMs),
+      holeIds: [],
+      count: 0,
+      isOverlapGroup: false,
+    };
+    existing.holeIds.push(holeId);
+    existing.count += 1;
+    bins.set(startMs, existing);
+  }
+  return [...bins.values()]
+    .sort((a, b) => a.startMs - b.startMs)
+    .map((bin) => ({
+      ...bin,
+      holeIds: [...bin.holeIds],
+      isOverlapGroup: bin.count > 1,
+    }));
+}
+
+export function deriveTimingAnalysis(holeTimes, windowMs = 8) {
+  const overlapBins = buildOverlapBins(holeTimes, windowMs);
+  const peakBinCount = overlapBins.reduce((max, bin) => Math.max(max, bin.count), 0);
+  const overlapGroupCount = overlapBins.filter((bin) => bin.isOverlapGroup).length;
+  return {
+    overlapBins,
+    peakBinCount,
+    overlapGroupCount,
+  };
 }
 
 function edgeDelay(edge, holeDelay, rowDelay, offsetAssignments) {
@@ -125,7 +162,7 @@ function buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments = ne
   const minTime = times.length ? Math.min(...times) : 0;
   const maxTime = times.length ? Math.max(...times) : 0;
   const endTime = maxTime - minTime;
-  const density8ms = maxHolesInWindow(times, 8);
+  const { overlapBins, peakBinCount, overlapGroupCount } = deriveTimingAnalysis(holeTimes, 8);
 
   return {
     valid: true,
@@ -135,7 +172,10 @@ function buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments = ne
     holeTimes,
     times,
     endTime,
-    density8ms,
+    density8ms: peakBinCount,
+    peakBinCount,
+    overlapGroupCount,
+    overlapBins,
     delayCounts: summarizeDelayCounts(holeTimes),
   };
 }
@@ -197,7 +237,8 @@ export function solveTimingCombinations(state) {
   });
 
   candidates.sort((a, b) => {
-    if (a.density8ms !== b.density8ms) return a.density8ms - b.density8ms;
+    if (a.peakBinCount !== b.peakBinCount) return a.peakBinCount - b.peakBinCount;
+    if (a.overlapGroupCount !== b.overlapGroupCount) return a.overlapGroupCount - b.overlapGroupCount;
     if (a.endTime !== b.endTime) return a.endTime - b.endTime;
     return (a.holeDelay + a.rowDelay) - (b.holeDelay + b.rowDelay);
   });
@@ -208,10 +249,10 @@ export function solveTimingCombinations(state) {
 export function formatTimingResult(result, index) {
   if (result.mode === "manual") {
     const offsetSummary = result.offsetAssignments?.size ? ` | offset ${result.manualOffsetDelay}ms` : "";
-    return `${index + 1}. Manual | H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak in 8ms: ${result.density8ms} holes | total duration: ${result.endTime.toFixed(1)}ms`;
+    return `${index + 1}. Manual | H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak 8ms bin: ${result.peakBinCount} holes | overlap groups: ${result.overlapGroupCount} | total duration: ${result.endTime.toFixed(1)}ms`;
   }
   const offsetSummary = result.offsetAssignments?.size
     ? ` | offsets: ${[...result.offsetAssignments.values()].join(",")}ms`
     : "";
-  return `${index + 1}. H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak in 8ms: ${result.density8ms} holes | total duration: ${result.endTime.toFixed(1)}ms`;
+  return `${index + 1}. H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak 8ms bin: ${result.peakBinCount} holes | overlap groups: ${result.overlapGroupCount} | total duration: ${result.endTime.toFixed(1)}ms`;
 }

@@ -243,6 +243,14 @@
           <section id="timingResultsMenu" class="menu-panel panel hidden">
             <h2>Timing Results</h2>
             <div id="timingResults" class="list"></div>
+            <div class="row-actions timing-results-actions">
+              <button id="timingOverlapAnalysisBtn" type="button">Overlap Analysis</button>
+              <button id="timingOverlapClearBtn" type="button">Clear Highlight</button>
+            </div>
+            <section id="timingOverlapAnalysisPanel" class="timing-overlap-panel hidden">
+              <div id="timingOverlapSummary" class="status-note">Select a timing result to inspect overlap bins.</div>
+              <div id="timingOverlapChart" class="timing-overlap-chart"></div>
+            </section>
           </section>
         </div>
 
