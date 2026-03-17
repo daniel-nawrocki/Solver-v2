@@ -1487,14 +1487,21 @@ function manualDelayCountsMarkup(result) {
 function currentTimingOverlapBin() {
   const result = selectedTimingResult();
   if (!result || !solverState.ui.activeOverlapBinKey) return null;
-  return (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey) || null;
+  return (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey)
+    || (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey)
+    || null;
+}
+
+function overlapHoleLabel(holeId) {
+  const hole = solverState.holesById.get(holeId);
+  return hole?.holeNumber || hole?.id || holeId;
 }
 
 function renderTimingOverlapAnalysis() {
   const result = selectedTimingResult();
   const hasResult = Boolean(result);
   const showPanel = hasResult && solverState.ui.showOverlapAnalysis === true;
-  const bins = result?.overlapBins || [];
+  const overlapGroups = (result?.overlapGroups || []).filter((group) => group.isOverlapGroup && group.count > 1);
   const activeBin = currentTimingOverlapBin();
 
   els.timingOverlapAnalysisBtn.classList.toggle("hidden", !hasResult);
@@ -1503,69 +1510,41 @@ function renderTimingOverlapAnalysis() {
   els.timingOverlapClearBtn.disabled = !activeBin;
   els.timingOverlapAnalysisPanel.classList.toggle("hidden", !showPanel);
   if (!showPanel) {
-    els.timingOverlapSummary.textContent = "Select a timing result to inspect overlap bins.";
+    els.timingOverlapSummary.textContent = "Select a timing result to inspect 8 ms overlap windows.";
     els.timingOverlapChart.innerHTML = "";
     return;
   }
 
-  if (!bins.length) {
-    els.timingOverlapSummary.textContent = "No firing bins are available for the active timing result.";
+  if (!overlapGroups.length) {
+    els.timingOverlapSummary.textContent = `No holes are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"}.`;
     els.timingOverlapChart.innerHTML = "";
     return;
   }
 
-  const maxCount = bins.reduce((max, bin) => Math.max(max, bin.count), 1);
-  const fixedPeak = Number.isFinite(result.fixedPeakBinCount) ? result.fixedPeakBinCount : maxCount;
-  const fixedGroups = Number.isFinite(result.fixedOverlapGroupCount)
-    ? result.fixedOverlapGroupCount
-    : bins.filter((bin) => bin.isOverlapGroup).length;
-  els.timingOverlapSummary.textContent = `Any 8ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap groups: ${result.overlapGroupCount} | Fixed-bin chart peak: ${fixedPeak} | Fixed-bin overlaps: ${fixedGroups}`;
-  const tickStep = Math.max(1, Math.ceil(bins.length / 8));
-  const yTicks = buildTimingOverlapTicks(maxCount);
+  const sortedGroups = [...overlapGroups].sort((a, b) => b.count - a.count || a.startMs - b.startMs);
+  els.timingOverlapSummary.textContent = `Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`;
   els.timingOverlapChart.innerHTML = `
-    <div class="timing-overlap-plot">
-      <div class="timing-overlap-yaxis" style="grid-template-rows:repeat(${yTicks.length}, 1fr)">
-        ${yTicks.map((tick) => `<span>${escapeHtml(String(tick))}</span>`).join("")}
-      </div>
-      <div class="timing-overlap-canvas">
-        <div class="timing-overlap-grid" style="grid-template-rows:repeat(${yTicks.length}, 1fr)">
-          ${yTicks.map(() => '<span></span>').join("")}
-        </div>
-        <div class="timing-overlap-bars">
-          ${bins.map((bin, index) => {
-            const active = activeBin?.key === bin.key ? "active" : "";
-            const height = maxCount > 0 ? Math.max(0, (bin.count / maxCount) * 100) : 0;
-            const clampedHeight = Math.min(100, Math.max(0, height));
-            const y = 100 - clampedHeight;
-            const showTick = index % tickStep === 0 || index === bins.length - 1;
-            return `
-              <button class="timing-overlap-bar ${active}" type="button" data-overlap-bin="${escapeHtml(bin.key)}" aria-pressed="${active ? "true" : "false"}" title="${escapeHtml(`${bin.label}: ${bin.count} hole${bin.count === 1 ? "" : "s"}`)}">
-                <span class="timing-overlap-column-wrap">
-                  <svg class="timing-overlap-column-svg" viewBox="0 0 24 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-                    <rect class="timing-overlap-column" x="2" y="${y.toFixed(2)}" width="20" height="${clampedHeight.toFixed(2)}" rx="1.5" ry="1.5"></rect>
-                  </svg>
-                </span>
-                <span class="timing-overlap-count">${escapeHtml(String(bin.count))}</span>
-                <span class="timing-overlap-label">${showTick ? escapeHtml(bin.label) : ""}</span>
-              </button>
-            `;
-          }).join("")}
-        </div>
-      </div>
+    <div class="timing-overlap-list">
+      ${sortedGroups.map((group) => {
+        const active = activeBin?.key === group.key ? "active" : "";
+        const durationMs = Math.max(0, group.endMs - group.startMs);
+        const holeMarkup = group.holeIds
+          .map((holeId) => `<span class="timing-overlap-hole">${escapeHtml(String(overlapHoleLabel(holeId)))}</span>`)
+          .join("");
+        return `
+          <button class="timing-overlap-card ${active}" type="button" data-overlap-bin="${escapeHtml(group.key)}" aria-pressed="${active ? "true" : "false"}">
+            <span class="timing-overlap-card-head">
+              <span class="timing-overlap-card-title">${escapeHtml(`${group.count} holes within 8 ms`)}</span>
+              <span class="timing-overlap-card-window">${escapeHtml(`${group.startMs.toFixed(1)}-${group.endMs.toFixed(1)} ms`)}</span>
+            </span>
+            <span class="timing-overlap-card-meta">${escapeHtml(`Spread: ${durationMs.toFixed(1)} ms`)}</span>
+            <span class="timing-overlap-hole-list">${holeMarkup}</span>
+          </button>
+        `;
+      }).join("")}
+      <div class="timing-overlap-note">Each row lists the holes whose firing times land within the same 8 ms period.</div>
     </div>
   `;
-}
-
-function buildTimingOverlapTicks(maxCount) {
-  if (maxCount <= 1) return [1, 0];
-  if (maxCount <= 3) {
-    return Array.from({ length: maxCount + 1 }, (_, index) => maxCount - index);
-  }
-  const tickCount = 4;
-  return Array.from({ length: tickCount }, (_, index) => {
-    const ratio = (tickCount - 1 - index) / (tickCount - 1);
-    return Math.round(maxCount * ratio);
-  });
 }
 
 function syncManualTimingFromInputs() {
@@ -1900,6 +1879,13 @@ function addTimingPrintPage() {
   }
   printSession.pages.push(page);
   activatePrintPage(printSession.pages.length - 1);
+  requestAnimationFrame(() => {
+    if (activePrintPage() !== page) return;
+    printRenderer.resize();
+    setPrintRendererPage(page, { render: false });
+    printRenderer.fitToData(PRINT_FIT_MARGINS);
+    syncPrintControls();
+  });
 }
 
 function removePrintPage(index) {

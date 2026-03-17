@@ -774,7 +774,11 @@ export class DiagramRenderer {
     const diagramMode = this.isDiagramMode();
     const activeOverlapKey = !diagramMode ? this.stateRef?.ui?.activeOverlapBinKey || null : null;
     const activeOverlapHoleIds = !diagramMode && preview && activeOverlapKey
-      ? new Set((preview.overlapBins || []).find((bin) => bin.key === activeOverlapKey)?.holeIds || [])
+      ? new Set(
+        (preview.overlapGroups || []).find((group) => group.key === activeOverlapKey)?.holeIds
+        || (preview.overlapBins || []).find((bin) => bin.key === activeOverlapKey)?.holeIds
+        || []
+      )
       : null;
 
     for (const hole of this.stateRef.holes) {

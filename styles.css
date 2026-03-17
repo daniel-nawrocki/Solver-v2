@@ -527,134 +527,79 @@ button:active {
   border-top: 1px dashed rgba(159, 179, 201, 0.45);
 }
 
-.timing-overlap-plot {
-  --timing-overlap-plot-height: 132px;
-  --timing-overlap-label-height: 34px;
+.timing-overlap-list {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
   gap: 10px;
-  align-items: stretch;
 }
 
-.timing-overlap-yaxis {
+.timing-overlap-card {
   display: grid;
-  align-items: stretch;
-  min-height: calc(var(--timing-overlap-plot-height) + var(--timing-overlap-label-height));
-  padding: 0 0 var(--timing-overlap-label-height);
-  font-size: 11px;
-  color: #5a6d83;
-  font-variant-numeric: tabular-nums;
-}
-
-.timing-overlap-yaxis span {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.timing-overlap-canvas {
-  position: relative;
-  min-height: calc(var(--timing-overlap-plot-height) + var(--timing-overlap-label-height));
-  padding: 0;
-}
-
-.timing-overlap-grid {
-  position: absolute;
-  inset: 0 0 var(--timing-overlap-label-height) 0;
-  display: grid;
-  pointer-events: none;
-}
-
-.timing-overlap-grid span {
-  border-top: 1px solid rgba(194, 206, 220, 0.7);
-}
-
-.timing-overlap-grid span:last-child {
-  border-bottom: 2px solid rgba(184, 198, 214, 0.9);
-}
-
-.timing-overlap-bars {
-  position: relative;
-  z-index: 1;
-  min-height: calc(var(--timing-overlap-plot-height) + var(--timing-overlap-label-height));
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 0 2px;
-}
-
-.timing-overlap-bar {
-  display: grid;
-  grid-template-rows: var(--timing-overlap-plot-height) 14px var(--timing-overlap-label-height);
-  align-items: stretch;
-  gap: 6px;
-  flex: 1 1 0;
-  min-width: 22px;
-  min-height: calc(var(--timing-overlap-plot-height) + var(--timing-overlap-label-height));
-  margin: 0;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: center;
-}
-
-.timing-overlap-bar:hover,
-.timing-overlap-bar:focus-visible {
-  transform: none;
-  box-shadow: none;
-  border: none;
-}
-
-.timing-overlap-column-wrap {
-  position: relative;
-  display: block;
-  height: var(--timing-overlap-plot-height);
-  min-height: var(--timing-overlap-plot-height);
-  padding: 0 1px;
-}
-
-.timing-overlap-column-svg {
-  display: block;
+  gap: 8px;
   width: 100%;
-  height: 100%;
-  overflow: visible;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(168, 184, 205, 0.45);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 247, 255, 0.94));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  text-align: left;
 }
 
-.timing-overlap-column {
-  fill: rgba(115, 140, 246, 0.58);
-  stroke: rgba(77, 112, 241, 0.96);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
+.timing-overlap-card.active {
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 14px 30px rgba(14, 165, 233, 0.16);
+  background: linear-gradient(180deg, rgba(236, 254, 255, 0.98), rgba(224, 242, 254, 0.96));
 }
 
-.timing-overlap-bar.active .timing-overlap-column {
-  fill: rgba(59, 130, 246, 0.72);
-  stroke: rgba(14, 165, 233, 0.98);
+.timing-overlap-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.timing-overlap-count {
-  min-height: 14px;
-  font-size: 11px;
+.timing-overlap-card-title {
+  font-size: 14px;
   font-weight: 800;
-  color: #1f3148;
+  color: #10243d;
+}
+
+.timing-overlap-card-window,
+.timing-overlap-card-meta {
+  font-size: 12px;
+  color: #567087;
   font-variant-numeric: tabular-nums;
 }
 
-.timing-overlap-label {
+.timing-overlap-hole-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timing-overlap-hole {
+  display: inline-flex;
+  align-items: center;
   min-height: 28px;
-  font-size: 9px;
-  line-height: 1.15;
-  color: #4a6076;
-  font-variant-numeric: tabular-nums;
-  word-break: break-word;
-  overflow: hidden;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(222, 233, 246, 0.92);
+  color: #17304b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
-.timing-overlap-bar.active .timing-overlap-count,
-.timing-overlap-bar.active .timing-overlap-label {
+.timing-overlap-card.active .timing-overlap-hole {
+  background: rgba(186, 230, 253, 0.95);
   color: #0c4a6e;
+}
+
+.timing-overlap-note {
+  padding: 4px 2px 0;
+  font-size: 12px;
+  color: #5d7287;
 }
 
 .timing-visualization-row {
