@@ -1258,22 +1258,26 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-4);
+  gap: 10px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(159, 179, 201, 0.55);
   background: rgba(248, 251, 255, 0.94);
   box-shadow: 0 10px 24px rgba(15, 32, 56, 0.08);
+  flex-wrap: wrap;
 }
 
 .print-toolbar-group {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .print-toolbar-group button {
   width: auto;
-  min-width: 110px;
+  min-width: 94px;
+  padding: 8px 14px;
+  font-size: 13px;
 }
 
 .print-toolbar-group button.active {
@@ -1285,13 +1289,14 @@ button:active {
 .print-toolbar-controls label {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 6px;
   margin-bottom: 0;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .print-toolbar-controls input[type="range"] {
-  width: 150px;
+  width: 118px;
   margin-top: 0;
 }
 
@@ -1310,12 +1315,13 @@ button:active {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
-  padding: 4px 10px 6px;
+  gap: 4px;
+  padding: 3px 8px 5px;
   border: 1px solid rgba(159, 179, 201, 0.48);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
-  min-width: 166px;
+  min-width: 142px;
+  max-width: 142px;
 }
 
 .print-label-angle-header,
@@ -1327,23 +1333,23 @@ button:active {
 
 .print-label-angle-header {
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .print-label-angle-controls {
-  gap: 8px;
+  gap: 6px;
 }
 
 .print-label-angle-title {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
 }
 
 .print-label-distance-value {
-  min-width: 32px;
-  font-size: 10px;
+  min-width: 28px;
+  font-size: 9px;
   font-weight: 800;
   color: #1f3148;
   text-align: right;
@@ -1353,8 +1359,8 @@ button:active {
 .print-label-angle-dial {
   --dial-angle: 315deg;
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   margin: 0;
   border-radius: 50%;
@@ -1371,13 +1377,13 @@ button:active {
 }
 
 .print-label-angle-ring {
-  border: 1.5px solid rgba(159, 179, 201, 0.75);
+  border: 1.25px solid rgba(159, 179, 201, 0.75);
   background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(235, 243, 252, 0.92) 68%, rgba(212, 224, 238, 0.96) 100%);
-  box-shadow: inset 0 1px 5px rgba(255, 255, 255, 0.7), 0 5px 10px rgba(15, 32, 56, 0.08);
+  box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.7), 0 3px 8px rgba(15, 32, 56, 0.08);
 }
 
 .print-label-angle-pointer {
-  inset: 5px;
+  inset: 4px;
   transform: rotate(var(--dial-angle));
 }
 
@@ -1386,8 +1392,8 @@ button:active {
   position: absolute;
   left: 50%;
   top: 1px;
-  width: 3px;
-  height: 16px;
+  width: 2.5px;
+  height: 12px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: linear-gradient(180deg, #0ea5e9 0%, #2563eb 100%);
@@ -1395,7 +1401,7 @@ button:active {
 }
 
 .print-label-angle-center {
-  inset: 15px;
+  inset: 12px;
   background: #ffffff;
   border: 1px solid rgba(159, 179, 201, 0.85);
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
@@ -1407,8 +1413,8 @@ button:active {
 }
 
 .print-label-angle-value {
-  min-width: 42px;
-  font-size: 10px;
+  min-width: 34px;
+  font-size: 9px;
   font-weight: 800;
   color: #1f3148;
   text-align: left;
@@ -1423,13 +1429,13 @@ button:active {
 
 .print-label-distance-control {
   display: grid;
-  grid-template-columns: auto minmax(96px, 1fr);
+  grid-template-columns: auto minmax(74px, 1fr);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .print-label-distance-title {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
@@ -1443,29 +1449,29 @@ button:active {
 
 .print-label-distance-scale {
   justify-content: space-between;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   color: #6b7c90;
   letter-spacing: 0.02em;
-  padding-left: 48px;
+  padding-left: 38px;
 }
 
 .print-stage {
   flex: 1;
   overflow: auto;
-  padding: var(--space-6);
+  padding: 16px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
 
 .print-paper-frame {
-  width: min(1100px, calc(100vw - 80px));
+  width: min(920px, calc(100vw - 40px));
   aspect-ratio: 11 / 8.5;
   background: #ffffff;
   border: 2px solid rgba(43, 61, 82, 0.35);
-  box-shadow: 0 28px 50px rgba(15, 32, 56, 0.18);
-  padding: 22px;
+  box-shadow: 0 20px 38px rgba(15, 32, 56, 0.16);
+  padding: 16px;
   position: relative;
 }
 
