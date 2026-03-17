@@ -2138,12 +2138,33 @@ function formatHoleTableFeet(value) {
 }
 
 function formatHoleTableDegrees(value) {
-  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}Â°` : "";
+  if (!Number.isFinite(Number(value))) return "";
+  const rounded = Math.round(Number(value));
+  if (rounded === 0) return "";
+  return `${rounded}°`;
 }
 
-function buildHoleTableMarkup(page) {
+function holeTableRowsPerPage(page) {
   const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
-  const rows = (page?.holes || []).map((hole) => `
+  return Math.max(8, Math.floor(27 / scale));
+}
+
+function chunkHoleTableRows(page) {
+  const rowsPerPage = holeTableRowsPerPage(page);
+  const holes = Array.isArray(page?.holes) ? page.holes : [];
+  if (!holes.length) return [[]];
+  const chunks = [];
+  for (let index = 0; index < holes.length; index += rowsPerPage) {
+    chunks.push(holes.slice(index, index + rowsPerPage));
+  }
+  return chunks;
+}
+
+function buildHoleTableMarkup(page, holes, options = {}) {
+  const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
+  const pageNumber = Number(options.pageNumber) || 1;
+  const pageCount = Number(options.pageCount) || 1;
+  const rows = (holes || []).map((hole) => `
     <tr>
       <td>${escapeHtml(holeTableHoleLabel(hole))}</td>
       <td>${escapeHtml(formatHoleTableFeet(hole?.depth))}</td>
@@ -2155,6 +2176,7 @@ function buildHoleTableMarkup(page) {
     <section class="print-hole-table-sheet" style="--hole-table-scale:${scale};">
       <header class="print-hole-table-header">
         <h1>Hole Table</h1>
+        <span>${escapeHtml(`Page ${pageNumber} of ${pageCount}`)}</span>
       </header>
       <table class="print-hole-table">
         <thead>
@@ -2173,7 +2195,10 @@ function buildHoleTableMarkup(page) {
 
 function renderHoleTablePreview(page, container) {
   if (!container) return;
-  container.innerHTML = buildHoleTableMarkup(page);
+  const chunks = chunkHoleTableRows(page);
+  container.innerHTML = chunks
+    .map((holes, index) => buildHoleTableMarkup(page, holes, { pageNumber: index + 1, pageCount: chunks.length }))
+    .join("");
 }
 
 function renderPrintPageToCanvas(page, canvas) {
@@ -2193,23 +2218,33 @@ function preparePrintablePages() {
   if (!currentPage) return;
   els.printPagesOutput.innerHTML = "";
   printSession.pages.forEach((page, index) => {
-    const wrapper = document.createElement("section");
-    wrapper.className = "print-output-page";
-    const frame = document.createElement("div");
-    frame.className = "print-paper-frame";
-    if (page.colorMode === "greyscale") frame.classList.add("greyscale");
     if (page.pageType === "holeTable") {
-      frame.innerHTML = buildHoleTableMarkup(page);
+      const chunks = chunkHoleTableRows(page);
+      chunks.forEach((holes, chunkIndex) => {
+        const wrapper = document.createElement("section");
+        wrapper.className = "print-output-page";
+        const frame = document.createElement("div");
+        frame.className = "print-paper-frame";
+        if (page.colorMode === "greyscale") frame.classList.add("greyscale");
+        frame.innerHTML = buildHoleTableMarkup(page, holes, { pageNumber: chunkIndex + 1, pageCount: chunks.length });
+        wrapper.appendChild(frame);
+        els.printPagesOutput.appendChild(wrapper);
+      });
     } else {
+      const wrapper = document.createElement("section");
+      wrapper.className = "print-output-page";
+      const frame = document.createElement("div");
+      frame.className = "print-paper-frame";
+      if (page.colorMode === "greyscale") frame.classList.add("greyscale");
       const canvas = document.createElement("canvas");
       canvas.width = printRenderer.canvas.width;
       canvas.height = printRenderer.canvas.height;
       canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
       frame.appendChild(canvas);
       renderPrintPageToCanvas(page, canvas);
+      wrapper.appendChild(frame);
+      els.printPagesOutput.appendChild(wrapper);
     }
-    wrapper.appendChild(frame);
-    els.printPagesOutput.appendChild(wrapper);
   });
   setPrintRendererPage(currentPage, { render: true });
 }
@@ -4345,3 +4380,4 @@ initializeCloudIntegration().catch((error) => {
   console.error(error);
   window.alert(error.message || "Supabase initialization failed.");
 });
+

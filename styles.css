@@ -1573,6 +1573,10 @@ button:active {
   height: 100%;
   overflow: auto;
   background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
 }
 
 .print-paper-frame.greyscale canvas {
@@ -1596,6 +1600,21 @@ button:active {
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.print-hole-table-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.print-hole-table-header span {
+  font-size: calc(10px * var(--hole-table-scale));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #52657c;
 }
 
 .print-hole-table {
