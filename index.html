@@ -693,11 +693,14 @@
               <span id="printLabelAngleValue" class="print-label-angle-value">315 deg</span>
             </div>
           </div>
-          <label class="print-label-distance-control" for="printLabelDistanceInput">
+          <div class="print-label-distance-control" aria-label="Print Label Distance">
             <span class="print-label-distance-title">Distance</span>
-            <input id="printLabelDistanceInput" type="range" min="0" max="35" step="1" value="3"
-              aria-label="Print Label Distance">
-          </label>
+            <div class="print-label-distance-stepper">
+              <button id="printLabelDistanceDownBtn" type="button" aria-label="Decrease Print Label Distance">-</button>
+              <span id="printLabelDistanceTickValue" class="print-label-distance-tick-value">3</span>
+              <button id="printLabelDistanceUpBtn" type="button" aria-label="Increase Print Label Distance">+</button>
+            </div>
+          </div>
           <div class="print-label-distance-scale" aria-hidden="true">
             <span>Near</span>
             <span>Far</span>

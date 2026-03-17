@@ -1449,7 +1449,7 @@ button:active {
 .print-label-distance-control {
   display: grid;
   grid-column: 1 / 3;
-  grid-template-columns: auto minmax(36px, 1fr);
+  grid-template-columns: auto minmax(44px, 1fr);
   align-items: center;
   gap: 3px;
 }
@@ -1459,12 +1459,42 @@ button:active {
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
+.print-label-distance-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
 }
 
-.print-label-distance-control input[type="range"] {
-  width: 100%;
-  min-width: 0;
+.print-label-distance-stepper button {
+  width: 14px;
+  min-width: 14px;
+  height: 14px;
+  min-height: 14px;
   margin: 0;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(163, 181, 201, 0.85);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: none;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  color: #35506d;
+}
+
+.print-label-distance-stepper button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.print-label-distance-tick-value {
+  min-width: 14px;
+  font-size: 7px;
+  font-weight: 800;
+  color: #1f3148;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .print-label-distance-scale {

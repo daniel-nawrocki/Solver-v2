@@ -414,8 +414,10 @@ const els = {
   printLabelAngleDial: document.getElementById("printLabelAngleDial"),
   printLabelAnglePointer: document.getElementById("printLabelAnglePointer"),
   printLabelAngleValue: document.getElementById("printLabelAngleValue"),
-  printLabelDistanceInput: document.getElementById("printLabelDistanceInput"),
   printLabelDistanceValue: document.getElementById("printLabelDistanceValue"),
+  printLabelDistanceTickValue: document.getElementById("printLabelDistanceTickValue"),
+  printLabelDistanceDownBtn: document.getElementById("printLabelDistanceDownBtn"),
+  printLabelDistanceUpBtn: document.getElementById("printLabelDistanceUpBtn"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
   holeRelationNegativeToolBtn: document.getElementById("holeRelationNegativeToolBtn"),
@@ -1584,15 +1586,21 @@ function printLabelTickToDistance(tick) {
   return clampPrintLabelDistance(PRINT_LABEL_DISTANCE_MIN + (Number(tick) || 0));
 }
 
+function clampPrintLabelDistanceTick(tick) {
+  return Math.max(0, Math.min(PRINT_LABEL_DISTANCE_MAX - PRINT_LABEL_DISTANCE_MIN, Number(tick) || 0));
+}
+
 function clampPrintLabelDistance(distance) {
   return Math.max(PRINT_LABEL_DISTANCE_MIN, Math.min(PRINT_LABEL_DISTANCE_MAX, Number(distance) || 0));
 }
 
 function updatePrintLabelDistanceControls(distance) {
   const clamped = clampPrintLabelDistance(distance);
-  const tick = printLabelDistanceToTick(clamped);
-  els.printLabelDistanceInput.value = String(Math.round(tick));
+  const tick = clampPrintLabelDistanceTick(printLabelDistanceToTick(clamped));
   els.printLabelDistanceValue.textContent = String(Math.round(tick));
+  els.printLabelDistanceTickValue.textContent = String(Math.round(tick));
+  els.printLabelDistanceDownBtn.disabled = tick <= 0;
+  els.printLabelDistanceUpBtn.disabled = tick >= (PRINT_LABEL_DISTANCE_MAX - PRINT_LABEL_DISTANCE_MIN);
 }
 
 function activePrintLabelAngle() {
@@ -4096,8 +4104,11 @@ els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSetti
 els.printBearingArrowLengthInput.addEventListener("input", () => applyPrintSettings());
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printCornerCoordsToggle.addEventListener("change", () => applyPrintSettings());
-els.printLabelDistanceInput.addEventListener("input", () => {
-  setActivePrintLabelDistance(printLabelTickToDistance(els.printLabelDistanceInput.value));
+els.printLabelDistanceDownBtn.addEventListener("click", () => {
+  setActivePrintLabelDistance(printLabelTickToDistance(clampPrintLabelDistanceTick(printLabelDistanceToTick(activePrintLabelDistance()) - 1)));
+});
+els.printLabelDistanceUpBtn.addEventListener("click", () => {
+  setActivePrintLabelDistance(printLabelTickToDistance(clampPrintLabelDistanceTick(printLabelDistanceToTick(activePrintLabelDistance()) + 1)));
 });
 els.printLabelAngleDial.addEventListener("mousedown", (event) => startPrintLabelDialInteraction(event));
 els.printLabelAngleDial.addEventListener("keydown", (event) => {
