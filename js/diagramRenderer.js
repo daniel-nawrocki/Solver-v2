@@ -624,8 +624,8 @@ export class DiagramRenderer {
     const radians = (angleDeg * Math.PI) / 180;
     const ux = Math.sin(radians);
     const uy = -Math.cos(radians);
-    const projection = Math.abs(ux) * (metrics.width / 2) + Math.abs(uy) * (metrics.height / 2);
-    const radius = this.holeRadius + edgeGapPx + projection;
+    const orbitPadding = Math.hypot(metrics.width / 2, metrics.height / 2);
+    const radius = this.holeRadius + edgeGapPx + orbitPadding;
     const centerX = point.x + (ux * radius);
     const centerY = point.y + (uy * radius);
     const defaultRect = {
@@ -663,8 +663,8 @@ export class DiagramRenderer {
     const radians = (angleDeg * Math.PI) / 180;
     const ux = Math.sin(radians);
     const uy = -Math.cos(radians);
-    const projection = Math.abs(ux) * (metrics.width / 2) + Math.abs(uy) * (metrics.height / 2);
-    const radius = this.holeRadius + edgeGapPx + projection;
+    const orbitPadding = Math.hypot(metrics.width / 2, metrics.height / 2);
+    const radius = this.holeRadius + edgeGapPx + orbitPadding;
     const centerX = point.x + (ux * radius);
     const centerY = point.y + (uy * radius);
     const defaultRect = {
