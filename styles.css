@@ -1134,8 +1134,8 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 12px 7px;
+  gap: 8px;
+  padding: 4px 8px 4px;
   border-bottom: 1px solid rgba(159, 179, 201, 0.42);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 246, 252, 0.92) 100%);
@@ -1145,22 +1145,22 @@ button:active {
 .print-page-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow-x: auto;
-  padding-bottom: 1px;
+  padding-bottom: 0;
 }
 
 .print-page-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px;
-  border-radius: 14px;
+  gap: 6px;
+  padding: 2px;
+  border-radius: 12px;
   border: 1px solid rgba(163, 181, 201, 0.78);
   background: rgba(255, 255, 255, 0.8);
   color: #31465c;
-  box-shadow: 0 6px 16px rgba(15, 32, 56, 0.08);
+  box-shadow: 0 4px 10px rgba(15, 32, 56, 0.07);
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease, background 120ms ease;
 }
@@ -1184,15 +1184,15 @@ button:active {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 8px 10px;
+  padding: 5px 8px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   box-shadow: none;
   color: inherit;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .print-page-tab-main:hover,
@@ -1203,7 +1203,7 @@ button:active {
 }
 
 .print-page-tab-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1211,7 +1211,7 @@ button:active {
 }
 
 .print-page-tab-meta {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: #60758c;
   white-space: nowrap;
@@ -1240,14 +1240,14 @@ button:active {
 
 .print-add-page-btn {
   width: auto;
-  min-width: 108px;
+  min-width: 92px;
   margin: 0;
-  padding: 7px 14px;
-  font-size: 12px;
+  padding: 5px 10px;
+  font-size: 11px;
   border-color: rgba(22, 101, 52, 0.24);
   background: linear-gradient(180deg, #f7fff8 0%, #dcfce7 100%);
   color: #17603a;
-  box-shadow: 0 8px 20px rgba(22, 101, 52, 0.12);
+  box-shadow: 0 5px 12px rgba(22, 101, 52, 0.1);
 }
 
 .print-add-page-btn:hover,
@@ -1260,11 +1260,11 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 3px 8px;
   border-bottom: 1px solid rgba(159, 179, 201, 0.55);
   background: rgba(248, 251, 255, 0.94);
-  box-shadow: 0 10px 24px rgba(15, 32, 56, 0.08);
+  box-shadow: 0 6px 14px rgba(15, 32, 56, 0.06);
   flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1273,7 +1273,7 @@ button:active {
 .print-toolbar-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: nowrap;
   flex: 0 0 auto;
 }
@@ -1281,18 +1281,18 @@ button:active {
 .print-toolbar-controls {
   flex: 1 1 auto;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
 }
 
 .print-toolbar-group button {
   width: auto;
-  min-width: 84px;
-  padding: 7px 12px;
-  font-size: 12px;
+  min-width: 70px;
+  padding: 4px 9px;
+  font-size: 11px;
 }
 
 .print-toolbar-group button.active {
@@ -1304,15 +1304,15 @@ button:active {
 .print-toolbar-controls label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   margin-bottom: 0;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
   flex: 0 0 auto;
 }
 
 .print-toolbar-controls input[type="range"] {
-  width: 92px;
+  width: 72px;
   margin-top: 0;
 }
 
@@ -1331,14 +1331,14 @@ button:active {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  column-gap: 6px;
-  row-gap: 2px;
-  padding: 3px 6px;
+  column-gap: 4px;
+  row-gap: 1px;
+  padding: 2px 4px;
   border: 1px solid rgba(159, 179, 201, 0.48);
-  border-radius: 10px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.88);
-  min-width: 118px;
-  max-width: 118px;
+  min-width: 92px;
+  max-width: 92px;
 }
 
 .print-label-angle-header,
@@ -1360,15 +1360,15 @@ button:active {
 }
 
 .print-label-angle-title {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
 }
 
 .print-label-distance-value {
-  min-width: 24px;
-  font-size: 8px;
+  min-width: 18px;
+  font-size: 7px;
   font-weight: 800;
   color: #1f3148;
   text-align: right;
@@ -1378,8 +1378,8 @@ button:active {
 .print-label-angle-dial {
   --dial-angle: 315deg;
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   flex: 0 0 auto;
   margin: 0;
   border-radius: 50%;
@@ -1396,13 +1396,13 @@ button:active {
 }
 
 .print-label-angle-ring {
-  border: 1.25px solid rgba(159, 179, 201, 0.75);
+  border: 1px solid rgba(159, 179, 201, 0.75);
   background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(235, 243, 252, 0.92) 68%, rgba(212, 224, 238, 0.96) 100%);
-  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.7), 0 2px 6px rgba(15, 32, 56, 0.08);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7), 0 1px 4px rgba(15, 32, 56, 0.08);
 }
 
 .print-label-angle-pointer {
-  inset: 3px;
+  inset: 2px;
   transform: rotate(var(--dial-angle));
 }
 
@@ -1411,8 +1411,8 @@ button:active {
   position: absolute;
   left: 50%;
   top: 1px;
-  width: 2px;
-  height: 10px;
+  width: 1.5px;
+  height: 7px;
   transform: translateX(-50%);
   border-radius: 999px;
   background: linear-gradient(180deg, #0ea5e9 0%, #2563eb 100%);
@@ -1420,10 +1420,10 @@ button:active {
 }
 
 .print-label-angle-center {
-  inset: 10px;
+  inset: 7px;
   background: #ffffff;
   border: 1px solid rgba(159, 179, 201, 0.85);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .print-label-angle-dial:focus-visible .print-label-angle-ring,
@@ -1432,8 +1432,8 @@ button:active {
 }
 
 .print-label-angle-value {
-  min-width: 28px;
-  font-size: 8px;
+  min-width: 21px;
+  font-size: 7px;
   font-weight: 800;
   color: #1f3148;
   text-align: left;
@@ -1449,13 +1449,13 @@ button:active {
 .print-label-distance-control {
   display: grid;
   grid-column: 1 / 3;
-  grid-template-columns: auto minmax(52px, 1fr);
+  grid-template-columns: auto minmax(36px, 1fr);
   align-items: center;
-  gap: 5px;
+  gap: 3px;
 }
 
 .print-label-distance-title {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
