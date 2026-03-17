@@ -1459,6 +1459,8 @@ button:active {
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
+}
+
 .print-label-distance-stepper {
   display: inline-flex;
   align-items: center;
