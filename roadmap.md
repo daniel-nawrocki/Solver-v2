@@ -66,6 +66,8 @@ Code-level status:
 - Diagram Maker `Assign Face` now keeps the `Shot` menu open while polygon designation is active.
 - Diagram Maker now includes a `Volume` menu with whole-shot cubic-yard and tonnage totals using editable rock density.
 - Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
+- Diagram Maker now supports `Subdrill` as a pattern-level input plus a per-hole editable field in both Hole Properties and the hole popup editor.
+- Diagram Maker volume totals now exclude subdrill by using burden x spacing x (depth - subdrill) for cubic yards and tonnage.
 - print CSS was simplified so print preview now outputs one sheet per page tab without the extra blank/overflow pages seen in browser PDF export.
 - repo documentation now includes a tracked end-user guide source at `HOW_TO_USE.md` plus a generated `Daniel Fire - How to Use.pdf`
 - Timing Results now includes an `Overlap Analysis` view with fixed `8 ms` firing-bin bars and click-to-highlight timing holes for the selected bin.
@@ -92,6 +94,7 @@ What has not been fully verified yet:
 - whether multi-page print switching and full browser print output behave cleanly across repeated page adds/removes
 - whether the new face designation / pattern assignment flow feels clear enough without additional face highlighting on dense diagrams
 - whether the new `Volume` menu totals and density workflow feel clear enough in real use
+- whether the new subdrill pattern/default workflow feels clear enough when mixing pattern-applied values with per-hole overrides
 - whether the new shared-project mode switching feels seamless enough even though the legacy workspace sections still exist behind the scenes
 - whether the centered top-bar mode toggle remains visually stable across all desktop/mobile header states in real browser use
 - whether Timing overlap-bin chart counts, labels, and click-to-highlight behavior feel clear enough on real solved timing graphs
@@ -487,6 +490,22 @@ Current rule:
 - duplicated print pages preserve the current label dial angle because it is part of per-page print state
 - polygon draft points should now remain fixed relative to holes during pan/zoom/rotation until the draft is completed or cancelled
 
+### 24. Pattern Menu Move + Subdrill Support
+Implemented in code.
+
+What was added:
+- face/interior pattern controls now live in a dedicated `Pattern` menu between `Import` and `View`
+- Diagram Maker now has a pattern-level `Subdrill` field in feet
+- `Apply Pattern` now applies the stored subdrill value to holes along with burden/spacing
+- per-hole `Subdrill` is editable from both the `Properties` menu and the hole popup editor
+- Diagram print header now includes subdrill when set
+- shot volume and tonnage now exclude subdrill by using only the effective charged rock height above floor
+
+Current rule:
+- volume uses burden x spacing x (depth - subdrill)
+- holes only contribute to volume when burden, spacing, and depth are valid and the effective depth remains greater than zero
+- subdrill remains editable per hole after pattern assignment, so hole-specific overrides are allowed
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -582,6 +601,8 @@ Important recent context:
   - angle color mapping and invalid-angle handling
   - `View` menu checkbox alignment
   - `Volume` menu totals and density edits
+  - pattern-level `Subdrill` entry, `Apply Pattern` subdrill assignment, and per-hole subdrill edits
+  - volume exclusion of subdrill from cubic yards / tonnage
   - selection toolkit behavior:
     - select mode
     - box mode

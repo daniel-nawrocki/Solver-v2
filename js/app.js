@@ -58,7 +58,7 @@ const WORKSPACE_TO_MODE = {
   delaySolver: "timing",
   diagramMaker: "diagram",
 };
-const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "stemHeight"];
+const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "subdrill", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
 const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
 const DIAGRAM_TOOL_MODES = new Set(["single", "box", "polygon", "markup", "text"]);
@@ -159,6 +159,7 @@ function createDiagramState() {
       location: "",
       bench: "",
       defaultDiameter: null,
+      patternSubdrill: null,
       faceBurden: null,
       faceSpacing: null,
       interiorBurden: null,
@@ -212,6 +213,7 @@ function createPrintPageState() {
       location: "",
       bench: "",
       defaultDiameter: null,
+      patternSubdrill: null,
       faceBurden: null,
       faceSpacing: null,
       interiorBurden: null,
@@ -431,6 +433,7 @@ const els = {
   diagramShotLocationSelect: document.getElementById("diagramShotLocationSelect"),
   diagramBenchInput: document.getElementById("diagramBenchInput"),
   diagramShotDefaultDiameterSelect: document.getElementById("diagramShotDefaultDiameterSelect"),
+  diagramPatternSubdrillInput: document.getElementById("diagramPatternSubdrillInput"),
   diagramFaceBurdenInput: document.getElementById("diagramFaceBurdenInput"),
   diagramFaceSpacingInput: document.getElementById("diagramFaceSpacingInput"),
   diagramInteriorBurdenInput: document.getElementById("diagramInteriorBurdenInput"),
@@ -441,6 +444,7 @@ const els = {
   diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
   diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
   diagramRockDensityInput: document.getElementById("diagramRockDensityInput"),
+  diagramVolumeRuleStatus: document.getElementById("diagramVolumeRuleStatus"),
   diagramVolumeIncludedStatus: document.getElementById("diagramVolumeIncludedStatus"),
   diagramVolumeCubicYardsStatus: document.getElementById("diagramVolumeCubicYardsStatus"),
   diagramVolumeTonsStatus: document.getElementById("diagramVolumeTonsStatus"),
@@ -475,6 +479,7 @@ const els = {
   diagramAngleInput: document.getElementById("diagramAngleInput"),
   diagramBearingInput: document.getElementById("diagramBearingInput"),
   diagramDepthInput: document.getElementById("diagramDepthInput"),
+  diagramSubdrillInput: document.getElementById("diagramSubdrillInput"),
   diagramStemHeightInput: document.getElementById("diagramStemHeightInput"),
   diagramApplyPropertiesBtn: document.getElementById("diagramApplyPropertiesBtn"),
   diagramClearSelectionBtn: document.getElementById("diagramClearSelectionBtn"),
@@ -488,6 +493,7 @@ const els = {
   diagramHolePopupAngleInput: document.getElementById("diagramHolePopupAngleInput"),
   diagramHolePopupBearingInput: document.getElementById("diagramHolePopupBearingInput"),
   diagramHolePopupDepthInput: document.getElementById("diagramHolePopupDepthInput"),
+  diagramHolePopupSubdrillInput: document.getElementById("diagramHolePopupSubdrillInput"),
   diagramHolePopupStemHeightInput: document.getElementById("diagramHolePopupStemHeightInput"),
   diagramHolePopupCornerStatus: document.getElementById("diagramHolePopupCornerStatus"),
   diagramHolePopupSetCornerBtns: [...document.querySelectorAll("[data-hole-popup-corner-set]")],
@@ -583,7 +589,7 @@ function activeRenderer() {
 }
 
 function closeAllMenus() {
-  const stickyMenuId = isDiagramWorkspaceActive() && diagramState.ui.pendingFaceDesignation ? "diagramShotMenu" : null;
+  const stickyMenuId = isDiagramWorkspaceActive() && diagramState.ui.pendingFaceDesignation ? "diagramPatternMenu" : null;
   els.menuPanels.forEach((panel) => panel.classList.toggle("hidden", panel.id !== stickyMenuId));
   els.menuToggles.forEach((button) => button.classList.toggle("active", button.dataset.menuToggle === stickyMenuId));
 }
@@ -1128,6 +1134,7 @@ function cloneDiagramMetadata(metadata = {}) {
     location: metadata.location || "",
     bench: metadata.bench || "",
     defaultDiameter: Number.isFinite(Number(metadata.defaultDiameter)) ? Number(metadata.defaultDiameter) : null,
+    patternSubdrill: Number.isFinite(Number(metadata.patternSubdrill)) ? Number(metadata.patternSubdrill) : null,
     faceBurden: Number.isFinite(Number(metadata.faceBurden)) ? Number(metadata.faceBurden) : null,
     faceSpacing: Number.isFinite(Number(metadata.faceSpacing)) ? Number(metadata.faceSpacing) : null,
     interiorBurden: Number.isFinite(Number(metadata.interiorBurden)) ? Number(metadata.interiorBurden) : null,
@@ -2247,6 +2254,7 @@ function renderDiagramShotPanel() {
   els.diagramShotLocationSelect.value = diagramState.metadata.location;
   els.diagramBenchInput.value = diagramState.metadata.bench;
   els.diagramShotDefaultDiameterSelect.value = Number.isFinite(diagramState.metadata.defaultDiameter) ? String(diagramState.metadata.defaultDiameter) : "";
+  els.diagramPatternSubdrillInput.value = Number.isFinite(diagramState.metadata.patternSubdrill) ? String(diagramState.metadata.patternSubdrill) : "";
   els.diagramFaceBurdenInput.value = Number.isFinite(diagramState.metadata.faceBurden) ? String(diagramState.metadata.faceBurden) : "";
   els.diagramFaceSpacingInput.value = Number.isFinite(diagramState.metadata.faceSpacing) ? String(diagramState.metadata.faceSpacing) : "";
   els.diagramInteriorBurdenInput.value = Number.isFinite(diagramState.metadata.interiorBurden) ? String(diagramState.metadata.interiorBurden) : "";
@@ -2279,9 +2287,12 @@ function summarizeDiagramVolume() {
     const burden = Number(hole.burden);
     const spacing = Number(hole.spacing);
     const depth = Number(hole.depth);
+    const subdrill = Number(hole.subdrill);
     if (!Number.isFinite(burden) || !Number.isFinite(spacing) || !Number.isFinite(depth)) return;
+    const effectiveDepth = depth - (Number.isFinite(subdrill) ? subdrill : 0);
+    if (!(effectiveDepth > 0)) return;
     includedHoleCount += 1;
-    cubicYards += (burden * spacing * depth) / 27;
+    cubicYards += (burden * spacing * effectiveDepth) / 27;
   });
   return {
     includedHoleCount,
@@ -2296,6 +2307,7 @@ function renderDiagramVolumePanel() {
     : 2.3;
   const summary = summarizeDiagramVolume();
   els.diagramRockDensityInput.value = String(density);
+  els.diagramVolumeRuleStatus.textContent = "Volume uses burden x spacing x (depth - subdrill). Subdrill is excluded from tonnage.";
   els.diagramVolumeIncludedStatus.textContent = `Included Holes: ${summary.includedHoleCount}`;
   els.diagramVolumeCubicYardsStatus.textContent = `Total Cubic Yards: ${formatVolumeNumber(summary.cubicYards)}`;
   els.diagramVolumeTonsStatus.textContent = `Total Tons: ${formatVolumeNumber(summary.tons)}`;
@@ -2340,6 +2352,10 @@ function normalizeDiagramHoleFields(hole, options = {}) {
     hole.depth = Number.isFinite(numericDepth)
       ? (options.roundBearingAndDepth === true ? Math.round(numericDepth) : numericDepth)
       : null;
+  }
+  if (hole.subdrill !== null && hole.subdrill !== undefined) {
+    const numericSubdrill = Number(hole.subdrill);
+    hole.subdrill = Number.isFinite(numericSubdrill) ? numericSubdrill : null;
   }
 }
 
@@ -2893,6 +2909,7 @@ function diagramPropertyInputMap() {
     angle: els.diagramAngleInput,
     bearing: els.diagramBearingInput,
     depth: els.diagramDepthInput,
+    subdrill: els.diagramSubdrillInput,
     stemHeight: els.diagramStemHeightInput,
   };
 }
@@ -2905,6 +2922,7 @@ function diagramHolePopupInputMap() {
     angle: els.diagramHolePopupAngleInput,
     bearing: els.diagramHolePopupBearingInput,
     depth: els.diagramHolePopupDepthInput,
+    subdrill: els.diagramHolePopupSubdrillInput,
     stemHeight: els.diagramHolePopupStemHeightInput,
   };
 }
@@ -3363,13 +3381,14 @@ function applyPatternAssignment() {
   const interiorBurden = diagramState.metadata.interiorBurden;
   const interiorSpacing = diagramState.metadata.interiorSpacing;
   if (![faceBurden, faceSpacing, interiorBurden, interiorSpacing].every((value) => Number.isFinite(value))) {
-    window.alert("Enter all face and interior burden/spacing values in the Shot menu first.");
+    window.alert("Enter all face and interior burden/spacing values in the Pattern menu first.");
     return;
   }
   if (!diagramState.holes.some((hole) => hole.isFaceHole === true)) {
     window.alert("Assign face holes first.");
     return;
   }
+  const patternSubdrill = diagramState.metadata.patternSubdrill;
   diagramState.holes.forEach((hole) => {
     if (hole.isFaceHole === true) {
       hole.burden = faceBurden;
@@ -3378,6 +3397,7 @@ function applyPatternAssignment() {
       hole.burden = interiorBurden;
       hole.spacing = interiorSpacing;
     }
+    if (Number.isFinite(patternSubdrill)) hole.subdrill = patternSubdrill;
   });
   fullDiagramRefresh();
 }
@@ -3389,7 +3409,7 @@ function startFaceDesignation() {
   }
   diagramState.ui.pendingFaceDesignation = true;
   diagramState.ui.faceDesignationReturnTool = diagramState.ui.activeTool || "single";
-  openMenu("diagramShotMenu");
+  openMenu("diagramPatternMenu");
   setDiagramToolMode("single");
   renderDiagramShotPanel();
 }
@@ -3676,6 +3696,7 @@ els.diagramShotLocationSelect.addEventListener("change", () => {
 });
 els.diagramBenchInput.addEventListener("input", () => applyDiagramMetadataPatch("bench", els.diagramBenchInput.value.trim()));
 els.diagramShotDefaultDiameterSelect.addEventListener("change", () => applyDiagramMetadataPatch("defaultDiameter", selectedDiagramDefaultDiameter()));
+els.diagramPatternSubdrillInput.addEventListener("change", () => applyDiagramMetadataPatch("patternSubdrill", selectedDiagramMetadataNumber(els.diagramPatternSubdrillInput)));
 els.diagramFaceBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("faceBurden", selectedDiagramMetadataNumber(els.diagramFaceBurdenInput)));
 els.diagramFaceSpacingInput.addEventListener("change", () => applyDiagramMetadataPatch("faceSpacing", selectedDiagramMetadataNumber(els.diagramFaceSpacingInput)));
 els.diagramInteriorBurdenInput.addEventListener("change", () => applyDiagramMetadataPatch("interiorBurden", selectedDiagramMetadataNumber(els.diagramInteriorBurdenInput)));

@@ -919,6 +919,7 @@ export class DiagramRenderer {
     ].filter(Boolean);
     const rightLines = [
       Number.isFinite(Number(metadata.defaultDiameter)) ? `Hole Diameter: ${formatDiameterLabel(metadata.defaultDiameter)}` : null,
+      Number.isFinite(Number(metadata.patternSubdrill)) ? `Subdrill: ${Math.round(Number(metadata.patternSubdrill) * 100) / 100} ft` : null,
       formatPatternPair(metadata.faceBurden, metadata.faceSpacing) ? `Face Pattern: ${formatPatternPair(metadata.faceBurden, metadata.faceSpacing)}` : null,
       formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing) ? `Interior Pattern: ${formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing)}` : null,
     ].filter(Boolean);
