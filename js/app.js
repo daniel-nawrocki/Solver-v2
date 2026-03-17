@@ -1792,7 +1792,7 @@ function createDiagramPrintPage() {
   page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
   page.ui.bearingArrowLength = Number(els.printBearingArrowLengthInput.value) || 16;
   page.ui.labelAngleDeg = activePrintLabelAngle();
-  page.ui.labelDistancePx = activePrintLabelDistance();
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
   page.ui.showDepthLabels = diagramState.ui.showDepthLabels;
   page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
