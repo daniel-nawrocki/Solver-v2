@@ -527,6 +527,38 @@ button:active {
   border-top: 1px dashed rgba(159, 179, 201, 0.45);
 }
 
+.experimental-timing-adjustments {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.experimental-timing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.experimental-timing-table th,
+.experimental-timing-table td {
+  padding: 8px 10px;
+  border: 1px solid rgba(159, 179, 201, 0.45);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.experimental-timing-table th {
+  background: rgba(232, 239, 247, 0.92);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.experimental-timing-table tbody tr:nth-child(even) td {
+  background: rgba(247, 250, 253, 0.88);
+}
+
 .timing-overlap-list {
   display: grid;
   gap: 10px;

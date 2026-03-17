@@ -67,12 +67,19 @@ function cloneTimingResults(results = []) {
   return results.map((result) => ({
     ...result,
     holeTimes: Array.isArray(result.holeTimes) ? result.holeTimes.map((entry) => [...entry]) : Array.from(result.holeTimes || []),
+    originalHoleTimes: Array.isArray(result.originalHoleTimes)
+      ? result.originalHoleTimes.map((entry) => [...entry])
+      : Array.from(result.originalHoleTimes || []),
     offsetAssignments: Array.isArray(result.offsetAssignments)
       ? result.offsetAssignments.map((entry) => [...entry])
       : Array.from(result.offsetAssignments || []),
+    timingAdjustments: Array.isArray(result.timingAdjustments) ? result.timingAdjustments.map((entry) => ({ ...entry })) : [],
     delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
     overlapBins: Array.isArray(result.overlapBins)
       ? result.overlapBins.map((bin) => ({ ...bin, holeIds: Array.isArray(bin.holeIds) ? [...bin.holeIds] : [] }))
+      : [],
+    overlapGroups: Array.isArray(result.overlapGroups)
+      ? result.overlapGroups.map((group) => ({ ...group, holeIds: Array.isArray(group.holeIds) ? [...group.holeIds] : [] }))
       : [],
   }));
 }
@@ -122,7 +129,10 @@ export function serializeProjectDocument(projectState) {
         nextId: projectState.timing?.relationships?.nextId || 1,
       },
       timingResults: cloneTimingResults(projectState.timing?.timingResults || []),
+      experimentalTimingResults: cloneTimingResults(projectState.timing?.experimentalTimingResults || []),
       solverMessage: projectState.timing?.solverMessage || "",
+      experimentalSolverMessage: projectState.timing?.experimentalSolverMessage || "",
+      hasExperimentalTimingRun: projectState.timing?.hasExperimentalTimingRun === true,
       timingVisualization: { ...(projectState.timing?.timingVisualization || {}) },
     },
   };
@@ -165,7 +175,10 @@ export function parseProjectDocument(document) {
         nextId: document.timing?.relationships?.nextId || 1,
       },
       timingResults: cloneTimingResults(document.timing?.timingResults || []),
+      experimentalTimingResults: cloneTimingResults(document.timing?.experimentalTimingResults || []),
       solverMessage: document.timing?.solverMessage || "",
+      experimentalSolverMessage: document.timing?.experimentalSolverMessage || "",
+      hasExperimentalTimingRun: document.timing?.hasExperimentalTimingRun === true,
       timingVisualization: { ...(document.timing?.timingVisualization || {}) },
     },
   };
