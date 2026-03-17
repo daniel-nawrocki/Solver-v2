@@ -678,15 +678,29 @@
           <input id="printBearingArrowLengthInput" type="range" min="8" max="48" step="1" value="16">
         </label>
         <div id="printLabelAngleWrap" class="print-label-angle-wrap hidden">
-          <span class="print-label-angle-title">Label Position</span>
-          <div id="printLabelAngleDial" class="print-label-angle-dial" role="slider" tabindex="0"
-            aria-label="Print Label Position" aria-valuemin="0" aria-valuemax="360" aria-valuenow="315">
-            <div class="print-label-angle-ring"></div>
-            <div id="printLabelAnglePointer" class="print-label-angle-pointer"></div>
-            <div class="print-label-angle-center"></div>
+          <div class="print-label-angle-header">
+            <span class="print-label-angle-title">Label Position</span>
+            <span id="printLabelDistanceValue" class="print-label-distance-value">8 px</span>
           </div>
-          <div class="print-label-angle-readout">
-            <span id="printLabelAngleValue" class="print-label-angle-value">315 deg</span>
+          <div class="print-label-angle-controls">
+            <div id="printLabelAngleDial" class="print-label-angle-dial" role="slider" tabindex="0"
+              aria-label="Print Label Position" aria-valuemin="0" aria-valuemax="360" aria-valuenow="315">
+              <div class="print-label-angle-ring"></div>
+              <div id="printLabelAnglePointer" class="print-label-angle-pointer"></div>
+              <div class="print-label-angle-center"></div>
+            </div>
+            <div class="print-label-angle-readout">
+              <span id="printLabelAngleValue" class="print-label-angle-value">315 deg</span>
+            </div>
+          </div>
+          <label class="print-label-distance-control" for="printLabelDistanceInput">
+            <span class="print-label-distance-title">Distance</span>
+            <input id="printLabelDistanceInput" type="range" min="0" max="20" step="1" value="8"
+              aria-label="Print Label Distance">
+          </label>
+          <div class="print-label-distance-scale" aria-hidden="true">
+            <span>Near</span>
+            <span>Far</span>
           </div>
         </div>
       </div>

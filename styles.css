@@ -1308,12 +1308,30 @@ button:active {
 
 .print-label-angle-wrap {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
   padding: 6px 12px;
   border: 1px solid rgba(159, 179, 201, 0.48);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.88);
+  min-width: 210px;
+}
+
+.print-label-angle-header,
+.print-label-angle-controls,
+.print-label-distance-scale {
+  display: flex;
+  align-items: center;
+}
+
+.print-label-angle-header {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.print-label-angle-controls {
+  gap: 10px;
 }
 
 .print-label-angle-title {
@@ -1321,6 +1339,15 @@ button:active {
   font-weight: 700;
   color: #415973;
   white-space: nowrap;
+}
+
+.print-label-distance-value {
+  min-width: 38px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1f3148;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .print-label-angle-dial {
@@ -1392,6 +1419,34 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.print-label-distance-control {
+  display: grid;
+  grid-template-columns: auto minmax(96px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.print-label-distance-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #415973;
+  white-space: nowrap;
+}
+
+.print-label-distance-control input[type="range"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.print-label-distance-scale {
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7c90;
+  letter-spacing: 0.02em;
+  padding-left: 56px;
 }
 
 .print-stage {
