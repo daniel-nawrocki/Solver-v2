@@ -2141,12 +2141,17 @@ function formatHoleTableDegrees(value) {
   if (!Number.isFinite(Number(value))) return "";
   const rounded = Math.round(Number(value));
   if (rounded === 0) return "";
-  return `${rounded}°`;
+  return `${rounded}${String.fromCharCode(176)}`;
+}
+
+function formatHoleTableAzimuth(value, angle) {
+  if (!Number.isFinite(Number(angle)) || Math.round(Number(angle)) === 0) return "";
+  return formatHoleTableDegrees(value);
 }
 
 function holeTableRowsPerPage(page) {
   const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
-  return Math.max(8, Math.floor(27 / scale));
+  return Math.max(8, Math.floor(23 / scale));
 }
 
 function chunkHoleTableRows(page) {
@@ -2169,7 +2174,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
       <td>${escapeHtml(holeTableHoleLabel(hole))}</td>
       <td>${escapeHtml(formatHoleTableFeet(hole?.depth))}</td>
       <td>${escapeHtml(formatHoleTableDegrees(hole?.angle))}</td>
-      <td>${escapeHtml(formatHoleTableDegrees(hole?.bearing))}</td>
+      <td>${escapeHtml(formatHoleTableAzimuth(hole?.bearing, hole?.angle))}</td>
     </tr>
   `).join("");
   return `
@@ -4380,4 +4385,6 @@ initializeCloudIntegration().catch((error) => {
   console.error(error);
   window.alert(error.message || "Supabase initialization failed.");
 });
+
+
 
