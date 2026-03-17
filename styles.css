@@ -1142,6 +1142,33 @@ button:active {
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.4);
 }
 
+.print-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.print-page-actions .top-menu {
+  position: relative;
+}
+
+.print-page-actions .menu-panel {
+  top: calc(100% + 4px);
+  left: auto;
+  right: 0;
+  width: 180px;
+  max-height: none;
+  padding: 8px;
+}
+
+.print-page-actions .menu-panel button {
+  min-width: 0;
+}
+
+.print-page-actions .menu-panel button + button {
+  margin-top: 6px;
+}
+
 .print-page-tabs {
   display: flex;
   align-items: center;
@@ -1541,8 +1568,61 @@ button:active {
   background: #ffffff;
 }
 
+.print-hole-table-preview {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background: #ffffff;
+}
+
 .print-paper-frame.greyscale canvas {
   filter: grayscale(1);
+}
+
+.print-hole-table-sheet {
+  --hole-table-scale: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: calc(8px * var(--hole-table-scale));
+  box-sizing: border-box;
+  color: #13263d;
+}
+
+.print-hole-table-header h1 {
+  margin: 0;
+  font-size: calc(18px * var(--hole-table-scale));
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.print-hole-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: calc(11px * var(--hole-table-scale));
+}
+
+.print-hole-table th,
+.print-hole-table td {
+  border: 1px solid rgba(159, 179, 201, 0.6);
+  padding: calc(5px * var(--hole-table-scale)) calc(7px * var(--hole-table-scale));
+  text-align: left;
+  vertical-align: middle;
+}
+
+.print-hole-table th {
+  background: rgba(232, 239, 247, 0.95);
+  font-size: calc(10px * var(--hole-table-scale));
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.print-hole-table tbody tr:nth-child(even) td {
+  background: rgba(247, 250, 253, 0.9);
 }
 
 .print-pages-output {

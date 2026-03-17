@@ -480,6 +480,7 @@ Implemented in code.
 What was added:
 - Timing overlap analysis now renders as a cleaner horizontal bar-chart style list while keeping the existing bin-click highlight interaction
 - Diagram print preview now includes a circular `Label Position` dial in the print controls
+- the dial now drives a true circular orbit instead of the earlier angle-dependent in/out drift
 - the dial applies to all labels on the active Diagram print page and uses continuous `360°` placement
 - label drag offsets are still preserved and now apply on top of the dial-based default label direction
 - `Reset Labels` still clears custom drag offsets while respecting the current dial angle
@@ -488,9 +489,31 @@ What was added:
 Current rule:
 - changing the print label dial does not clear existing manual label drag offsets
 - duplicated print pages preserve the current label dial angle because it is part of per-page print state
+- label distance is now controlled separately from dial rotation
 - polygon draft points should now remain fixed relative to holes during pan/zoom/rotation until the draft is completed or cancelled
 
-### 24. Pattern Menu Move + Subdrill Support
+### 24. Diagram Print Distance Stepper + Corner Coordinate Labeling
+Implemented in code.
+
+What was added:
+- Diagram print preview label distance is now adjustable from the same `Label Position` tool as the dial
+- the distance control now uses a compact `- / tick / +` stepper instead of a raw slider
+- the distance scale now maps:
+  - tick `0` to `-15 px`
+  - tick `35` to `20 px`
+  - default new Diagram print pages to tick `3`
+- corner coordinate print panels now include their source hole label above `Lat` / `Lon`
+- corner coordinate print panels no longer draw leader lines when dragged away from their source hole
+- normal hole print labels still draw leader lines once moved far enough away
+- the print header / toolbar sizing was tightened for better browser viewing at normal zoom
+- a malformed print-stepper CSS block that temporarily broke the Diagram Maker bottom toolbar was fixed
+
+Current rule:
+- duplicated print pages preserve the current label-distance state because it remains part of per-page print state
+- existing print pages keep their current distance value unless a new Diagram print page is created
+- the distance stepper updates the same underlying label spacing state used by print label layout and manual drag offsets
+
+### 25. Pattern Menu Move + Subdrill Support
 Implemented in code.
 
 What was added:
@@ -538,7 +561,7 @@ Important recent context:
 - shared-project mode switching, import parity, and print timing-page behavior all need manual browser verification
 - centered mode-toggle layout still needs manual responsive/browser verification
 - Timing overlap chart interactions and overlap-based result ordering still need manual browser verification with real timing graphs
-- print label dial interaction and dial-plus-drag label placement still need manual browser verification
+- print label dial interaction, true circular orbit behavior, distance stepper behavior, and dial-plus-distance-plus-drag placement still need manual browser verification
 - world-space polygon drafting still needs manual browser verification across zoom/pan/rotation
 
 ## High-Priority Next Steps

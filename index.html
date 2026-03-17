@@ -645,8 +645,17 @@
   <section id="printWorkspace" class="print-workspace hidden" aria-label="Print Preview">
     <div id="printPageStrip" class="print-page-strip" aria-label="Print Pages">
       <div id="printPageTabs" class="print-page-tabs"></div>
-      <button id="printAddTimingPageBtn" class="print-add-page-btn hidden" type="button">Add Timing Page</button>
-      <button id="printAddPageBtn" class="print-add-page-btn" type="button">Add Page</button>
+      <div class="print-page-actions">
+        <div class="top-menu">
+          <button id="printAdditionalPagesBtn" class="menu-toggle print-add-page-btn hidden" type="button"
+            data-menu-toggle="printAdditionalPagesMenu">Additional Pages</button>
+          <section id="printAdditionalPagesMenu" class="menu-panel panel hidden">
+            <button id="printAddTimingPageBtn" type="button">Add Timing Page</button>
+            <button id="printAddHoleTablePageBtn" type="button">Add Hole Table</button>
+          </section>
+        </div>
+        <button id="printAddPageBtn" class="print-add-page-btn" type="button">Add Page</button>
+      </div>
     </div>
     <div class="print-toolbar">
       <div class="print-toolbar-group">
@@ -711,6 +720,7 @@
     <div class="print-stage" id="printStage">
       <div class="print-paper-frame" id="printPaperFrame">
         <canvas id="printCanvas" width="1100" height="850"></canvas>
+        <div id="printHoleTablePreview" class="print-hole-table-preview hidden" aria-label="Hole Table Preview"></div>
       </div>
     </div>
     <div id="printPagesOutput" class="print-pages-output" aria-hidden="true"></div>

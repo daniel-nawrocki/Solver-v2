@@ -182,6 +182,7 @@ function createDiagramState() {
 
 function createPrintPageState() {
   return {
+    pageType: "solver",
     holes: [],
     holesById: new Map(),
     selection: new Set(),
@@ -410,6 +411,8 @@ const els = {
   timingOverlapAnalysisPanel: document.getElementById("timingOverlapAnalysisPanel"),
   timingOverlapSummary: document.getElementById("timingOverlapSummary"),
   timingOverlapChart: document.getElementById("timingOverlapChart"),
+  printAdditionalPagesBtn: document.getElementById("printAdditionalPagesBtn"),
+  printAdditionalPagesMenu: document.getElementById("printAdditionalPagesMenu"),
   printLabelAngleWrap: document.getElementById("printLabelAngleWrap"),
   printLabelAngleDial: document.getElementById("printLabelAngleDial"),
   printLabelAnglePointer: document.getElementById("printLabelAnglePointer"),
@@ -418,6 +421,8 @@ const els = {
   printLabelDistanceTickValue: document.getElementById("printLabelDistanceTickValue"),
   printLabelDistanceDownBtn: document.getElementById("printLabelDistanceDownBtn"),
   printLabelDistanceUpBtn: document.getElementById("printLabelDistanceUpBtn"),
+  printAddHoleTablePageBtn: document.getElementById("printAddHoleTablePageBtn"),
+  printHoleTablePreview: document.getElementById("printHoleTablePreview"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
   holeRelationNegativeToolBtn: document.getElementById("holeRelationNegativeToolBtn"),
@@ -1644,6 +1649,7 @@ function pointerDialAngle(clientX, clientY) {
 function clonePrintPage(page) {
   const holes = page.holes.map(cloneHole);
   return {
+    pageType: page.pageType || (page?.ui?.workspaceMode === "diagram" ? "diagram" : "solver"),
     holes,
     holesById: new Map(holes.map((hole) => [hole.id, hole])),
     selection: new Set(page.selection || []),
@@ -1701,6 +1707,7 @@ function selectedProjectTimingResult() {
 
 function createSolverPrintPage(selectedTiming) {
   const page = createPrintPageState();
+  page.pageType = "solver";
   page.holes = solverState.holes.map(cloneHole);
   syncPrintPageHolesById(page);
   page.selection = new Set();
@@ -1741,6 +1748,7 @@ function createSolverPrintPageFromProject() {
   const selectedTiming = selectedProjectTimingResult();
   if (!selectedTiming) return null;
   const page = createPrintPageState();
+  page.pageType = "solver";
   page.holes = projectState.holes.map(cloneHole);
   syncPrintPageHolesById(page);
   page.selection = new Set();
@@ -1776,6 +1784,7 @@ function createSolverPrintPageFromProject() {
 
 function createDiagramPrintPage() {
   const page = createPrintPageState();
+  page.pageType = "diagram";
   page.holes = diagramState.holes.map(cloneHole);
   syncPrintPageHolesById(page);
   page.selection = new Set();
@@ -1808,7 +1817,55 @@ function createDiagramPrintPage() {
   return page;
 }
 
+function compareHoleTableRows(left, right) {
+  const leftLabel = String(left?.holeNumber || left?.id || "");
+  const rightLabel = String(right?.holeNumber || right?.id || "");
+  const leftNumeric = Number.parseFloat(leftLabel);
+  const rightNumeric = Number.parseFloat(rightLabel);
+  const leftHasNumeric = Number.isFinite(leftNumeric);
+  const rightHasNumeric = Number.isFinite(rightNumeric);
+  if (leftHasNumeric && rightHasNumeric && leftNumeric !== rightNumeric) return leftNumeric - rightNumeric;
+  if (leftHasNumeric !== rightHasNumeric) return leftHasNumeric ? -1 : 1;
+  return leftLabel.localeCompare(rightLabel, undefined, { numeric: true, sensitivity: "base" });
+}
+
+function createHoleTablePrintPage() {
+  const page = createPrintPageState();
+  page.pageType = "holeTable";
+  page.holes = diagramState.holes.map(cloneHole).sort(compareHoleTableRows);
+  syncPrintPageHolesById(page);
+  page.selection = new Set();
+  page.relationships = { originHoleId: null, edges: [], nextId: 1 };
+  page.timingResults = [];
+  page.ui.workspaceMode = "diagram";
+  page.ui.activeTimingPreviewIndex = -1;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = false;
+  page.ui.showOverlayText = false;
+  page.ui.showAngleLabels = false;
+  page.ui.showBearingLabels = false;
+  page.ui.showBearingArrows = false;
+  page.ui.bearingArrowWeight = 1;
+  page.ui.bearingArrowLength = 16;
+  page.ui.labelAngleDeg = 315;
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
+  page.ui.showDepthLabels = false;
+  page.ui.showCornerCoordinates = false;
+  page.ui.labelEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata(diagramState.metadata);
+  page.annotations = cloneDiagramAnnotations();
+  page.shotCorners = cloneShotCorners(diagramState.shotCorners);
+  page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
+  return page;
+}
+
 function pageWorkspaceLabel(page) {
+  if (page?.pageType === "holeTable") return "Hole Table";
   return page?.ui?.workspaceMode === "diagram" ? "Diagram" : "Timing";
 }
 
@@ -1819,8 +1876,16 @@ function applyPrintPageChrome(page) {
 }
 
 function setPrintRendererPage(page, options = {}) {
-  printRenderer.stateRef = page;
+  const showHoleTable = page?.pageType === "holeTable";
   applyPrintPageChrome(page);
+  els.printCanvas.classList.toggle("hidden", showHoleTable);
+  els.printHoleTablePreview.classList.toggle("hidden", !showHoleTable);
+  if (showHoleTable) {
+    renderHoleTablePreview(page, els.printHoleTablePreview);
+    printRenderer.stateRef = null;
+    return;
+  }
+  printRenderer.stateRef = page;
   if (!page) {
     printRenderer.render();
     return;
@@ -1861,12 +1926,17 @@ function renderPrintPageTabs() {
 function syncPrintControls() {
   const page = activePrintPage();
   if (!page) return;
-  const diagramMode = page.ui.workspaceMode === "diagram";
+  const diagramMode = page.pageType === "diagram";
+  const holeTableMode = page.pageType === "holeTable";
   const labelModeEnabled = page.ui.labelEditMode === true;
   const hasTimingPageOption = projectState.timing.timingResults.length > 0;
+  const showAdditionalPages = diagramMode || holeTableMode;
   els.printTextScaleInput.value = String(page.ui.textScale || 1);
-  els.printAddTimingPageBtn.classList.toggle("hidden", !diagramMode || !hasTimingPageOption);
-  els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode);
+  els.printFitBtn.classList.toggle("hidden", holeTableMode);
+  els.printAdditionalPagesBtn.classList.toggle("hidden", !showAdditionalPages);
+  els.printAddTimingPageBtn.classList.toggle("hidden", !hasTimingPageOption);
+  els.printAddHoleTablePageBtn.classList.toggle("hidden", !showAdditionalPages);
+  els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode || holeTableMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
@@ -1920,6 +1990,13 @@ function addTimingPrintPage() {
     printRenderer.fitToData(PRINT_FIT_MARGINS);
     syncPrintControls();
   });
+}
+
+function addHoleTablePrintPage() {
+  if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable") return;
+  const page = createHoleTablePrintPage();
+  printSession.pages.push(page);
+  activatePrintPage(printSession.pages.length - 1);
 }
 
 function removePrintPage(index) {
@@ -2015,7 +2092,11 @@ function applyPrintSettings() {
   page.ui.orientation = "landscape";
   page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
   applyPrintPageChrome(page);
-  printRenderer.render();
+  if (page.pageType === "holeTable") {
+    renderHoleTablePreview(page, els.printHoleTablePreview);
+  } else {
+    printRenderer.render();
+  }
   renderPrintPageTabs();
 }
 
@@ -2048,6 +2129,53 @@ function resetPrintLabelLayouts() {
   printRenderer.render();
 }
 
+function holeTableHoleLabel(hole) {
+  return hole?.holeNumber || hole?.id || "";
+}
+
+function formatHoleTableFeet(value) {
+  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))} ft` : "";
+}
+
+function formatHoleTableDegrees(value) {
+  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}°` : "";
+}
+
+function buildHoleTableMarkup(page) {
+  const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
+  const rows = (page?.holes || []).map((hole) => `
+    <tr>
+      <td>${escapeHtml(holeTableHoleLabel(hole))}</td>
+      <td>${escapeHtml(formatHoleTableFeet(hole?.depth))}</td>
+      <td>${escapeHtml(formatHoleTableDegrees(hole?.angle))}</td>
+      <td>${escapeHtml(formatHoleTableDegrees(hole?.bearing))}</td>
+    </tr>
+  `).join("");
+  return `
+    <section class="print-hole-table-sheet" style="--hole-table-scale:${scale};">
+      <header class="print-hole-table-header">
+        <h1>Hole Table</h1>
+      </header>
+      <table class="print-hole-table">
+        <thead>
+          <tr>
+            <th>Hole ID</th>
+            <th>Depth</th>
+            <th>Angle</th>
+            <th>Azimuth (True North)</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>
+  `;
+}
+
+function renderHoleTablePreview(page, container) {
+  if (!container) return;
+  container.innerHTML = buildHoleTableMarkup(page);
+}
+
 function renderPrintPageToCanvas(page, canvas) {
   if (!page || !canvas) return;
   const context = canvas.getContext("2d");
@@ -2070,14 +2198,18 @@ function preparePrintablePages() {
     const frame = document.createElement("div");
     frame.className = "print-paper-frame";
     if (page.colorMode === "greyscale") frame.classList.add("greyscale");
-    const canvas = document.createElement("canvas");
-    canvas.width = printRenderer.canvas.width;
-    canvas.height = printRenderer.canvas.height;
-    canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
-    frame.appendChild(canvas);
+    if (page.pageType === "holeTable") {
+      frame.innerHTML = buildHoleTableMarkup(page);
+    } else {
+      const canvas = document.createElement("canvas");
+      canvas.width = printRenderer.canvas.width;
+      canvas.height = printRenderer.canvas.height;
+      canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
+      frame.appendChild(canvas);
+      renderPrintPageToCanvas(page, canvas);
+    }
     wrapper.appendChild(frame);
     els.printPagesOutput.appendChild(wrapper);
-    renderPrintPageToCanvas(page, canvas);
   });
   setPrintRendererPage(currentPage, { render: true });
 }
@@ -4075,7 +4207,14 @@ els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
-els.printAddTimingPageBtn.addEventListener("click", () => addTimingPrintPage());
+els.printAddTimingPageBtn.addEventListener("click", () => {
+  addTimingPrintPage();
+  closeAllMenus();
+});
+els.printAddHoleTablePageBtn.addEventListener("click", () => {
+  addHoleTablePrintPage();
+  closeAllMenus();
+});
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
 els.printPageTabs.addEventListener("click", (event) => {
   const removeBtn = event.target.closest("[data-print-remove]");
