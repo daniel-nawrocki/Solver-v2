@@ -61,6 +61,9 @@ const WORKSPACE_TO_MODE = {
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "subdrill", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
 const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
+const PRINT_LABEL_DISTANCE_MIN = -15;
+const PRINT_LABEL_DISTANCE_MAX = 20;
+const PRINT_LABEL_DISTANCE_DEFAULT_TICK = 3;
 const DIAGRAM_TOOL_MODES = new Set(["single", "box", "polygon", "markup", "text"]);
 const DIAGRAM_ANNOTATION_SIZE_MAP = {
   small: { strokeWidth: 2, textSize: 14 },
@@ -197,7 +200,7 @@ function createPrintPageState() {
       bearingArrowWeight: 1,
       bearingArrowLength: 16,
       labelAngleDeg: 315,
-      labelDistancePx: 8,
+      labelDistancePx: PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK,
       showDepthLabels: true,
       showCornerCoordinates: false,
       labelEditMode: false,
@@ -1573,14 +1576,23 @@ function updatePrintLabelAngleDial(angle) {
   els.printLabelAngleValue.textContent = `${Math.round(normalized)} deg`;
 }
 
+function printLabelDistanceToTick(distance) {
+  return clampPrintLabelDistance(distance) - PRINT_LABEL_DISTANCE_MIN;
+}
+
+function printLabelTickToDistance(tick) {
+  return clampPrintLabelDistance(PRINT_LABEL_DISTANCE_MIN + (Number(tick) || 0));
+}
+
 function clampPrintLabelDistance(distance) {
-  return Math.max(-15, Math.min(20, Number(distance) || 0));
+  return Math.max(PRINT_LABEL_DISTANCE_MIN, Math.min(PRINT_LABEL_DISTANCE_MAX, Number(distance) || 0));
 }
 
 function updatePrintLabelDistanceControls(distance) {
   const clamped = clampPrintLabelDistance(distance);
-  els.printLabelDistanceInput.value = String(Math.round(clamped));
-  els.printLabelDistanceValue.textContent = `${Math.round(clamped)} px`;
+  const tick = printLabelDistanceToTick(clamped);
+  els.printLabelDistanceInput.value = String(Math.round(tick));
+  els.printLabelDistanceValue.textContent = String(Math.round(tick));
 }
 
 function activePrintLabelAngle() {
@@ -1701,7 +1713,7 @@ function createSolverPrintPage(selectedTiming) {
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
   page.ui.labelAngleDeg = 315;
-  page.ui.labelDistancePx = 8;
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
   page.ui.showDepthLabels = false;
   page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
@@ -1737,7 +1749,7 @@ function createSolverPrintPageFromProject() {
   page.ui.bearingArrowWeight = 1;
   page.ui.bearingArrowLength = 16;
   page.ui.labelAngleDeg = 315;
-  page.ui.labelDistancePx = 8;
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
   page.ui.showDepthLabels = false;
   page.ui.showCornerCoordinates = false;
   page.ui.labelEditMode = false;
@@ -4085,7 +4097,7 @@ els.printBearingArrowLengthInput.addEventListener("input", () => applyPrintSetti
 els.printDepthToggle.addEventListener("change", () => applyPrintSettings());
 els.printCornerCoordsToggle.addEventListener("change", () => applyPrintSettings());
 els.printLabelDistanceInput.addEventListener("input", () => {
-  setActivePrintLabelDistance(els.printLabelDistanceInput.value);
+  setActivePrintLabelDistance(printLabelTickToDistance(els.printLabelDistanceInput.value));
 });
 els.printLabelAngleDial.addEventListener("mousedown", (event) => startPrintLabelDialInteraction(event));
 els.printLabelAngleDial.addEventListener("keydown", (event) => {
