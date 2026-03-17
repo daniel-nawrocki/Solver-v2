@@ -605,7 +605,9 @@ export class DiagramRenderer {
     const lon = hole.collar?.coordinates?.latLon?.lon ?? hole.coordinates?.latLon?.lon;
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return [];
     const valueSize = Math.max(8, Math.round(10 * this.textScale()));
+    const holeLabel = hole.holeNumber || hole.id;
     return [
+      { text: `Hole ${holeLabel}`, color: "#111827", weight: 700, size: valueSize },
       { text: `Lat ${Number(lat).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
       { text: `Lon ${Number(lon).toFixed(6)}`, color: "#334155", weight: 700, size: valueSize },
     ];
@@ -706,6 +708,7 @@ export class DiagramRenderer {
   }
 
   drawDiagramPrintLabelLeader(layout) {
+    if ((layout.kind || "hole") !== "hole") return;
     const { point, rect } = layout;
     const nearest = {
       x: clamp(point.x, rect.left, rect.left + rect.width),
