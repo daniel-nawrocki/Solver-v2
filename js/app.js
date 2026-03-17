@@ -2169,6 +2169,12 @@ function buildHoleTableMarkup(page, holes, options = {}) {
   const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
   const pageNumber = Number(options.pageNumber) || 1;
   const pageCount = Number(options.pageCount) || 1;
+  const showSummary = options.showSummary === true;
+  const totalHoles = Array.isArray(page?.holes) ? page.holes.length : 0;
+  const totalDrillFootage = (page?.holes || []).reduce((sum, hole) => {
+    const depth = Number(hole?.depth);
+    return Number.isFinite(depth) ? sum + depth : sum;
+  }, 0);
   const rows = (holes || []).map((hole) => `
     <tr>
       <td>${escapeHtml(holeTableHoleLabel(hole))}</td>
@@ -2177,6 +2183,14 @@ function buildHoleTableMarkup(page, holes, options = {}) {
       <td>${escapeHtml(formatHoleTableAzimuth(hole?.bearing, hole?.angle))}</td>
     </tr>
   `).join("");
+  const summaryMarkup = showSummary
+    ? `
+      <footer class="print-hole-table-summary">
+        <span>${escapeHtml(`Total Holes: ${totalHoles}`)}</span>
+        <span>${escapeHtml(`Total Drill Footage: ${Math.round(totalDrillFootage)} ft`)}</span>
+      </footer>
+    `
+    : "";
   return `
     <section class="print-hole-table-sheet" style="--hole-table-scale:${scale};">
       <header class="print-hole-table-header">
@@ -2194,6 +2208,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+      ${summaryMarkup}
     </section>
   `;
 }
@@ -2202,7 +2217,7 @@ function renderHoleTablePreview(page, container) {
   if (!container) return;
   const chunks = chunkHoleTableRows(page);
   container.innerHTML = chunks
-    .map((holes, index) => buildHoleTableMarkup(page, holes, { pageNumber: index + 1, pageCount: chunks.length }))
+    .map((holes, index) => buildHoleTableMarkup(page, holes, { pageNumber: index + 1, pageCount: chunks.length, showSummary: index === chunks.length - 1 }))
     .join("");
 }
 
@@ -2231,7 +2246,7 @@ function preparePrintablePages() {
         const frame = document.createElement("div");
         frame.className = "print-paper-frame";
         if (page.colorMode === "greyscale") frame.classList.add("greyscale");
-        frame.innerHTML = buildHoleTableMarkup(page, holes, { pageNumber: chunkIndex + 1, pageCount: chunks.length });
+        frame.innerHTML = buildHoleTableMarkup(page, holes, { pageNumber: chunkIndex + 1, pageCount: chunks.length, showSummary: chunkIndex === chunks.length - 1 });
         wrapper.appendChild(frame);
         els.printPagesOutput.appendChild(wrapper);
       });
@@ -4385,6 +4400,8 @@ initializeCloudIntegration().catch((error) => {
   console.error(error);
   window.alert(error.message || "Supabase initialization failed.");
 });
+
+
 
 
 

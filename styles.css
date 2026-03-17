@@ -1644,6 +1644,21 @@ button:active {
   background: rgba(247, 250, 253, 0.9);
 }
 
+.print-hole-table-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding: calc(8px * var(--hole-table-scale)) calc(10px * var(--hole-table-scale));
+  border: 1px solid rgba(159, 179, 201, 0.6);
+  background: rgba(243, 247, 252, 0.95);
+  font-size: calc(10px * var(--hole-table-scale));
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .print-pages-output {
   display: none;
   width: 100%;
