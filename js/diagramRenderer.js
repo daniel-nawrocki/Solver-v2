@@ -618,7 +618,7 @@ export class DiagramRenderer {
     const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
     const angleDeg = Number.isFinite(configuredAngle) ? configuredAngle : 315;
     const configuredDistance = Number(this.stateRef?.ui?.labelDistancePx);
-    const edgeGapPx = Number.isFinite(configuredDistance) ? Math.max(-4, Math.min(20, configuredDistance)) : 8;
+    const edgeGapPx = Number.isFinite(configuredDistance) ? Math.max(-8, Math.min(20, configuredDistance)) : 8;
     const radians = (angleDeg * Math.PI) / 180;
     const ux = Math.sin(radians);
     const uy = -Math.cos(radians);
@@ -657,7 +657,7 @@ export class DiagramRenderer {
     const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
     const angleDeg = Number.isFinite(configuredAngle) ? configuredAngle : 315;
     const configuredDistance = Number(this.stateRef?.ui?.labelDistancePx);
-    const edgeGapPx = (Number.isFinite(configuredDistance) ? Math.max(-4, Math.min(20, configuredDistance)) : 8) + 18;
+    const edgeGapPx = (Number.isFinite(configuredDistance) ? Math.max(-8, Math.min(20, configuredDistance)) : 8) + 18;
     const radians = (angleDeg * Math.PI) / 180;
     const ux = Math.sin(radians);
     const uy = -Math.cos(radians);

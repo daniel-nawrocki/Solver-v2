@@ -1574,7 +1574,7 @@ function updatePrintLabelAngleDial(angle) {
 }
 
 function clampPrintLabelDistance(distance) {
-  return Math.max(-4, Math.min(20, Number(distance) || 0));
+  return Math.max(-8, Math.min(20, Number(distance) || 0));
 }
 
 function updatePrintLabelDistanceControls(distance) {
