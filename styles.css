@@ -533,8 +533,7 @@ button:active {
 .timing-solve-floating {
   position: fixed;
   top: 84px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 18px;
   z-index: 220;
   width: min(280px, calc(100vw - 36px));
   padding: 12px 14px;
@@ -549,6 +548,8 @@ button:active {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #35516f;
+  cursor: move;
+  user-select: none;
 }
 
 .timing-solve-floating-grid {

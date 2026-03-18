@@ -334,6 +334,13 @@ const printLabelDialState = {
   dragging: false,
 };
 
+const timingSolveFloatingState = {
+  dragging: false,
+  pointerOffsetX: 0,
+  pointerOffsetY: 0,
+  hasMoved: false,
+};
+
 let solverWorker = null;
 
 const els = {
@@ -414,6 +421,7 @@ const els = {
   manualRowDelayInput: document.getElementById("manualRowDelayInput"),
   manualOffsetDelayInput: document.getElementById("manualOffsetDelayInput"),
   timingSolveFloating: document.getElementById("timingSolveFloating"),
+  timingSolveFloatingHandle: document.getElementById("timingSolveFloatingHandle"),
   timingFloatingOriginValue: document.getElementById("timingFloatingOriginValue"),
   timingFloatingReachableValue: document.getElementById("timingFloatingReachableValue"),
   timingFloatingConflictsValue: document.getElementById("timingFloatingConflictsValue"),
@@ -1502,11 +1510,43 @@ function formatSolveCount(value) {
   return Number.isFinite(value) ? value.toLocaleString() : "0";
 }
 
+function clampTimingSolveFloatingPosition(left, top) {
+  const rect = els.timingSolveFloating.getBoundingClientRect();
+  const maxLeft = Math.max(8, window.innerWidth - rect.width - 8);
+  const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+  return {
+    left: Math.min(Math.max(8, left), maxLeft),
+    top: Math.min(Math.max(8, top), maxTop),
+  };
+}
+
+function setTimingSolveFloatingPosition(left, top) {
+  const clamped = clampTimingSolveFloatingPosition(left, top);
+  els.timingSolveFloating.style.left = `${clamped.left}px`;
+  els.timingSolveFloating.style.top = `${clamped.top}px`;
+  els.timingSolveFloating.style.right = "auto";
+}
+
+function ensureTimingSolveFloatingDefaultPosition() {
+  if (timingSolveFloatingState.hasMoved) return;
+  els.timingSolveFloating.style.left = "auto";
+  els.timingSolveFloating.style.top = "84px";
+  els.timingSolveFloating.style.right = "18px";
+}
+
+function startTimingSolveFloatingDrag(event) {
+  const rect = els.timingSolveFloating.getBoundingClientRect();
+  timingSolveFloatingState.dragging = true;
+  timingSolveFloatingState.pointerOffsetX = event.clientX - rect.left;
+  timingSolveFloatingState.pointerOffsetY = event.clientY - rect.top;
+}
+
 function shouldShowTimingSolveFloating() {
   return isSolverWorkspaceActive() && activeTimingMode() === "solver";
 }
 
 function showTimingSolveFloating() {
+  ensureTimingSolveFloatingDefaultPosition();
   els.timingSolveFloating.classList.remove("hidden");
 }
 
@@ -4494,6 +4534,10 @@ els.cancelTimingSolveBtn.addEventListener("click", () => {
   cancelTimingSolve();
 });
 
+els.timingSolveFloatingHandle.addEventListener("mousedown", (event) => {
+  startTimingSolveFloatingDrag(event);
+});
+
 els.timingResults.addEventListener("click", (event) => {
   const target = event.target.closest("[data-timing-index]");
   if (!target) return;
@@ -4601,10 +4645,18 @@ els.printLabelAngleDial.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("mousemove", (event) => {
+  if (timingSolveFloatingState.dragging) {
+    timingSolveFloatingState.hasMoved = true;
+    setTimingSolveFloatingPosition(
+      event.clientX - timingSolveFloatingState.pointerOffsetX,
+      event.clientY - timingSolveFloatingState.pointerOffsetY,
+    );
+  }
   if (!printLabelDialState.dragging) return;
   setActivePrintLabelAngle(pointerDialAngle(event.clientX, event.clientY));
 });
 window.addEventListener("mouseup", () => {
+  timingSolveFloatingState.dragging = false;
   printLabelDialState.dragging = false;
 });
 els.printActionBtn.addEventListener("click", () => {
