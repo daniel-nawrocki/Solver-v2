@@ -105,6 +105,7 @@ function createSolverState() {
       showOverlapAnalysis: false,
       activeOverlapBinKey: null,
       relationshipDraft: null,
+      readinessDismissed: false,
       solveProgress: { current: 0, total: 0 },
       isSolving: false,
       timingVisualization: {
@@ -1320,6 +1321,7 @@ function hydrateSolverFromProject() {
   solverState.ui.showOverlapAnalysis = false;
   solverState.ui.activeOverlapBinKey = null;
   solverState.ui.relationshipDraft = null;
+  solverState.ui.readinessDismissed = false;
   solverState.ui.solveProgress = { current: 0, total: 0 };
   solverState.ui.isSolving = false;
   solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
@@ -1542,7 +1544,7 @@ function startTimingSolveFloatingDrag(event) {
 }
 
 function shouldShowTimingSolveFloating() {
-  return isSolverWorkspaceActive() && activeTimingMode() === "solver";
+  return isSolverWorkspaceActive() && activeTimingMode() === "solver" && solverState.ui.readinessDismissed !== true;
 }
 
 function showTimingSolveFloating() {
@@ -1607,6 +1609,7 @@ function createSolverWorker() {
     if (data.type === "result") {
       solverState.timingResults = cloneTimingResults(data.results || []);
       solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
+      solverState.ui.readinessDismissed = solverState.timingResults.length > 0;
       solverState.solverMessage = solverState.timingResults.length
         ? ""
         : (data.message || "No valid timing combinations were produced for the current graph.");
@@ -1618,6 +1621,7 @@ function createSolverWorker() {
     if (data.type === "error") {
       solverState.timingResults = [];
       solverState.ui.activeTimingPreviewIndex = -1;
+      solverState.ui.readinessDismissed = false;
       solverState.solverMessage = data.message || "Timing solver failed.";
       renderTimingResults();
       solverRenderer.render();
@@ -1634,6 +1638,7 @@ function createSolverWorker() {
     solverState.ui.isSolving = false;
     solverState.timingResults = [];
     solverState.ui.activeTimingPreviewIndex = -1;
+    solverState.ui.readinessDismissed = false;
     solverState.solverMessage = event.message || "Timing solver worker failed.";
     syncTimingSolveFloating();
     renderTimingModeControls();
@@ -1889,6 +1894,7 @@ function startWorkerTimingSolve() {
   resetTimingOverlapAnalysis();
   solverState.timingResults = [];
   solverState.ui.activeTimingPreviewIndex = -1;
+  solverState.ui.readinessDismissed = false;
   solverState.ui.isSolving = true;
   solverState.solverMessage = "Starting advanced brute force solve...";
   showTimingSolveFloating();
@@ -3071,6 +3077,7 @@ function resetTimingResults(message = "") {
   resetTimingOverlapAnalysis();
   solverState.timingResults = [];
   solverState.ui.activeTimingPreviewIndex = -1;
+  solverState.ui.readinessDismissed = false;
   solverState.solverMessage = message;
   updateTimingSolveProgress(0, 0);
   renderTimingResults();
