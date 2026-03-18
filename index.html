@@ -235,21 +235,25 @@
               </label>
               <div class="status-note">Manual mode applies these values directly to the current timing pathing graph.</div>
             </div>
-            <div id="timingSolveControls" class="timing-solve-controls">
-              <label>Solver Mode
-                <select id="timingSolveModeSelect">
-                  <option value="default">Default (Refined)</option>
-                  <option value="advanced">Advanced (Brute Force)</option>
-                </select>
-              </label>
-              <div class="row-actions timing-solve-actions">
-                <button id="solveTimingBtn" class="menu-action-btn" type="button">Solve</button>
-                <button id="cancelTimingSolveBtn" type="button" class="hidden">Cancel</button>
+            <div id="timingReadinessPanel" class="timing-solve-controls">
+              <h3 class="subsection-title">Solver Readiness</h3>
+              <div class="timing-readiness-grid">
+                <div class="timing-readiness-row"><span>Origin Selected</span><strong id="timingReadyOriginValue">No</strong></div>
+                <div class="timing-readiness-row"><span>Relationships Count</span><strong id="timingReadyRelationshipsValue">0</strong></div>
+                <div class="timing-readiness-row"><span>Reachable Holes Count</span><strong id="timingReadyReachableValue">0 / 0</strong></div>
+                <div class="timing-readiness-row"><span>Conflicting Paths</span><strong id="timingReadyConflictsValue">No</strong></div>
+                <div class="timing-readiness-row"><span>Offset Edges Count</span><strong id="timingReadyOffsetsValue">0</strong></div>
+                <div class="timing-readiness-row"><span>Estimated Combinations</span><strong id="timingReadyEstimateValue">0</strong></div>
               </div>
               <div id="timingSolveStatus" class="status-note">Run solver to see best delay combinations.</div>
               <progress id="timingSolveProgress" class="timing-solve-progress hidden" max="1" value="0"></progress>
             </div>
           </section>
+        </div>
+
+        <div class="row-actions timing-toolbar-actions">
+          <button id="solveTimingBtn" class="menu-action-btn" type="button">Solve</button>
+          <button id="cancelTimingSolveBtn" type="button" class="hidden">Cancel</button>
         </div>
 
         <div id="timingResultsMenuWrap" class="top-menu hidden">

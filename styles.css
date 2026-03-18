@@ -501,12 +501,33 @@ button:active {
   border-top: 1px solid rgba(159, 179, 201, 0.34);
 }
 
-.timing-solve-actions {
-  margin-top: 8px;
+.timing-toolbar-actions {
+  align-self: flex-start;
 }
 
-.timing-solve-actions .menu-action-btn {
-  min-width: 0;
+.timing-readiness-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.timing-readiness-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(159, 179, 201, 0.35);
+  font-size: 11px;
+  color: #52657c;
+}
+
+.timing-readiness-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.timing-readiness-row strong {
+  color: #16324f;
 }
 
 .timing-solve-progress {

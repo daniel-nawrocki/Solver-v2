@@ -1,17 +1,3 @@
-function generateValues(min, max, maxSamples = 15) {
-  const absMin = Math.abs(Math.floor(Number(min) || 0));
-  const absMax = Math.abs(Math.floor(Number(max) || 0));
-  const a = Math.max(0, Math.min(absMin, absMax));
-  const b = Math.max(a, Math.max(absMin, absMax));
-  if (a === b) return [a];
-  const span = b - a;
-  const step = Math.max(1, Math.ceil(span / (maxSamples - 1)));
-  const values = [];
-  for (let value = a; value <= b; value += step) values.push(value);
-  if (values[values.length - 1] !== b) values.push(b);
-  return values;
-}
-
 function enumerateIntegerRange(min, max) {
   const a = Math.max(0, Math.min(Math.floor(Number(min) || 0), Math.floor(Number(max) || 0)));
   const b = Math.max(a, Math.max(Math.floor(Number(min) || 0), Math.floor(Number(max) || 0)));
@@ -201,15 +187,6 @@ function computeAdvancedTotal(ranges, offsetCount) {
   const r2rCount = rangeCount(ranges.rowToRow.min, ranges.rowToRow.max);
   const offsetCountPerEdge = rangeCount(ranges.offset.min, ranges.offset.max);
   return h2hCount * r2rCount * (offsetCountPerEdge ** offsetCount);
-}
-
-function computeDefaultTotal(ranges, offsetCount, topCount = 5) {
-  const sampledHole = generateValues(ranges.holeToHole.min, ranges.holeToHole.max).length;
-  const sampledRow = generateValues(ranges.rowToRow.min, ranges.rowToRow.max).length;
-  const sampledOffset = generateValues(ranges.offset.min, ranges.offset.max, 26).length;
-  const coarseTotal = sampledHole * sampledRow * (sampledOffset ** offsetCount);
-  const refineTotalPerCandidate = 5 * 5 * (5 ** offsetCount);
-  return coarseTotal + (topCount * refineTotalPerCandidate);
 }
 
 function buildNormalizedInput(rawInputs = {}, rawRanges = {}) {
@@ -439,65 +416,6 @@ function solveEnumerated(context, graph, holeValues, rowValues, offsetValueSets,
   }
 }
 
-function buildRefinedRanges(candidate, ranges, offsetEdges) {
-  const holeValues = enumerateIntegerRange(
-    Math.max(ranges.holeToHole.min, candidate.holeDelay - 2),
-    Math.min(ranges.holeToHole.max, candidate.holeDelay + 2),
-  );
-  const rowValues = enumerateIntegerRange(
-    Math.max(ranges.rowToRow.min, candidate.rowDelay - 2),
-    Math.min(ranges.rowToRow.max, candidate.rowDelay + 2),
-  );
-  const offsetMap = new Map(candidate.offsetAssignments || []);
-  const offsetValues = offsetEdges.map((edge) => enumerateIntegerRange(
-    Math.max(ranges.offset.min, (offsetMap.get(edge.id) ?? ranges.offset.min) - 2),
-    Math.min(ranges.offset.max, (offsetMap.get(edge.id) ?? ranges.offset.max) + 2),
-  ));
-  return { holeValues, rowValues, offsetValues };
-}
-
-function runDefaultSolve(context, graph) {
-  const sampledHoleValues = generateValues(context.ranges.holeToHole.min, context.ranges.holeToHole.max);
-  const sampledRowValues = generateValues(context.ranges.rowToRow.min, context.ranges.rowToRow.max);
-  const sampledOffsetValues = context.offsetEdges.map(() => generateValues(context.ranges.offset.min, context.ranges.offset.max, 26));
-  const topCount = 5;
-  const totalIterations = computeDefaultTotal(context.ranges, context.offsetEdges.length, topCount);
-  const progressState = { current: 0 };
-  const coarseBest = [];
-
-  solveEnumerated(
-    context,
-    graph,
-    sampledHoleValues,
-    sampledRowValues,
-    sampledOffsetValues,
-    totalIterations,
-    progressState,
-    coarseBest,
-  );
-
-  const refinedBest = [...coarseBest];
-  const seeds = coarseBest.slice(0, topCount);
-  for (let index = 0; index < seeds.length; index += 1) {
-    const refined = buildRefinedRanges(seeds[index], context.ranges, context.offsetEdges);
-    solveEnumerated(
-      context,
-      graph,
-      refined.holeValues,
-      refined.rowValues,
-      refined.offsetValues,
-      totalIterations,
-      progressState,
-      refinedBest,
-    );
-  }
-
-  refinedBest.sort(compareResults);
-  return {
-    totalIterations,
-    results: refinedBest.slice(0, 12),
-  };
-}
 
 function runAdvancedSolve(context, graph) {
   const holeValues = enumerateIntegerRange(context.ranges.holeToHole.min, context.ranges.holeToHole.max);
@@ -516,7 +434,7 @@ function runAdvancedSolve(context, graph) {
 }
 
 self.onmessage = function onMessage(event) {
-  const { type, mode, inputs, ranges } = event.data || {};
+  const { type, inputs, ranges } = event.data || {};
   if (type !== "start") return;
 
   try {
@@ -528,16 +446,13 @@ self.onmessage = function onMessage(event) {
       return;
     }
 
-    const solveMode = mode === "advanced" ? "advanced" : "default";
-    const output = solveMode === "advanced"
-      ? runAdvancedSolve(context, graph)
-      : runDefaultSolve(context, graph);
+    const output = runAdvancedSolve(context, graph);
 
     postProgress(output.totalIterations, output.totalIterations);
     self.postMessage({
       type: "result",
       results: output.results,
-      mode: solveMode,
+      mode: "advanced",
       total: output.totalIterations,
     });
     self.postMessage({ type: "done" });
