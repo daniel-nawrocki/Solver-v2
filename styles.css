@@ -538,14 +538,15 @@ button:active {
 
 .timing-solve-floating {
   position: fixed;
-  top: 86px;
-  right: 18px;
-  z-index: 140;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 220;
   width: min(280px, calc(100vw - 36px));
   padding: 12px 14px;
-  border: 1px solid rgba(47, 125, 246, 0.18);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(15, 32, 56, 0.18);
+  border: 1px solid rgba(47, 125, 246, 0.28);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 56px rgba(15, 32, 56, 0.24);
 }
 
 .timing-solve-floating-title {

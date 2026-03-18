@@ -335,6 +335,7 @@ const printLabelDialState = {
 };
 
 let solverWorker = null;
+let timingSolveFloatingHideTimer = null;
 
 const els = {
   homeWorkspace: document.getElementById("homeWorkspace"),
@@ -649,6 +650,7 @@ function renderWorkspaceChrome() {
   } else {
     renderTimingVisualizationControls();
   }
+  syncTimingSolveFloating();
 }
 
 function setActiveWorkspace(workspaceId) {
@@ -1507,8 +1509,42 @@ function formatSolveCount(value) {
   return Number.isFinite(value) ? value.toLocaleString() : "0";
 }
 
-function renderTimingSolveFloating() {
-  els.timingSolveFloating.classList.toggle("hidden", !solverState.ui.isSolving);
+function shouldShowTimingSolveFloating() {
+  return isSolverWorkspaceActive() && activeTimingMode() === "solver";
+}
+
+function showTimingSolveFloating() {
+  if (timingSolveFloatingHideTimer) {
+    window.clearTimeout(timingSolveFloatingHideTimer);
+    timingSolveFloatingHideTimer = null;
+  }
+  els.timingSolveFloating.classList.remove("hidden");
+}
+
+function hideTimingSolveFloating() {
+  const hideNow = () => {
+    if (timingSolveFloatingHideTimer) {
+      window.clearTimeout(timingSolveFloatingHideTimer);
+      timingSolveFloatingHideTimer = null;
+    }
+    els.timingSolveFloating.classList.add("hidden");
+  };
+  hideNow();
+}
+
+function syncTimingSolveFloating() {
+  if (!shouldShowTimingSolveFloating()) {
+    hideTimingSolveFloating();
+    return;
+  }
+  showTimingSolveFloating();
+  if (solverState.ui.isSolving) {
+    els.timingSolveStatus.textContent = solverState.solverMessage || "Running timing solve...";
+    els.timingSolveProgress.classList.remove("hidden");
+    return;
+  }
+  els.timingSolveStatus.textContent = "Solver ready. Run timing combinations from the toolbar.";
+  els.timingSolveProgress.classList.add("hidden");
 }
 
 function updateTimingSolveProgress(current = 0, total = 0) {
@@ -1517,7 +1553,8 @@ function updateTimingSolveProgress(current = 0, total = 0) {
   solverState.ui.solveProgress = { current: safeCurrent, total: safeTotal };
   els.timingSolveProgress.max = safeTotal > 0 ? safeTotal : 1;
   els.timingSolveProgress.value = safeCurrent;
-  renderTimingSolveFloating();
+  els.timingSolveProgress.classList.toggle("hidden", !solverState.ui.isSolving || safeTotal <= 0);
+  syncTimingSolveFloating();
 }
 
 function createSolverWorker() {
@@ -1529,6 +1566,7 @@ function createSolverWorker() {
       if (solverState.ui.isSolving) {
         solverState.solverMessage = `Solving advanced brute force: ${formatSolveCount(data.current)} / ${formatSolveCount(data.total)} combinations`;
         els.timingSolveStatus.textContent = solverState.solverMessage;
+        els.timingSolveProgress.classList.remove("hidden");
         renderTimingResults();
       }
       return;
@@ -1554,7 +1592,7 @@ function createSolverWorker() {
     }
     if (data.type === "done") {
       solverState.ui.isSolving = false;
-      renderTimingSolveFloating();
+      syncTimingSolveFloating();
       renderTimingModeControls();
       persistTimingStateToProject();
     }
@@ -1564,7 +1602,7 @@ function createSolverWorker() {
     solverState.timingResults = [];
     solverState.ui.activeTimingPreviewIndex = -1;
     solverState.solverMessage = event.message || "Timing solver worker failed.";
-    renderTimingSolveFloating();
+    syncTimingSolveFloating();
     renderTimingModeControls();
     renderTimingResults();
     solverRenderer.render();
@@ -1588,7 +1626,7 @@ function cancelTimingSolve({ keepMessage = false } = {}) {
   resetSolverWorker();
   updateTimingSolveProgress(0, 0);
   if (!keepMessage) solverState.solverMessage = "Solve canceled.";
-  renderTimingSolveFloating();
+  syncTimingSolveFloating();
   renderTimingModeControls();
   renderTimingResults();
   solverRenderer.render();
@@ -1837,6 +1875,8 @@ function startWorkerTimingSolve() {
   solverState.ui.isSolving = true;
   solverState.solverMessage = "Starting advanced brute force solve...";
   els.timingSolveStatus.textContent = solverState.solverMessage;
+  els.timingSolveProgress.classList.remove("hidden");
+  showTimingSolveFloating();
   updateTimingSolveProgress(0, 0);
   renderTimingModeControls();
   renderTimingResults();
