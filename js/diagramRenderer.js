@@ -159,9 +159,6 @@ export class DiagramRenderer {
 
   activeTimingPreview() {
     if (this.isDiagramMode()) return null;
-    if (this.stateRef?.ui?.activeTimingResultSet === "experimental") {
-      return this.stateRef.experimentalTimingResults?.[this.stateRef.ui.activeExperimentalTimingPreviewIndex] || null;
-    }
     return this.stateRef.timingResults?.[this.stateRef.ui.activeTimingPreviewIndex] || null;
   }
 
@@ -866,9 +863,7 @@ export class DiagramRenderer {
   drawTimingVisualization(preview) {
     const playback = this.timingVisualization();
     if (!preview || !playback?.isPlaying) return;
-    const activeIndex = this.stateRef?.ui?.activeTimingResultSet === "experimental"
-      ? this.stateRef.ui.activeExperimentalTimingPreviewIndex
-      : this.stateRef.ui.activeTimingPreviewIndex;
+    const activeIndex = this.stateRef?.ui?.activeTimingPreviewIndex;
     if (playback.resultIndexAtStart !== activeIndex) return;
     const elapsedMs = Number(playback.elapsedMs);
     if (!Number.isFinite(elapsedMs)) return;

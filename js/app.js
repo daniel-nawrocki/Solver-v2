@@ -22,12 +22,9 @@ import {
 import { initTimingControls } from "./timingControls.js";
 import {
   solveTimingCombinations,
-  solveExperimentalTimingCombinations,
   formatTimingResult,
-  formatExperimentalTimingResult,
   validateTimingGraph,
   buildManualTimingResult,
-  buildExperimentalManualTimingResult,
   deriveTimingAnalysis,
 } from "./timingSolver.js";
 import {
@@ -104,9 +101,7 @@ function createSolverState() {
       timingMode: "solver",
       toolMode: "origin",
       coordView: "collar",
-      activeTimingResultSet: "standard",
       activeTimingPreviewIndex: -1,
-      activeExperimentalTimingPreviewIndex: -1,
       showOverlapAnalysis: false,
       activeOverlapBinKey: null,
       relationshipDraft: null,
@@ -120,7 +115,6 @@ function createSolverState() {
         elapsedMs: 0,
         completed: false,
         resultIndexAtStart: -1,
-        resultSetAtStart: "standard",
         frameRequestId: null,
       },
     },
@@ -137,10 +131,7 @@ function createSolverState() {
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     csvCache: null,
     timingResults: [],
-    experimentalTimingResults: [],
     solverMessage: "",
-    experimentalSolverMessage: "",
-    hasExperimentalTimingRun: false,
   };
 }
 
@@ -301,9 +292,7 @@ const projectState = {
       showOverlayText: true,
       timingMode: "solver",
       toolMode: "origin",
-      activeTimingResultSet: "standard",
       activeTimingPreviewIndex: -1,
-      activeExperimentalTimingPreviewIndex: -1,
       showOverlapAnalysis: false,
       activeOverlapBinKey: null,
     },
@@ -320,9 +309,6 @@ const projectState = {
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
     solverMessage: "",
-    experimentalTimingResults: [],
-    experimentalSolverMessage: "",
-    hasExperimentalTimingRun: false,
     timingVisualization: {
       speedMultiplier: 1,
       activeSpeedMultiplier: 1,
@@ -333,7 +319,6 @@ const projectState = {
       elapsedMs: 0,
       completed: false,
       resultIndexAtStart: -1,
-      resultSetAtStart: "standard",
       frameRequestId: null,
     },
   },
@@ -427,12 +412,6 @@ const els = {
   solveTimingBtn: document.getElementById("solveTimingBtn"),
   timingResults: document.getElementById("timingResults"),
   timingResultsMenuWrap: document.getElementById("timingResultsMenuWrap"),
-  experimentalTimingBtn: document.getElementById("experimentalTimingBtn"),
-  experimentalTimingResults: document.getElementById("experimentalTimingResults"),
-  experimentalTimingResultsMenuWrap: document.getElementById("experimentalTimingResultsMenuWrap"),
-  experimentalTimingSummary: document.getElementById("experimentalTimingSummary"),
-  experimentalTimingAdjustments: document.getElementById("experimentalTimingAdjustments"),
-  experimentalTimingDetailPanel: document.getElementById("experimentalTimingDetailPanel"),
   timingOverlapAnalysisBtn: document.getElementById("timingOverlapAnalysisBtn"),
   timingOverlapClearBtn: document.getElementById("timingOverlapClearBtn"),
   timingOverlapAnalysisPanel: document.getElementById("timingOverlapAnalysisPanel"),
@@ -1094,11 +1073,16 @@ async function initializeCloudIntegration() {
 function cloneSelectedTiming(selectedTiming) {
   if (!selectedTiming) return [];
   const holeTimes = new Map(selectedTiming.holeTimes);
+  const originalHoleTimes = selectedTiming.originalHoleTimes ? new Map(selectedTiming.originalHoleTimes) : new Map(holeTimes);
+  const adjustedHoleTimes = selectedTiming.adjustedHoleTimes ? new Map(selectedTiming.adjustedHoleTimes) : new Map(holeTimes);
   const derived = deriveTimingAnalysis(holeTimes, 8);
   return [{
     ...selectedTiming,
     holeTimes,
+    originalHoleTimes,
+    adjustedHoleTimes,
     offsetAssignments: selectedTiming.offsetAssignments ? new Map(selectedTiming.offsetAssignments) : new Map(),
+    timingAdjustments: Array.isArray(selectedTiming.timingAdjustments) ? selectedTiming.timingAdjustments.map((entry) => ({ ...entry })) : [],
     delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
     peakBinCount: Number.isFinite(selectedTiming.peakBinCount) ? selectedTiming.peakBinCount : derived.peakBinCount,
     overlapGroupCount: Number.isFinite(selectedTiming.overlapGroupCount) ? selectedTiming.overlapGroupCount : derived.overlapGroupCount,
@@ -1273,7 +1257,6 @@ function cloneTimingVisualizationState(playback = {}) {
     elapsedMs: Number(playback.elapsedMs) || 0,
     completed: playback.completed === true,
     resultIndexAtStart: -1,
-    resultSetAtStart: playback.resultSetAtStart === "experimental" ? "experimental" : "standard",
     frameRequestId: null,
   };
 }
@@ -1312,21 +1295,14 @@ function hydrateSolverFromProject() {
   solverState.ui.showOverlayText = projectState.timing.ui.showOverlayText !== false;
   solverState.ui.timingMode = projectState.timing.ui.timingMode === "manual" ? "manual" : "solver";
   solverState.ui.toolMode = projectState.timing.ui.toolMode || "origin";
-  solverState.ui.activeTimingResultSet = projectState.timing.ui.activeTimingResultSet === "experimental" ? "experimental" : "standard";
   solverState.ui.coordView = projectState.view.coordView || "collar";
   solverState.ui.activeTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
     ? projectState.timing.ui.activeTimingPreviewIndex
-    : -1;
-  solverState.ui.activeExperimentalTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeExperimentalTimingPreviewIndex)
-    ? projectState.timing.ui.activeExperimentalTimingPreviewIndex
     : -1;
   solverState.ui.showOverlapAnalysis = false;
   solverState.ui.activeOverlapBinKey = null;
   solverState.ui.relationshipDraft = null;
   solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
-  solverState.experimentalTimingResults = cloneTimingResults(projectState.timing.experimentalTimingResults);
-  solverState.experimentalSolverMessage = projectState.timing.experimentalSolverMessage || "";
-  solverState.hasExperimentalTimingRun = projectState.timing.hasExperimentalTimingRun === true;
   timingControlsApi?.syncFromState?.();
   syncManualTimingInputs();
   renderTimingModeControls();
@@ -1371,12 +1347,8 @@ function persistTimingStateToProject() {
   projectState.timing.ui.showOverlayText = solverState.ui.showOverlayText !== false;
   projectState.timing.ui.timingMode = solverState.ui.timingMode === "manual" ? "manual" : "solver";
   projectState.timing.ui.toolMode = solverState.ui.toolMode || "origin";
-  projectState.timing.ui.activeTimingResultSet = solverState.ui.activeTimingResultSet === "experimental" ? "experimental" : "standard";
   projectState.timing.ui.activeTimingPreviewIndex = Number.isInteger(solverState.ui.activeTimingPreviewIndex)
     ? solverState.ui.activeTimingPreviewIndex
-    : -1;
-  projectState.timing.ui.activeExperimentalTimingPreviewIndex = Number.isInteger(solverState.ui.activeExperimentalTimingPreviewIndex)
-    ? solverState.ui.activeExperimentalTimingPreviewIndex
     : -1;
   delete projectState.timing.ui.showOverlapAnalysis;
   delete projectState.timing.ui.activeOverlapBinKey;
@@ -1385,9 +1357,6 @@ function persistTimingStateToProject() {
   projectState.timing.relationships = cloneRelationshipsState(solverState.relationships);
   projectState.timing.timingResults = cloneTimingResults(solverState.timingResults);
   projectState.timing.solverMessage = solverState.solverMessage || "";
-  projectState.timing.experimentalTimingResults = cloneTimingResults(solverState.experimentalTimingResults);
-  projectState.timing.experimentalSolverMessage = solverState.experimentalSolverMessage || "";
-  projectState.timing.hasExperimentalTimingRun = solverState.hasExperimentalTimingRun === true;
   projectState.timing.timingVisualization = cloneTimingVisualizationState(solverState.ui.timingVisualization);
   markProjectDirty();
 }
@@ -1478,14 +1447,9 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.timing.ui.showOverlayText = true;
   projectState.timing.ui.timingMode = "solver";
   projectState.timing.ui.toolMode = "origin";
-  projectState.timing.ui.activeTimingResultSet = "standard";
   projectState.timing.ui.activeTimingPreviewIndex = -1;
-  projectState.timing.ui.activeExperimentalTimingPreviewIndex = -1;
   projectState.timing.manualTiming = cloneManualTiming();
   projectState.timing.timingVisualization = cloneTimingVisualizationState();
-  projectState.timing.experimentalTimingResults = [];
-  projectState.timing.experimentalSolverMessage = "";
-  projectState.timing.hasExperimentalTimingRun = false;
   resetCurrentProjectRef();
   appUi.dirty = true;
 }
@@ -1532,13 +1496,8 @@ function setTimingMode(mode) {
   resetTimingOverlapAnalysis();
   solverState.ui.timingMode = nextMode;
   solverState.timingResults = [];
-  solverState.experimentalTimingResults = [];
-  solverState.ui.activeTimingResultSet = "standard";
   solverState.ui.activeTimingPreviewIndex = -1;
-  solverState.ui.activeExperimentalTimingPreviewIndex = -1;
   solverState.solverMessage = defaultTimingMessage();
-  solverState.experimentalSolverMessage = "Run Experimental Timing to evaluate per-hole nudges.";
-  solverState.hasExperimentalTimingRun = false;
   renderTimingModeControls();
   fullSolverRefresh();
 }
@@ -1551,36 +1510,8 @@ function manualDelayCountsMarkup(result) {
   return `<div class="timing-delay-counts">${rows}</div>`;
 }
 
-function experimentalAdjustmentTableMarkup(result) {
-  const adjustments = Array.isArray(result?.timingAdjustments)
-    ? result.timingAdjustments.filter((entry) => Number(entry.deltaMs) !== 0)
-    : [];
-  if (!adjustments.length) return `<div class="status-note">No per-hole timing changes were needed.</div>`;
-  const rows = adjustments.map((entry) => `
-    <tr>
-      <td>${escapeHtml(String(entry.holeLabel || entry.holeId || ""))}</td>
-      <td>${escapeHtml(`${entry.originalTime.toFixed(1)} ms`)}</td>
-      <td>${escapeHtml(`${entry.adjustedTime.toFixed(1)} ms`)}</td>
-      <td>${escapeHtml(`${entry.deltaMs > 0 ? "+" : ""}${entry.deltaMs.toFixed(1)} ms`)}</td>
-    </tr>
-  `).join("");
-  return `
-    <table class="experimental-timing-table">
-      <thead>
-        <tr>
-          <th>Hole</th>
-          <th>Original</th>
-          <th>Adjusted</th>
-          <th>Shift</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
 function currentTimingOverlapBin() {
-  const result = selectedStandardTimingResult();
+  const result = selectedTimingResult();
   if (!result || !solverState.ui.activeOverlapBinKey) return null;
   return (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey)
     || (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey)
@@ -1593,7 +1524,7 @@ function overlapHoleLabel(holeId) {
 }
 
 function renderTimingOverlapAnalysis() {
-  const result = selectedStandardTimingResult();
+  const result = selectedTimingResult();
   const hasResult = Boolean(result);
   const showPanel = hasResult && solverState.ui.showOverlapAnalysis === true;
   const overlapGroups = (result?.overlapGroups || []).filter((group) => group.isOverlapGroup && group.count > 1);
@@ -1757,10 +1688,16 @@ function clonePrintPage(page) {
     timingResults: (page.timingResults || []).map((timing) => ({
       ...timing,
       holeTimes: new Map(timing.holeTimes),
+      originalHoleTimes: timing.originalHoleTimes ? new Map(timing.originalHoleTimes) : new Map(timing.holeTimes),
+      adjustedHoleTimes: timing.adjustedHoleTimes ? new Map(timing.adjustedHoleTimes) : new Map(timing.holeTimes),
       offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
+      timingAdjustments: Array.isArray(timing.timingAdjustments) ? timing.timingAdjustments.map((entry) => ({ ...entry })) : [],
       delayCounts: Array.isArray(timing.delayCounts) ? timing.delayCounts.map((entry) => ({ ...entry })) : [],
       overlapBins: Array.isArray(timing.overlapBins)
         ? timing.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+        : [],
+      overlapGroups: Array.isArray(timing.overlapGroups)
+        ? timing.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
         : [],
     })),
     viewport: {
@@ -1782,12 +1719,6 @@ function syncPrintPageHolesById(page) {
 }
 
 function selectedProjectTimingResult() {
-  if (projectState.timing.ui.activeTimingResultSet === "experimental") {
-    const index = Number.isInteger(projectState.timing.ui.activeExperimentalTimingPreviewIndex)
-      ? projectState.timing.ui.activeExperimentalTimingPreviewIndex
-      : -1;
-    return projectState.timing.experimentalTimingResults[index] || null;
-  }
   const index = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
     ? projectState.timing.ui.activeTimingPreviewIndex
     : -1;
@@ -2687,22 +2618,8 @@ function exportSelectedTimingCsv() {
   URL.revokeObjectURL(url);
 }
 
-function activeTimingResultSet() {
-  return solverState.ui.activeTimingResultSet === "experimental" ? "experimental" : "standard";
-}
-
-function selectedExperimentalTimingResult() {
-  return solverState.experimentalTimingResults[solverState.ui.activeExperimentalTimingPreviewIndex] || null;
-}
-
-function selectedStandardTimingResult() {
-  return solverState.timingResults[solverState.ui.activeTimingPreviewIndex] || null;
-}
-
 function selectedTimingResult() {
-  return activeTimingResultSet() === "experimental"
-    ? selectedExperimentalTimingResult()
-    : selectedStandardTimingResult();
+  return solverState.timingResults[solverState.ui.activeTimingPreviewIndex] || null;
 }
 
 function timingVisualizationState() {
@@ -2722,7 +2639,6 @@ function resetTimingVisualization({ preserveSpeed = true } = {}) {
   playback.elapsedMs = 0;
   playback.completed = false;
   playback.resultIndexAtStart = -1;
-  playback.resultSetAtStart = "standard";
   playback.frameRequestId = null;
 }
 
@@ -2736,14 +2652,13 @@ function stopTimingVisualization({ completed = false, preserveElapsed = false } 
   playback.tailStartTimestamp = 0;
   playback.completed = completed;
   playback.resultIndexAtStart = -1;
-  playback.resultSetAtStart = "standard";
   if (!preserveElapsed) playback.elapsedMs = 0;
   renderTimingVisualizationControls();
   solverRenderer.render();
 }
 
 function renderTimingVisualizationControls() {
-  const hasResults = solverState.timingResults.length > 0 || solverState.experimentalTimingResults.length > 0;
+  const hasResults = solverState.timingResults.length > 0;
   const playback = timingVisualizationState();
   const hasSelectedTiming = Boolean(selectedTimingResult());
 
@@ -2770,13 +2685,8 @@ function stepTimingVisualization(now) {
   const playback = timingVisualizationState();
   if (!playback.isPlaying) return;
 
-  const result = playback.resultSetAtStart === "experimental"
-    ? solverState.experimentalTimingResults[playback.resultIndexAtStart] || null
-    : solverState.timingResults[playback.resultIndexAtStart] || null;
-  const activeIndex = playback.resultSetAtStart === "experimental"
-    ? solverState.ui.activeExperimentalTimingPreviewIndex
-    : solverState.ui.activeTimingPreviewIndex;
-  if (!result || activeIndex !== playback.resultIndexAtStart || activeTimingResultSet() !== playback.resultSetAtStart) {
+  const result = solverState.timingResults[playback.resultIndexAtStart] || null;
+  if (!result || solverState.ui.activeTimingPreviewIndex !== playback.resultIndexAtStart) {
     stopTimingVisualization();
     return;
   }
@@ -2825,10 +2735,6 @@ function startTimingVisualization() {
   playback.elapsedMs = 0;
   playback.completed = false;
   playback.resultIndexAtStart = solverState.ui.activeTimingPreviewIndex;
-  playback.resultSetAtStart = activeTimingResultSet();
-  if (playback.resultSetAtStart === "experimental") {
-    playback.resultIndexAtStart = solverState.ui.activeExperimentalTimingPreviewIndex;
-  }
   playback.frameRequestId = requestAnimationFrame(stepTimingVisualization);
   renderTimingVisualizationControls();
   solverRenderer.render();
@@ -2838,28 +2744,9 @@ function resetTimingResults(message = "") {
   resetTimingVisualization();
   resetTimingOverlapAnalysis();
   solverState.timingResults = [];
-  solverState.experimentalTimingResults = [];
-  solverState.ui.activeTimingResultSet = "standard";
   solverState.ui.activeTimingPreviewIndex = -1;
-  solverState.ui.activeExperimentalTimingPreviewIndex = -1;
   solverState.solverMessage = message;
-  solverState.experimentalSolverMessage = "Run Experimental Timing to evaluate per-hole nudges.";
-  solverState.hasExperimentalTimingRun = false;
   renderTimingResults();
-  renderExperimentalTimingResults();
-}
-
-function resetExperimentalTimingResults(message = "Run Experimental Timing to evaluate per-hole nudges.") {
-  resetTimingVisualization();
-  solverState.experimentalTimingResults = [];
-  if (solverState.ui.activeTimingResultSet === "experimental") {
-    solverState.ui.activeTimingResultSet = solverState.timingResults.length ? "standard" : "experimental";
-  }
-  solverState.ui.activeExperimentalTimingPreviewIndex = -1;
-  solverState.experimentalSolverMessage = message;
-  solverState.hasExperimentalTimingRun = true;
-  renderExperimentalTimingResults();
-  renderTimingVisualizationControls();
 }
 
 function uniqueHoleIds(holes, records, idColumn) {
@@ -3082,48 +2969,11 @@ function renderTimingResults() {
   renderTimingVisualizationControls();
 }
 
-function renderExperimentalTimingResults() {
-  const hasMenu = solverState.hasExperimentalTimingRun || solverState.experimentalTimingResults.length > 0;
-  const hasResults = solverState.experimentalTimingResults.length > 0;
-  els.experimentalTimingResultsMenuWrap.classList.toggle("hidden", !hasMenu);
-  if (!hasMenu) {
-    const resultsButton = els.menuToggles.find((button) => button.dataset.menuToggle === "experimentalTimingResultsMenu");
-    document.getElementById("experimentalTimingResultsMenu")?.classList.add("hidden");
-    resultsButton?.classList.remove("active");
-  }
-  if (!solverState.experimentalTimingResults.length) {
-    els.experimentalTimingResults.innerHTML = `<div>${escapeHtml(solverState.experimentalSolverMessage || "Run Experimental Timing to evaluate per-hole nudges.")}</div>`;
-    els.experimentalTimingDetailPanel.classList.add("hidden");
-    els.experimentalTimingSummary.textContent = "Select an experimental timing result to inspect per-hole nudges.";
-    els.experimentalTimingAdjustments.innerHTML = "";
-    renderTimingVisualizationControls();
-    return;
-  }
-  els.experimentalTimingResults.innerHTML = solverState.experimentalTimingResults.map((result, index) => {
-    const active = index === solverState.ui.activeExperimentalTimingPreviewIndex ? "active" : "";
-    return `<button class="timing-item ${active}" data-experimental-timing-index="${index}"><span>${escapeHtml(formatExperimentalTimingResult(result, index))}</span></button>`;
-  }).join("");
-  const selected = selectedExperimentalTimingResult();
-  els.experimentalTimingDetailPanel.classList.toggle("hidden", !selected);
-  if (!selected) {
-    els.experimentalTimingSummary.textContent = "Select an experimental timing result to inspect per-hole nudges.";
-    els.experimentalTimingAdjustments.innerHTML = "";
-  } else {
-    const changedCount = Array.isArray(selected.timingAdjustments)
-      ? selected.timingAdjustments.filter((entry) => Number(entry.deltaMs) !== 0).length
-      : 0;
-    els.experimentalTimingSummary.textContent = `Adjusted holes: ${changedCount} | Max shift: ${Number(selected.maxAbsoluteAdjustmentMs || 0).toFixed(1)} ms | Total shift: ${Number(selected.totalAbsoluteAdjustmentMs || 0).toFixed(1)} ms.`;
-    els.experimentalTimingAdjustments.innerHTML = experimentalAdjustmentTableMarkup(selected);
-  }
-  renderTimingVisualizationControls();
-}
-
 function fullSolverRefresh({ fit = false } = {}) {
   persistTimingStateToProject();
   renderOriginStatus();
   renderRelationshipList();
   renderTimingResults();
-  renderExperimentalTimingResults();
   solverRenderer.render();
   if (fit) solverRenderer.fitToData();
 }
@@ -4363,7 +4213,6 @@ els.solveTimingBtn.addEventListener("click", () => {
       return;
     }
     solverState.timingResults = [manual.result];
-    solverState.ui.activeTimingResultSet = "standard";
     solverState.ui.activeTimingPreviewIndex = 0;
     solverState.solverMessage = "";
   } else {
@@ -4374,47 +4223,11 @@ els.solveTimingBtn.addEventListener("click", () => {
       return;
     }
     solverState.timingResults = solveTimingCombinations(solverState);
-    solverState.ui.activeTimingResultSet = "standard";
     solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
     solverState.solverMessage = solverState.timingResults.length ? "" : "No valid timing combinations were produced for the current graph.";
   }
   renderTimingResults();
-  renderExperimentalTimingResults();
   if (solverState.timingResults.length) openMenu("timingResultsMenu");
-  solverRenderer.render();
-});
-
-els.experimentalTimingBtn.addEventListener("click", () => {
-  resetTimingVisualization();
-  solverState.hasExperimentalTimingRun = true;
-  if (activeTimingMode() === "manual") {
-    const manual = buildExperimentalManualTimingResult(solverState, solverState.manualTiming);
-    if (!manual.valid) {
-      resetExperimentalTimingResults(manual.reason || "No valid one-hole-per-8ms experimental schedule was found within the ±8 ms per-hole limit.");
-      solverRenderer.render();
-      return;
-    }
-    solverState.experimentalTimingResults = [manual.result];
-    solverState.ui.activeTimingResultSet = "experimental";
-    solverState.ui.activeExperimentalTimingPreviewIndex = 0;
-    solverState.experimentalSolverMessage = "";
-  } else {
-    const validation = validateTimingGraph(solverState);
-    if (!validation.valid) {
-      resetExperimentalTimingResults(validation.reason);
-      solverRenderer.render();
-      return;
-    }
-    solverState.experimentalTimingResults = solveExperimentalTimingCombinations(solverState);
-    solverState.ui.activeTimingResultSet = "experimental";
-    solverState.ui.activeExperimentalTimingPreviewIndex = solverState.experimentalTimingResults.length ? 0 : -1;
-    solverState.experimentalSolverMessage = solverState.experimentalTimingResults.length
-      ? ""
-      : "No valid one-hole-per-8ms experimental schedule was found within the ±8 ms per-hole limit.";
-  }
-  renderTimingResults();
-  renderExperimentalTimingResults();
-  openMenu("experimentalTimingResultsMenu");
   solverRenderer.render();
 });
 
@@ -4425,28 +4238,13 @@ els.timingResults.addEventListener("click", (event) => {
   if (!Number.isFinite(index)) return;
   resetTimingVisualization();
   resetTimingOverlapAnalysis({ preservePanel: true });
-  solverState.ui.activeTimingResultSet = "standard";
   solverState.ui.activeTimingPreviewIndex = index;
   renderTimingResults();
-  renderExperimentalTimingResults();
-  solverRenderer.render();
-});
-
-els.experimentalTimingResults.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-experimental-timing-index]");
-  if (!target) return;
-  const index = Number(target.getAttribute("data-experimental-timing-index"));
-  if (!Number.isFinite(index)) return;
-  resetTimingVisualization();
-  solverState.ui.activeTimingResultSet = "experimental";
-  solverState.ui.activeExperimentalTimingPreviewIndex = index;
-  renderTimingResults();
-  renderExperimentalTimingResults();
   solverRenderer.render();
 });
 
 els.timingOverlapAnalysisBtn.addEventListener("click", () => {
-  if (!selectedStandardTimingResult()) return;
+  if (!selectedTimingResult()) return;
   solverState.ui.showOverlapAnalysis = !solverState.ui.showOverlapAnalysis;
   if (!solverState.ui.showOverlapAnalysis) solverState.ui.activeOverlapBinKey = null;
   renderTimingOverlapAnalysis();
@@ -4606,7 +4404,6 @@ syncRelationshipVisibilityUi();
 renderOriginStatus();
 renderRelationshipList();
 renderTimingResults();
-renderExperimentalTimingResults();
 syncDiagramDefaultDiameterStatus();
 renderDiagramPropertiesPanel();
 persistDiagramStateToProject();

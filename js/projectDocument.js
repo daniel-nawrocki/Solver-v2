@@ -129,10 +129,7 @@ export function serializeProjectDocument(projectState) {
         nextId: projectState.timing?.relationships?.nextId || 1,
       },
       timingResults: cloneTimingResults(projectState.timing?.timingResults || []),
-      experimentalTimingResults: cloneTimingResults(projectState.timing?.experimentalTimingResults || []),
       solverMessage: projectState.timing?.solverMessage || "",
-      experimentalSolverMessage: projectState.timing?.experimentalSolverMessage || "",
-      hasExperimentalTimingRun: projectState.timing?.hasExperimentalTimingRun === true,
       timingVisualization: { ...(projectState.timing?.timingVisualization || {}) },
     },
   };
@@ -175,10 +172,7 @@ export function parseProjectDocument(document) {
         nextId: document.timing?.relationships?.nextId || 1,
       },
       timingResults: cloneTimingResults(document.timing?.timingResults || []),
-      experimentalTimingResults: cloneTimingResults(document.timing?.experimentalTimingResults || []),
       solverMessage: document.timing?.solverMessage || "",
-      experimentalSolverMessage: document.timing?.experimentalSolverMessage || "",
-      hasExperimentalTimingRun: document.timing?.hasExperimentalTimingRun === true,
       timingVisualization: { ...(document.timing?.timingVisualization || {}) },
     },
   };

@@ -274,142 +274,6 @@ function buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments = ne
   };
 }
 
-function allowedExperimentalBinStarts(time, maxAdjustmentMs = 8, windowMs = 8) {
-  if (!Number.isFinite(time)) return [];
-  const minTime = time - maxAdjustmentMs;
-  const maxTime = time + maxAdjustmentMs;
-  const minStart = Math.floor(minTime / windowMs) * windowMs;
-  const maxStart = Math.floor(maxTime / windowMs) * windowMs;
-  const starts = [];
-  const epsilon = 0.001;
-  for (let startMs = minStart; startMs <= maxStart; startMs += windowMs) {
-    const low = Math.max(startMs, minTime);
-    const high = Math.min((startMs + windowMs) - epsilon, maxTime);
-    if (low <= high) starts.push(startMs);
-  }
-  return starts;
-}
-
-function nearestExperimentalTimeInBin(time, startMs, maxAdjustmentMs = 8, windowMs = 8) {
-  const epsilon = 0.001;
-  const minTime = time - maxAdjustmentMs;
-  const maxTime = time + maxAdjustmentMs;
-  const low = Math.max(startMs, minTime);
-  const high = Math.min((startMs + windowMs) - epsilon, maxTime);
-  if (low > high) return null;
-  if (time < low) return low;
-  if (time > high) return high;
-  return time;
-}
-
-function buildExperimentalAdjustment(schedule, state, maxAdjustmentMs = 8, windowMs = 8) {
-  const entries = sortedTimingEntries(schedule.holeTimes).map(({ holeId, time }) => {
-    const allowedBins = allowedExperimentalBinStarts(time, maxAdjustmentMs, windowMs)
-      .map((startMs) => ({
-        startMs,
-        targetTime: nearestExperimentalTimeInBin(time, startMs, maxAdjustmentMs, windowMs),
-      }))
-      .filter((entry) => Number.isFinite(entry.targetTime))
-      .sort((a, b) => {
-        const deltaA = Math.abs(a.targetTime - time);
-        const deltaB = Math.abs(b.targetTime - time);
-        if (deltaA !== deltaB) return deltaA - deltaB;
-        return a.startMs - b.startMs;
-      });
-    return {
-      holeId,
-      time,
-      allowedBins,
-    };
-  });
-
-  const orderedEntries = [...entries].sort((a, b) => {
-    if (a.allowedBins.length !== b.allowedBins.length) return a.allowedBins.length - b.allowedBins.length;
-    return a.time - b.time;
-  });
-
-  const assignments = new Map();
-  const binOwners = new Map();
-
-  function tryAssign(entry, visited = new Set()) {
-    for (const option of entry.allowedBins) {
-      if (visited.has(option.startMs)) continue;
-      visited.add(option.startMs);
-      const owner = binOwners.get(option.startMs);
-      if (!owner || tryAssign(owner, visited)) {
-        binOwners.set(option.startMs, entry);
-        assignments.set(entry.holeId, option);
-        if (owner) assignments.delete(owner.holeId);
-        return true;
-      }
-    }
-    return false;
-  }
-
-  for (const entry of orderedEntries) {
-    if (!tryAssign(entry)) return null;
-  }
-
-  const adjustedHoleTimes = new Map();
-  const timingAdjustments = [];
-  for (const { holeId, time } of entries) {
-    const option = assignments.get(holeId);
-    if (!option) return null;
-    const adjustedTime = option.targetTime;
-    const deltaMs = adjustedTime - time;
-    adjustedHoleTimes.set(holeId, adjustedTime);
-    const hole = state.holesById.get(holeId);
-    timingAdjustments.push({
-      holeId,
-      holeLabel: hole?.holeNumber || hole?.id || holeId,
-      originalTime: time,
-      adjustedTime,
-      deltaMs,
-      targetBinStartMs: option.startMs,
-    });
-  }
-
-  const adjustedTimes = [...adjustedHoleTimes.values()];
-  const minTime = adjustedTimes.length ? Math.min(...adjustedTimes) : 0;
-  const maxTime = adjustedTimes.length ? Math.max(...adjustedTimes) : 0;
-  const analysis = deriveTimingAnalysis(adjustedHoleTimes, windowMs);
-  return {
-    adjustedHoleTimes,
-    timingAdjustments,
-    affectedHoleCount: timingAdjustments.filter((entry) => Math.abs(entry.deltaMs) > 0.0001).length,
-    maxAbsoluteAdjustmentMs: timingAdjustments.reduce((max, entry) => Math.max(max, Math.abs(entry.deltaMs)), 0),
-    totalAbsoluteAdjustmentMs: timingAdjustments.reduce((sum, entry) => sum + Math.abs(entry.deltaMs), 0),
-    adjustedEndTime: maxTime - minTime,
-    analysis,
-  };
-}
-
-function toExperimentalResult(schedule, state, maxAdjustmentMs = 8, windowMs = 8) {
-  const adjustment = buildExperimentalAdjustment(schedule, state, maxAdjustmentMs, windowMs);
-  if (!adjustment) return null;
-  if (adjustment.analysis.fixedPeakBinCount > 1) return null;
-  return {
-    ...schedule,
-    mode: "experimental",
-    originalHoleTimes: new Map(schedule.holeTimes),
-    holeTimes: adjustment.adjustedHoleTimes,
-    adjustedHoleTimes: new Map(adjustment.adjustedHoleTimes),
-    timingAdjustments: adjustment.timingAdjustments,
-    affectedHoleCount: adjustment.affectedHoleCount,
-    maxAbsoluteAdjustmentMs: adjustment.maxAbsoluteAdjustmentMs,
-    totalAbsoluteAdjustmentMs: adjustment.totalAbsoluteAdjustmentMs,
-    endTime: adjustment.adjustedEndTime,
-    times: [...adjustment.adjustedHoleTimes.values()],
-    peakBinCount: adjustment.analysis.peakBinCount,
-    overlapGroupCount: adjustment.analysis.overlapGroupCount,
-    fixedPeakBinCount: adjustment.analysis.fixedPeakBinCount,
-    fixedOverlapGroupCount: adjustment.analysis.fixedOverlapGroupCount,
-    overlapBins: adjustment.analysis.overlapBins,
-    overlapGroups: adjustment.analysis.overlapGroups,
-    delayCounts: summarizeDelayCounts(adjustment.adjustedHoleTimes),
-  };
-}
-
 export function buildManualTimingResult(state, manualTiming = {}) {
   const graph = validateTimingGraph(state);
   if (!graph.valid) return graph;
@@ -432,22 +296,6 @@ export function buildManualTimingResult(state, manualTiming = {}) {
       mode: "manual",
       manualOffsetDelay: offsetDelay,
     },
-  };
-}
-
-export function buildExperimentalManualTimingResult(state, manualTiming = {}) {
-  const manual = buildManualTimingResult(state, manualTiming);
-  if (!manual.valid) return manual;
-  const result = toExperimentalResult(manual.result, state);
-  if (!result) {
-    return {
-      valid: false,
-      reason: "No valid one-hole-per-8ms experimental schedule was found within the ±8 ms per-hole limit.",
-    };
-  }
-  return {
-    valid: true,
-    result,
   };
 }
 
@@ -492,50 +340,6 @@ export function solveTimingCombinations(state) {
   return candidates.slice(0, 12);
 }
 
-export function solveExperimentalTimingCombinations(state) {
-  const graph = validateTimingGraph(state);
-  if (!graph.valid) return [];
-
-  const holeValues = generateValues(state.timing.holeToHole.min, state.timing.holeToHole.max);
-  const rowValues = generateValues(state.timing.rowToRow.min, state.timing.rowToRow.max);
-  const offsetEdges = graph.edges.filter((edge) => edge.type === "offset");
-  const candidates = [];
-
-  function exploreOffsets(index, offsetAssignments, holeDelay, rowDelay) {
-    if (index >= offsetEdges.length) {
-      const schedule = buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments);
-      if (!schedule.valid) return;
-      const result = toExperimentalResult(schedule, state);
-      if (result) candidates.push(result);
-      return;
-    }
-
-    const edge = offsetEdges[index];
-    const values = offsetRangeValues(state);
-    values.forEach((value) => {
-      const nextAssignments = new Map(offsetAssignments);
-      nextAssignments.set(edge.id, value);
-      exploreOffsets(index + 1, nextAssignments, holeDelay, rowDelay);
-    });
-  }
-
-  holeValues.forEach((holeDelay) => {
-    rowValues.forEach((rowDelay) => {
-      exploreOffsets(0, new Map(), holeDelay, rowDelay);
-    });
-  });
-
-  candidates.sort((a, b) => {
-    if (a.maxAbsoluteAdjustmentMs !== b.maxAbsoluteAdjustmentMs) return a.maxAbsoluteAdjustmentMs - b.maxAbsoluteAdjustmentMs;
-    if (a.totalAbsoluteAdjustmentMs !== b.totalAbsoluteAdjustmentMs) return a.totalAbsoluteAdjustmentMs - b.totalAbsoluteAdjustmentMs;
-    if (a.endTime !== b.endTime) return a.endTime - b.endTime;
-    if (a.holeDelay !== b.holeDelay) return a.holeDelay - b.holeDelay;
-    return a.rowDelay - b.rowDelay;
-  });
-
-  return candidates.slice(0, 12);
-}
-
 export function formatTimingResult(result, index) {
   if (result.mode === "manual") {
     const offsetSummary = result.offsetAssignments?.size ? ` | offset ${result.manualOffsetDelay}ms` : "";
@@ -545,11 +349,4 @@ export function formatTimingResult(result, index) {
     ? ` | offsets: ${[...result.offsetAssignments.values()].join(",")}ms`
     : "";
   return `${index + 1}. H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | peak 8ms window: ${result.peakBinCount} holes | overlap groups: ${result.overlapGroupCount} | total duration: ${result.endTime.toFixed(1)}ms`;
-}
-
-export function formatExperimentalTimingResult(result, index) {
-  const offsetSummary = result.offsetAssignments?.size
-    ? ` | offsets: ${[...result.offsetAssignments.values()].join(",")}ms`
-    : "";
-  return `${index + 1}. Experimental | H2H ${result.holeDelay}ms | R2R ${result.rowDelay}ms${offsetSummary} | max shift ${result.maxAbsoluteAdjustmentMs.toFixed(1)}ms | total shift ${result.totalAbsoluteAdjustmentMs.toFixed(1)}ms | adjusted holes ${result.affectedHoleCount} | total duration: ${result.endTime.toFixed(1)}ms`;
 }

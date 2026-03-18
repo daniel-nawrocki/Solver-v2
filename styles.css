@@ -34,7 +34,7 @@ body {
 }
 
 .topbar {
-  height: 62px;
+  min-height: 62px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,6 +100,7 @@ body {
   align-items: center;
   justify-content: center;
   min-width: 0;
+  max-width: 32vw;
   pointer-events: none;
 }
 
@@ -129,14 +130,15 @@ body {
 }
 
 .planner-mode-btn {
-  min-width: 104px;
+  min-width: 92px;
   margin: 0;
-  padding: 10px 16px;
+  padding: 8px 14px;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: rgba(247, 251, 255, 0.82);
   box-shadow: none;
+  font-size: 12px;
 }
 
 .planner-mode-btn.active {
@@ -152,12 +154,14 @@ body {
 }
 
 .topbar-nav-btn {
-  min-width: 108px;
+  min-width: 96px;
 }
 
 .topbar-actions button {
   width: auto;
-  min-width: 120px;
+  min-width: 104px;
+  padding: 8px 14px;
+  font-size: 12px;
 }
 
 .corner-dock {
@@ -509,7 +513,7 @@ button:active {
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
-  padding: 4px 8px;
+  padding: 2px 6px;
   flex: 0 1 auto;
   min-width: 0;
 }
@@ -525,38 +529,6 @@ button:active {
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px dashed rgba(159, 179, 201, 0.45);
-}
-
-.experimental-timing-adjustments {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.experimental-timing-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.experimental-timing-table th,
-.experimental-timing-table td {
-  padding: 8px 10px;
-  border: 1px solid rgba(159, 179, 201, 0.45);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.experimental-timing-table th {
-  background: rgba(232, 239, 247, 0.92);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.experimental-timing-table tbody tr:nth-child(even) td {
-  background: rgba(247, 250, 253, 0.88);
 }
 
 .timing-overlap-list {
@@ -644,8 +616,8 @@ button:active {
 
 .timing-visualization-row button {
   flex: 0 0 auto;
-  min-width: 108px;
-  padding: 7px 12px;
+  min-width: 92px;
+  padding: 6px 10px;
   font-size: 10px;
 }
 
@@ -660,8 +632,8 @@ button:active {
 }
 
 .timing-visualization-row select {
-  min-width: 60px;
-  padding: 6px 8px;
+  min-width: 54px;
+  padding: 5px 7px;
   font-size: 10px;
 }
 
@@ -824,8 +796,10 @@ button:active {
   z-index: 60;
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
   gap: var(--space-2);
   pointer-events: none;
+  max-width: min(1600px, calc(100vw - 32px));
 }
 
 .timing-mode-toggle {
@@ -843,17 +817,17 @@ button:active {
 
 .timing-mode-btn {
   width: auto;
-  min-width: 92px;
+  min-width: 82px;
   margin: 0;
-  padding: 9px 14px;
+  padding: 8px 12px;
   border: none;
   border-radius: 999px;
   background: transparent;
   box-shadow: none;
   color: #4a607a;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
@@ -876,16 +850,16 @@ button:active {
 
 .menu-toggle {
   width: auto;
-  min-width: 100px;
-  padding: 9px 14px;
+  min-width: 84px;
+  padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(159, 179, 201, 0.7);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10px 24px rgba(15, 32, 56, 0.12);
   backdrop-filter: blur(8px);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
@@ -897,16 +871,16 @@ button:active {
 
 .menu-action-btn {
   width: auto;
-  min-width: 190px;
-  padding: 9px 16px;
+  min-width: 154px;
+  padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid rgba(47, 125, 246, 0.42);
   background: linear-gradient(180deg, #f7fbff 0%, #e9f2ff 100%);
   color: var(--accent-ink);
   box-shadow: 0 10px 24px rgba(15, 32, 56, 0.12);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0.7px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   pointer-events: auto;
 }
