@@ -335,7 +335,6 @@ const printLabelDialState = {
 };
 
 let solverWorker = null;
-let timingSolveFloatingHideTimer = null;
 
 const els = {
   homeWorkspace: document.getElementById("homeWorkspace"),
@@ -414,18 +413,12 @@ const els = {
   manualHoleDelayInput: document.getElementById("manualHoleDelayInput"),
   manualRowDelayInput: document.getElementById("manualRowDelayInput"),
   manualOffsetDelayInput: document.getElementById("manualOffsetDelayInput"),
-  timingReadinessPanel: document.getElementById("timingReadinessPanel"),
-  timingReadyOriginValue: document.getElementById("timingReadyOriginValue"),
-  timingReadyRelationshipsValue: document.getElementById("timingReadyRelationshipsValue"),
-  timingReadyReachableValue: document.getElementById("timingReadyReachableValue"),
-  timingReadyConflictsValue: document.getElementById("timingReadyConflictsValue"),
-  timingReadyOffsetsValue: document.getElementById("timingReadyOffsetsValue"),
-  timingReadyEstimateValue: document.getElementById("timingReadyEstimateValue"),
   timingSolveFloating: document.getElementById("timingSolveFloating"),
+  timingFloatingOriginValue: document.getElementById("timingFloatingOriginValue"),
+  timingFloatingReachableValue: document.getElementById("timingFloatingReachableValue"),
+  timingFloatingConflictsValue: document.getElementById("timingFloatingConflictsValue"),
   solveTimingBtn: document.getElementById("solveTimingBtn"),
   cancelTimingSolveBtn: document.getElementById("cancelTimingSolveBtn"),
-  timingSolveStatus: document.getElementById("timingSolveStatus"),
-  timingSolveProgress: document.getElementById("timingSolveProgress"),
   timingResults: document.getElementById("timingResults"),
   timingResultsMenuWrap: document.getElementById("timingResultsMenuWrap"),
   timingOverlapAnalysisBtn: document.getElementById("timingOverlapAnalysisBtn"),
@@ -1514,22 +1507,11 @@ function shouldShowTimingSolveFloating() {
 }
 
 function showTimingSolveFloating() {
-  if (timingSolveFloatingHideTimer) {
-    window.clearTimeout(timingSolveFloatingHideTimer);
-    timingSolveFloatingHideTimer = null;
-  }
   els.timingSolveFloating.classList.remove("hidden");
 }
 
 function hideTimingSolveFloating() {
-  const hideNow = () => {
-    if (timingSolveFloatingHideTimer) {
-      window.clearTimeout(timingSolveFloatingHideTimer);
-      timingSolveFloatingHideTimer = null;
-    }
-    els.timingSolveFloating.classList.add("hidden");
-  };
-  hideNow();
+  els.timingSolveFloating.classList.add("hidden");
 }
 
 function syncTimingSolveFloating() {
@@ -1538,22 +1520,16 @@ function syncTimingSolveFloating() {
     return;
   }
   showTimingSolveFloating();
-  if (solverState.ui.isSolving) {
-    els.timingSolveStatus.textContent = solverState.solverMessage || "Running timing solve...";
-    els.timingSolveProgress.classList.remove("hidden");
-    return;
-  }
-  els.timingSolveStatus.textContent = "Solver ready. Run timing combinations from the toolbar.";
-  els.timingSolveProgress.classList.add("hidden");
+  const readiness = analyzeSolverReadiness();
+  els.timingFloatingOriginValue.textContent = readiness.originSelected ? "Yes" : "No";
+  els.timingFloatingReachableValue.textContent = `${readiness.reachableCount} / ${readiness.totalHoles}`;
+  els.timingFloatingConflictsValue.textContent = readiness.conflictingPaths ? "Yes" : "No";
 }
 
 function updateTimingSolveProgress(current = 0, total = 0) {
   const safeTotal = Math.max(0, Number(total) || 0);
   const safeCurrent = Math.max(0, Math.min(safeTotal || Number(current) || 0, Number(current) || 0));
   solverState.ui.solveProgress = { current: safeCurrent, total: safeTotal };
-  els.timingSolveProgress.max = safeTotal > 0 ? safeTotal : 1;
-  els.timingSolveProgress.value = safeCurrent;
-  els.timingSolveProgress.classList.toggle("hidden", !solverState.ui.isSolving || safeTotal <= 0);
   syncTimingSolveFloating();
 }
 
@@ -1563,12 +1539,7 @@ function createSolverWorker() {
     const data = event.data || {};
     if (data.type === "progress") {
       updateTimingSolveProgress(data.current, data.total);
-      if (solverState.ui.isSolving) {
-        solverState.solverMessage = `Solving advanced brute force: ${formatSolveCount(data.current)} / ${formatSolveCount(data.total)} combinations`;
-        els.timingSolveStatus.textContent = solverState.solverMessage;
-        els.timingSolveProgress.classList.remove("hidden");
-        renderTimingResults();
-      }
+      if (solverState.ui.isSolving) renderTimingResults();
       return;
     }
     if (data.type === "result") {
@@ -1723,16 +1694,6 @@ function analyzeSolverReadiness() {
   };
 }
 
-function renderSolverReadiness() {
-  const readiness = analyzeSolverReadiness();
-  els.timingReadyOriginValue.textContent = readiness.originSelected ? "Yes" : "No";
-  els.timingReadyRelationshipsValue.textContent = String(readiness.relationshipsCount);
-  els.timingReadyReachableValue.textContent = `${readiness.reachableCount} / ${readiness.totalHoles}`;
-  els.timingReadyConflictsValue.textContent = readiness.conflictingPaths ? "Yes" : "No";
-  els.timingReadyOffsetsValue.textContent = String(readiness.offsetEdgesCount);
-  els.timingReadyEstimateValue.textContent = formatSolveCount(readiness.estimatedCombinations);
-}
-
 function syncManualTimingInputs() {
   els.manualHoleDelayInput.value = String(solverState.manualTiming.holeDelay);
   els.manualRowDelayInput.value = String(solverState.manualTiming.rowDelay);
@@ -1746,18 +1707,12 @@ function renderTimingModeControls() {
   els.timingMenuTitle.textContent = manualMode ? "Manual Timing" : "Timing Ranges";
   els.timingSolverFields.classList.toggle("hidden", manualMode);
   els.timingManualFields.classList.toggle("hidden", !manualMode);
-  els.timingReadinessPanel.classList.toggle("hidden", manualMode);
   els.solveTimingBtn.textContent = manualMode ? "Apply Manual Timing" : "Solve";
   els.solveTimingBtn.disabled = solverState.ui.isSolving && !manualMode;
   els.cancelTimingSolveBtn.classList.toggle("hidden", manualMode || !solverState.ui.isSolving);
   els.cancelTimingSolveBtn.disabled = !solverState.ui.isSolving;
-  els.timingSolveStatus.textContent = manualMode
-    ? "Manual mode applies the exact H2H, R2R, and Offset values shown above."
-    : (solverState.ui.isSolving
-      ? "Running advanced brute force in the background."
-      : "Advanced brute force solver is ready.");
   updateTimingSolveProgress(solverState.ui.solveProgress.current, solverState.ui.solveProgress.total);
-  renderSolverReadiness();
+  syncTimingSolveFloating();
 }
 
 function setTimingMode(mode) {
@@ -1874,8 +1829,6 @@ function startWorkerTimingSolve() {
   solverState.ui.activeTimingPreviewIndex = -1;
   solverState.ui.isSolving = true;
   solverState.solverMessage = "Starting advanced brute force solve...";
-  els.timingSolveStatus.textContent = solverState.solverMessage;
-  els.timingSolveProgress.classList.remove("hidden");
   showTimingSolveFloating();
   updateTimingSolveProgress(0, 0);
   renderTimingModeControls();
@@ -3285,7 +3238,7 @@ function fullSolverRefresh({ fit = false } = {}) {
   persistTimingStateToProject();
   renderOriginStatus();
   renderRelationshipList();
-  renderSolverReadiness();
+  syncTimingSolveFloating();
   renderTimingResults();
   solverRenderer.render();
   if (fit) solverRenderer.fitToData();

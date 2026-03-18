@@ -530,12 +530,6 @@ button:active {
   color: #16324f;
 }
 
-.timing-solve-progress {
-  width: 100%;
-  height: 10px;
-  accent-color: var(--accent);
-}
-
 .timing-solve-floating {
   position: fixed;
   top: 84px;
@@ -557,15 +551,30 @@ button:active {
   color: #35516f;
 }
 
-.timing-solve-floating-status {
-  margin-top: 6px;
+.timing-solve-floating-grid {
+  display: grid;
+  gap: 0;
+  margin-top: 10px;
+}
+
+.timing-solve-floating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(159, 179, 201, 0.45);
   font-size: 12px;
-  line-height: 1.35;
   color: #52657c;
 }
 
-.timing-solve-floating .timing-solve-progress {
-  margin-top: 10px;
+.timing-solve-floating-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.timing-solve-floating-row strong {
+  color: #16324f;
 }
 
 .timing-delay-count-row {
