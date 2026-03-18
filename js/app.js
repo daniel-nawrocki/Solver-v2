@@ -21,7 +21,6 @@ import {
 } from "./supabaseService.js";
 import { initTimingControls } from "./timingControls.js";
 import {
-  solveTimingCombinations,
   formatTimingResult,
   validateTimingGraph,
   buildManualTimingResult,
@@ -70,6 +69,7 @@ const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, m
 const PRINT_LABEL_DISTANCE_MIN = -15;
 const PRINT_LABEL_DISTANCE_MAX = 20;
 const PRINT_LABEL_DISTANCE_DEFAULT_TICK = 3;
+const TIMING_SOLVE_WARNING_LIMIT = 10000000;
 const DIAGRAM_TOOL_MODES = new Set(["single", "box", "polygon", "markup", "text"]);
 const DIAGRAM_ANNOTATION_SIZE_MAP = {
   small: { strokeWidth: 2, textSize: 14 },
@@ -100,11 +100,14 @@ function createSolverState() {
       showOverlayText: true,
       timingMode: "solver",
       toolMode: "origin",
+      solveMode: "default",
       coordView: "collar",
       activeTimingPreviewIndex: -1,
       showOverlapAnalysis: false,
       activeOverlapBinKey: null,
       relationshipDraft: null,
+      solveProgress: { current: 0, total: 0 },
+      isSolving: false,
       timingVisualization: {
         speedMultiplier: 1,
         activeSpeedMultiplier: 1,
@@ -292,6 +295,7 @@ const projectState = {
       showOverlayText: true,
       timingMode: "solver",
       toolMode: "origin",
+      solveMode: "default",
       activeTimingPreviewIndex: -1,
       showOverlapAnalysis: false,
       activeOverlapBinKey: null,
@@ -331,6 +335,8 @@ const printSession = {
 const printLabelDialState = {
   dragging: false,
 };
+
+let solverWorker = null;
 
 const els = {
   homeWorkspace: document.getElementById("homeWorkspace"),
@@ -409,7 +415,12 @@ const els = {
   manualHoleDelayInput: document.getElementById("manualHoleDelayInput"),
   manualRowDelayInput: document.getElementById("manualRowDelayInput"),
   manualOffsetDelayInput: document.getElementById("manualOffsetDelayInput"),
+  timingSolveControls: document.getElementById("timingSolveControls"),
+  timingSolveModeSelect: document.getElementById("timingSolveModeSelect"),
   solveTimingBtn: document.getElementById("solveTimingBtn"),
+  cancelTimingSolveBtn: document.getElementById("cancelTimingSolveBtn"),
+  timingSolveStatus: document.getElementById("timingSolveStatus"),
+  timingSolveProgress: document.getElementById("timingSolveProgress"),
   timingResults: document.getElementById("timingResults"),
   timingResultsMenuWrap: document.getElementById("timingResultsMenuWrap"),
   timingOverlapAnalysisBtn: document.getElementById("timingOverlapAnalysisBtn"),
@@ -1295,6 +1306,7 @@ function hydrateSolverFromProject() {
   solverState.ui.showOverlayText = projectState.timing.ui.showOverlayText !== false;
   solverState.ui.timingMode = projectState.timing.ui.timingMode === "manual" ? "manual" : "solver";
   solverState.ui.toolMode = projectState.timing.ui.toolMode || "origin";
+  solverState.ui.solveMode = projectState.timing.ui.solveMode === "advanced" ? "advanced" : "default";
   solverState.ui.coordView = projectState.view.coordView || "collar";
   solverState.ui.activeTimingPreviewIndex = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
     ? projectState.timing.ui.activeTimingPreviewIndex
@@ -1302,6 +1314,8 @@ function hydrateSolverFromProject() {
   solverState.ui.showOverlapAnalysis = false;
   solverState.ui.activeOverlapBinKey = null;
   solverState.ui.relationshipDraft = null;
+  solverState.ui.solveProgress = { current: 0, total: 0 };
+  solverState.ui.isSolving = false;
   solverState.ui.timingVisualization = cloneTimingVisualizationState(projectState.timing.timingVisualization);
   timingControlsApi?.syncFromState?.();
   syncManualTimingInputs();
@@ -1347,6 +1361,7 @@ function persistTimingStateToProject() {
   projectState.timing.ui.showOverlayText = solverState.ui.showOverlayText !== false;
   projectState.timing.ui.timingMode = solverState.ui.timingMode === "manual" ? "manual" : "solver";
   projectState.timing.ui.toolMode = solverState.ui.toolMode || "origin";
+  projectState.timing.ui.solveMode = activeSolveMode();
   projectState.timing.ui.activeTimingPreviewIndex = Number.isInteger(solverState.ui.activeTimingPreviewIndex)
     ? solverState.ui.activeTimingPreviewIndex
     : -1;
@@ -1447,6 +1462,7 @@ function initializeProjectFromHoles(holes, csvCache = null) {
   projectState.timing.ui.showOverlayText = true;
   projectState.timing.ui.timingMode = "solver";
   projectState.timing.ui.toolMode = "origin";
+  projectState.timing.ui.solveMode = "default";
   projectState.timing.ui.activeTimingPreviewIndex = -1;
   projectState.timing.manualTiming = cloneManualTiming();
   projectState.timing.timingVisualization = cloneTimingVisualizationState();
@@ -1473,6 +1489,146 @@ function defaultTimingMessage() {
     : "Run solver to see best delay combinations.";
 }
 
+function activeSolveMode() {
+  return solverState.ui.solveMode === "advanced" ? "advanced" : "default";
+}
+
+function generateSolveValues(min, max, maxSamples = 15) {
+  const absMin = Math.abs(Math.floor(Number(min) || 0));
+  const absMax = Math.abs(Math.floor(Number(max) || 0));
+  const a = Math.max(0, Math.min(absMin, absMax));
+  const b = Math.max(a, Math.max(absMin, absMax));
+  if (a === b) return [a];
+  const span = b - a;
+  const step = Math.max(1, Math.ceil(span / (maxSamples - 1)));
+  const values = [];
+  for (let value = a; value <= b; value += step) values.push(value);
+  if (values[values.length - 1] !== b) values.push(b);
+  return values;
+}
+
+function timingRangeCount(min, max) {
+  const a = Math.floor(Number(min) || 0);
+  const b = Math.floor(Number(max) || 0);
+  return Math.max(0, Math.abs(b - a)) + 1;
+}
+
+function advancedSolveCombinationCount() {
+  const offsetEdgeCount = solverState.relationships.edges.filter((edge) => edge.type === "offset").length;
+  return timingRangeCount(solverState.timing.holeToHole.min, solverState.timing.holeToHole.max)
+    * timingRangeCount(solverState.timing.rowToRow.min, solverState.timing.rowToRow.max)
+    * (timingRangeCount(solverState.timing.offset.min, solverState.timing.offset.max) ** offsetEdgeCount);
+}
+
+function defaultSolveCombinationEstimate() {
+  const offsetEdgeCount = solverState.relationships.edges.filter((edge) => edge.type === "offset").length;
+  const coarse = generateSolveValues(solverState.timing.holeToHole.min, solverState.timing.holeToHole.max).length
+    * generateSolveValues(solverState.timing.rowToRow.min, solverState.timing.rowToRow.max).length
+    * (generateSolveValues(solverState.timing.offset.min, solverState.timing.offset.max, 26).length ** offsetEdgeCount);
+  const refine = 5 * 5 * (5 ** offsetEdgeCount) * 5;
+  return coarse + refine;
+}
+
+function formatSolveCount(value) {
+  return Number.isFinite(value) ? value.toLocaleString() : "0";
+}
+
+function updateTimingSolveProgress(current = 0, total = 0) {
+  const safeTotal = Math.max(0, Number(total) || 0);
+  const safeCurrent = Math.max(0, Math.min(safeTotal || Number(current) || 0, Number(current) || 0));
+  solverState.ui.solveProgress = { current: safeCurrent, total: safeTotal };
+  els.timingSolveProgress.max = safeTotal > 0 ? safeTotal : 1;
+  els.timingSolveProgress.value = safeCurrent;
+  els.timingSolveProgress.classList.toggle("hidden", safeTotal <= 0);
+}
+
+function createSolverWorker() {
+  const worker = new Worker(new URL("./solverWorker.js", import.meta.url), { type: "module" });
+  worker.onmessage = (event) => {
+    const data = event.data || {};
+    if (data.type === "progress") {
+      updateTimingSolveProgress(data.current, data.total);
+      if (solverState.ui.isSolving) {
+        solverState.solverMessage = `Solving ${activeSolveMode() === "advanced" ? "Advanced (Brute Force)" : "Default (Refined)"}: ${formatSolveCount(data.current)} / ${formatSolveCount(data.total)} combinations`;
+        els.timingSolveStatus.textContent = solverState.solverMessage;
+        renderTimingResults();
+      }
+      return;
+    }
+    if (data.type === "result") {
+      solverState.timingResults = cloneTimingResults(data.results || []);
+      solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
+      solverState.solverMessage = solverState.timingResults.length
+        ? ""
+        : (data.message || "No valid timing combinations were produced for the current graph.");
+      renderTimingResults();
+      if (solverState.timingResults.length) openMenu("timingResultsMenu");
+      solverRenderer.render();
+      return;
+    }
+    if (data.type === "error") {
+      solverState.timingResults = [];
+      solverState.ui.activeTimingPreviewIndex = -1;
+      solverState.solverMessage = data.message || "Timing solver failed.";
+      renderTimingResults();
+      solverRenderer.render();
+      return;
+    }
+    if (data.type === "done") {
+      solverState.ui.isSolving = false;
+      renderTimingModeControls();
+      persistTimingStateToProject();
+    }
+  };
+  worker.onerror = (event) => {
+    solverState.ui.isSolving = false;
+    solverState.timingResults = [];
+    solverState.ui.activeTimingPreviewIndex = -1;
+    solverState.solverMessage = event.message || "Timing solver worker failed.";
+    renderTimingModeControls();
+    renderTimingResults();
+    solverRenderer.render();
+  };
+  return worker;
+}
+
+function ensureSolverWorker() {
+  if (!solverWorker) solverWorker = createSolverWorker();
+  return solverWorker;
+}
+
+function resetSolverWorker() {
+  if (solverWorker) solverWorker.terminate();
+  solverWorker = createSolverWorker();
+}
+
+function cancelTimingSolve({ keepMessage = false } = {}) {
+  if (!solverState.ui.isSolving) return;
+  solverState.ui.isSolving = false;
+  resetSolverWorker();
+  updateTimingSolveProgress(0, 0);
+  if (!keepMessage) solverState.solverMessage = "Solve canceled.";
+  renderTimingModeControls();
+  renderTimingResults();
+  solverRenderer.render();
+}
+
+function buildSolverWorkerPayload() {
+  return {
+    holes: solverState.holes.map((hole) => ({ id: hole.id, holeNumber: hole.holeNumber || hole.id })),
+    relationships: {
+      originHoleId: solverState.relationships.originHoleId,
+      edges: solverState.relationships.edges.map((edge) => ({
+        id: edge.id,
+        type: edge.type,
+        sign: edge.sign,
+        fromHoleId: edge.fromHoleId,
+        toHoleId: edge.toHoleId,
+      })),
+    },
+  };
+}
+
 function syncManualTimingInputs() {
   els.manualHoleDelayInput.value = String(solverState.manualTiming.holeDelay);
   els.manualRowDelayInput.value = String(solverState.manualTiming.rowDelay);
@@ -1486,12 +1642,25 @@ function renderTimingModeControls() {
   els.timingMenuTitle.textContent = manualMode ? "Manual Timing" : "Timing Ranges";
   els.timingSolverFields.classList.toggle("hidden", manualMode);
   els.timingManualFields.classList.toggle("hidden", !manualMode);
-  els.solveTimingBtn.textContent = manualMode ? "Apply Manual Timing" : "Run Timing Combinations";
+  els.timingSolveControls.classList.toggle("hidden", manualMode);
+  els.timingSolveModeSelect.value = activeSolveMode();
+  els.timingSolveModeSelect.disabled = manualMode || solverState.ui.isSolving;
+  els.solveTimingBtn.textContent = manualMode ? "Apply Manual Timing" : "Solve";
+  els.solveTimingBtn.disabled = solverState.ui.isSolving && !manualMode;
+  els.cancelTimingSolveBtn.classList.toggle("hidden", manualMode || !solverState.ui.isSolving);
+  els.cancelTimingSolveBtn.disabled = !solverState.ui.isSolving;
+  els.timingSolveStatus.textContent = manualMode
+    ? "Manual mode applies the exact H2H, R2R, and Offset values shown above."
+    : (solverState.ui.isSolving
+      ? `Running ${activeSolveMode() === "advanced" ? "Advanced (Brute Force)" : "Default (Refined)"} in the background.`
+      : `${activeSolveMode() === "advanced" ? "Advanced (Brute Force)" : "Default (Refined)"} solver is ready.`);
+  updateTimingSolveProgress(solverState.ui.solveProgress.current, solverState.ui.solveProgress.total);
 }
 
 function setTimingMode(mode) {
   const nextMode = mode === "manual" ? "manual" : "solver";
   if (solverState.ui.timingMode === nextMode) return;
+  if (solverState.ui.isSolving) cancelTimingSolve({ keepMessage: true });
   resetTimingVisualization();
   resetTimingOverlapAnalysis();
   solverState.ui.timingMode = nextMode;
@@ -1578,6 +1747,44 @@ function syncManualTimingFromInputs() {
   solverState.manualTiming.rowDelay = Number(els.manualRowDelayInput.value) || 0;
   solverState.manualTiming.offsetDelay = Number(els.manualOffsetDelayInput.value) || 0;
   persistTimingStateToProject();
+}
+
+function confirmLargeSolveIfNeeded(mode) {
+  const estimate = mode === "advanced" ? advancedSolveCombinationCount() : defaultSolveCombinationEstimate();
+  if (estimate <= TIMING_SOLVE_WARNING_LIMIT) return true;
+  return window.confirm(
+    `${mode === "advanced" ? "Advanced" : "Default"} solve is estimated at ${formatSolveCount(estimate)} combinations. Continue?`,
+  );
+}
+
+function startWorkerTimingSolve() {
+  const validation = validateTimingGraph(solverState);
+  if (!validation.valid) {
+    resetTimingResults(validation.reason);
+    solverRenderer.render();
+    return;
+  }
+  const mode = activeSolveMode();
+  if (!confirmLargeSolveIfNeeded(mode)) return;
+
+  if (solverState.ui.isSolving) cancelTimingSolve({ keepMessage: true });
+  resetTimingVisualization();
+  resetTimingOverlapAnalysis();
+  solverState.timingResults = [];
+  solverState.ui.activeTimingPreviewIndex = -1;
+  solverState.ui.isSolving = true;
+  solverState.solverMessage = `Starting ${mode === "advanced" ? "Advanced (Brute Force)" : "Default (Refined)"} solve...`;
+  updateTimingSolveProgress(0, 0);
+  renderTimingModeControls();
+  renderTimingResults();
+  solverRenderer.render();
+
+  ensureSolverWorker().postMessage({
+    type: "start",
+    mode,
+    inputs: buildSolverWorkerPayload(),
+    ranges: cloneTimingRanges(solverState.timing),
+  });
 }
 
 function cloneLabelLayoutMap(layoutMap = new Map()) {
@@ -2741,11 +2948,13 @@ function startTimingVisualization() {
 }
 
 function resetTimingResults(message = "") {
+  if (solverState.ui.isSolving) cancelTimingSolve({ keepMessage: true });
   resetTimingVisualization();
   resetTimingOverlapAnalysis();
   solverState.timingResults = [];
   solverState.ui.activeTimingPreviewIndex = -1;
   solverState.solverMessage = message;
+  updateTimingSolveProgress(0, 0);
   renderTimingResults();
 }
 
@@ -4203,6 +4412,12 @@ els.relationshipList.addEventListener("click", (event) => {
   }
 });
 
+els.timingSolveModeSelect.addEventListener("change", () => {
+  solverState.ui.solveMode = els.timingSolveModeSelect.value === "advanced" ? "advanced" : "default";
+  renderTimingModeControls();
+  persistTimingStateToProject();
+});
+
 els.solveTimingBtn.addEventListener("click", () => {
   resetTimingVisualization();
   if (activeTimingMode() === "manual") {
@@ -4216,19 +4431,16 @@ els.solveTimingBtn.addEventListener("click", () => {
     solverState.ui.activeTimingPreviewIndex = 0;
     solverState.solverMessage = "";
   } else {
-    const validation = validateTimingGraph(solverState);
-    if (!validation.valid) {
-      resetTimingResults(validation.reason);
-      solverRenderer.render();
-      return;
-    }
-    solverState.timingResults = solveTimingCombinations(solverState);
-    solverState.ui.activeTimingPreviewIndex = solverState.timingResults.length ? 0 : -1;
-    solverState.solverMessage = solverState.timingResults.length ? "" : "No valid timing combinations were produced for the current graph.";
+    startWorkerTimingSolve();
+    return;
   }
   renderTimingResults();
   if (solverState.timingResults.length) openMenu("timingResultsMenu");
   solverRenderer.render();
+});
+
+els.cancelTimingSolveBtn.addEventListener("click", () => {
+  cancelTimingSolve();
 });
 
 els.timingResults.addEventListener("click", (event) => {

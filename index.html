@@ -235,6 +235,20 @@
               </label>
               <div class="status-note">Manual mode applies these values directly to the current timing pathing graph.</div>
             </div>
+            <div id="timingSolveControls" class="timing-solve-controls">
+              <label>Solver Mode
+                <select id="timingSolveModeSelect">
+                  <option value="default">Default (Refined)</option>
+                  <option value="advanced">Advanced (Brute Force)</option>
+                </select>
+              </label>
+              <div class="row-actions timing-solve-actions">
+                <button id="solveTimingBtn" class="menu-action-btn" type="button">Solve</button>
+                <button id="cancelTimingSolveBtn" type="button" class="hidden">Cancel</button>
+              </div>
+              <div id="timingSolveStatus" class="status-note">Run solver to see best delay combinations.</div>
+              <progress id="timingSolveProgress" class="timing-solve-progress hidden" max="1" value="0"></progress>
+            </div>
           </section>
         </div>
 
@@ -253,8 +267,6 @@
             </section>
           </section>
         </div>
-
-        <button id="solveTimingBtn" class="menu-action-btn" type="button">Run Timing Combinations</button>
       </div>
 
       <canvas id="diagramCanvas" width="1300" height="800"></canvas>

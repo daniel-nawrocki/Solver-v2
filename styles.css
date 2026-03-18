@@ -495,6 +495,27 @@ button:active {
   min-width: 0;
 }
 
+.timing-solve-controls {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(159, 179, 201, 0.34);
+}
+
+.timing-solve-actions {
+  margin-top: 8px;
+}
+
+.timing-solve-actions .menu-action-btn {
+  min-width: 0;
+}
+
+.timing-solve-progress {
+  width: 100%;
+  height: 10px;
+  margin-top: 8px;
+  accent-color: var(--accent);
+}
+
 .timing-delay-count-row {
   display: flex;
   align-items: center;
