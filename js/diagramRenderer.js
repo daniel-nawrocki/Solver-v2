@@ -348,6 +348,18 @@ export class DiagramRenderer {
     this.ctx.restore();
   }
 
+  relationshipAssignedHoleIds() {
+    if (this.isDiagramMode()) return new Set();
+    const assigned = new Set();
+    for (const edge of this.stateRef.relationships?.edges || []) {
+      assigned.add(edge.fromHoleId);
+      assigned.add(edge.toHoleId);
+    }
+    const draftHoleIds = this.stateRef.ui?.relationshipDraft?.holeIds || [];
+    draftHoleIds.forEach((holeId) => assigned.add(holeId));
+    return assigned;
+  }
+
   diagramMetadataLines(hole) {
     const settings = this.diagramLabelSettings();
     const lines = [];
@@ -775,6 +787,7 @@ export class DiagramRenderer {
     const maxT = times.length ? Math.max(...times) : 0;
     const originHoleId = this.stateRef.relationships?.originHoleId || null;
     const diagramMode = this.isDiagramMode();
+    const relationshipAssignedHoleIds = !diagramMode ? this.relationshipAssignedHoleIds() : null;
     const activeOverlapKey = !diagramMode ? this.stateRef?.ui?.activeOverlapBinKey || null : null;
     const activeOverlapHoleIds = !diagramMode && preview && activeOverlapKey
       ? new Set(
@@ -788,6 +801,7 @@ export class DiagramRenderer {
       const point = this.worldToScreen(hole.x, hole.y);
       const selected = this.stateRef.selection.has(hole.id);
       const isOrigin = !diagramMode && hole.id === originHoleId;
+      const useRelationshipHighlight = !diagramMode && !preview && relationshipAssignedHoleIds?.has(hole.id) === true;
       const useSelectionHighlight = diagramMode && selected;
       const useOverlapHighlight = !diagramMode && activeOverlapHoleIds?.has(hole.id) === true;
       const time = preview ? preview.holeTimes.get(hole.id) : null;
@@ -804,20 +818,30 @@ export class DiagramRenderer {
         this.ctx.fillStyle = "rgba(14, 165, 233, 0.18)";
         this.ctx.fill();
       }
+      if (useRelationshipHighlight) {
+        this.ctx.beginPath();
+        this.ctx.arc(point.x, point.y, this.holeRadius + 4, 0, Math.PI * 2);
+        this.ctx.fillStyle = "rgba(239, 68, 68, 0.18)";
+        this.ctx.fill();
+      }
 
       this.ctx.beginPath();
       this.ctx.arc(point.x, point.y, this.holeRadius, 0, Math.PI * 2);
       this.ctx.fillStyle = preview
         ? timingColor(time, minT, maxT)
+        : useRelationshipHighlight
+          ? "#ef4444"
         : useSelectionHighlight
           ? "#ef4444"
           : diagramMode
             ? "#3c4f66"
             : "#475569";
       this.ctx.fill();
-      this.ctx.lineWidth = isOrigin ? 4 : useSelectionHighlight ? 2.5 : useOverlapHighlight ? 2.5 : selected ? 3 : 1;
+      this.ctx.lineWidth = isOrigin ? 4 : useRelationshipHighlight || useSelectionHighlight || useOverlapHighlight ? 2.5 : selected ? 3 : 1;
       this.ctx.strokeStyle = isOrigin
         ? "#f59e0b"
+        : useRelationshipHighlight
+          ? "#991b1b"
         : useSelectionHighlight
           ? "#991b1b"
           : useOverlapHighlight
@@ -837,9 +861,9 @@ export class DiagramRenderer {
 
       if (!this.isDiagramPrintMode()) {
         const label = hole.holeNumber || hole.id;
-        this.ctx.fillStyle = useOverlapHighlight ? "#0c4a6e" : "#111827";
+        this.ctx.fillStyle = useOverlapHighlight ? "#0c4a6e" : useRelationshipHighlight ? "#991b1b" : "#111827";
         const labelSize = Math.max(9, Math.round(11 * this.textScale()));
-        this.ctx.font = canvasUiFont(labelSize, selected || isOrigin || useOverlapHighlight ? 700 : 600);
+        this.ctx.font = canvasUiFont(labelSize, selected || isOrigin || useRelationshipHighlight || useOverlapHighlight ? 700 : 600);
         this.ctx.fillText(label, point.x + 8, point.y - 6);
       }
 

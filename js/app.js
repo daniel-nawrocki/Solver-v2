@@ -1554,16 +1554,38 @@ function hideTimingSolveFloating() {
   els.timingSolveFloating.classList.add("hidden");
 }
 
+function solverReadinessFlags(readiness = analyzeSolverReadiness()) {
+  return {
+    originReady: readiness.originSelected,
+    reachableReady: readiness.totalHoles > 0 && readiness.reachableCount === readiness.totalHoles,
+    conflictsReady: readiness.relationshipsCount > 0 && !readiness.conflictingPaths,
+  };
+}
+
+function syncSolveButtonState(readiness = analyzeSolverReadiness()) {
+  const manualMode = activeTimingMode() === "manual";
+  const { originReady, reachableReady, conflictsReady } = solverReadinessFlags(readiness);
+  const readyToRun = originReady && reachableReady && conflictsReady;
+  els.solveTimingBtn.classList.toggle("solver-ready", !manualMode && readyToRun);
+  els.solveTimingBtn.classList.toggle("solver-not-ready", !manualMode && !readyToRun);
+}
+
 function syncTimingSolveFloating() {
   if (!shouldShowTimingSolveFloating()) {
     hideTimingSolveFloating();
+    syncSolveButtonState();
     return;
   }
   showTimingSolveFloating();
   const readiness = analyzeSolverReadiness();
-  els.timingFloatingOriginValue.textContent = readiness.originSelected ? "Yes" : "No";
+  const { originReady, reachableReady, conflictsReady } = solverReadinessFlags(readiness);
+  els.timingFloatingOriginValue.closest(".timing-solve-floating-row")?.classList.toggle("is-ready", originReady);
+  els.timingFloatingReachableValue.closest(".timing-solve-floating-row")?.classList.toggle("is-ready", reachableReady);
+  els.timingFloatingConflictsValue.closest(".timing-solve-floating-row")?.classList.toggle("is-ready", conflictsReady);
+  els.timingFloatingOriginValue.textContent = originReady ? "Ready" : "No";
   els.timingFloatingReachableValue.textContent = `${readiness.reachableCount} / ${readiness.totalHoles}`;
-  els.timingFloatingConflictsValue.textContent = readiness.conflictingPaths ? "Yes" : "No";
+  els.timingFloatingConflictsValue.textContent = readiness.conflictingPaths ? "Conflict" : "Clear";
+  syncSolveButtonState(readiness);
 }
 
 function updateTimingSolveProgress(current = 0, total = 0) {

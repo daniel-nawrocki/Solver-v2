@@ -569,6 +569,19 @@ button:active {
   color: #52657c;
 }
 
+.timing-solve-floating-row::before {
+  content: "";
+  flex: 0 0 14px;
+  width: 14px;
+}
+
+.timing-solve-floating-row.is-ready::before {
+  content: "\2713";
+  color: #16a34a;
+  font-size: 14px;
+  font-weight: 900;
+}
+
 .timing-solve-floating-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
@@ -972,6 +985,30 @@ button:active {
 .menu-action-btn:focus {
   border-color: rgba(47, 125, 246, 0.68);
   background: linear-gradient(180deg, #ffffff 0%, #deebff 100%);
+}
+
+.menu-action-btn.solver-not-ready {
+  border-color: rgba(185, 95, 95, 0.42);
+  background: linear-gradient(180deg, rgba(255, 249, 249, 0.98) 0%, rgba(246, 234, 234, 0.98) 100%);
+  color: #6f4343;
+}
+
+.menu-action-btn.solver-not-ready:hover,
+.menu-action-btn.solver-not-ready:focus {
+  border-color: rgba(185, 95, 95, 0.56);
+  background: linear-gradient(180deg, rgba(255, 252, 252, 0.99) 0%, rgba(244, 227, 227, 0.99) 100%);
+}
+
+.menu-action-btn.solver-ready {
+  border-color: rgba(93, 151, 114, 0.42);
+  background: linear-gradient(180deg, rgba(249, 253, 249, 0.98) 0%, rgba(232, 242, 234, 0.98) 100%);
+  color: #355245;
+}
+
+.menu-action-btn.solver-ready:hover,
+.menu-action-btn.solver-ready:focus {
+  border-color: rgba(93, 151, 114, 0.56);
+  background: linear-gradient(180deg, rgba(252, 255, 252, 0.99) 0%, rgba(226, 239, 229, 0.99) 100%);
 }
 
 .menu-panel {
