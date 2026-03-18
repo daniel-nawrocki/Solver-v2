@@ -533,8 +533,38 @@ button:active {
 .timing-solve-progress {
   width: 100%;
   height: 10px;
-  margin-top: 8px;
   accent-color: var(--accent);
+}
+
+.timing-solve-floating {
+  position: fixed;
+  top: 86px;
+  right: 18px;
+  z-index: 140;
+  width: min(280px, calc(100vw - 36px));
+  padding: 12px 14px;
+  border: 1px solid rgba(47, 125, 246, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(15, 32, 56, 0.18);
+}
+
+.timing-solve-floating-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #35516f;
+}
+
+.timing-solve-floating-status {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #52657c;
+}
+
+.timing-solve-floating .timing-solve-progress {
+  margin-top: 10px;
 }
 
 .timing-delay-count-row {

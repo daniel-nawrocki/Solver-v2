@@ -91,6 +91,12 @@
     </div>
   </div>
 
+  <aside id="timingSolveFloating" class="timing-solve-floating panel hidden" aria-live="polite">
+    <div class="timing-solve-floating-title">Running Timing Solve</div>
+    <div id="timingSolveStatus" class="timing-solve-floating-status">Starting solve...</div>
+    <progress id="timingSolveProgress" class="timing-solve-progress" max="1" value="0"></progress>
+  </aside>
+
   <main id="homeWorkspace" class="workspace workspace-home">
     <section class="home-shell">
       <div class="home-hero panel">
@@ -245,8 +251,6 @@
                 <div class="timing-readiness-row"><span>Offset Edges Count</span><strong id="timingReadyOffsetsValue">0</strong></div>
                 <div class="timing-readiness-row"><span>Estimated Combinations</span><strong id="timingReadyEstimateValue">0</strong></div>
               </div>
-              <div id="timingSolveStatus" class="status-note">Run solver to see best delay combinations.</div>
-              <progress id="timingSolveProgress" class="timing-solve-progress hidden" max="1" value="0"></progress>
             </div>
           </section>
         </div>

@@ -420,6 +420,7 @@ const els = {
   timingReadyConflictsValue: document.getElementById("timingReadyConflictsValue"),
   timingReadyOffsetsValue: document.getElementById("timingReadyOffsetsValue"),
   timingReadyEstimateValue: document.getElementById("timingReadyEstimateValue"),
+  timingSolveFloating: document.getElementById("timingSolveFloating"),
   solveTimingBtn: document.getElementById("solveTimingBtn"),
   cancelTimingSolveBtn: document.getElementById("cancelTimingSolveBtn"),
   timingSolveStatus: document.getElementById("timingSolveStatus"),
@@ -1506,13 +1507,17 @@ function formatSolveCount(value) {
   return Number.isFinite(value) ? value.toLocaleString() : "0";
 }
 
+function renderTimingSolveFloating() {
+  els.timingSolveFloating.classList.toggle("hidden", !solverState.ui.isSolving);
+}
+
 function updateTimingSolveProgress(current = 0, total = 0) {
   const safeTotal = Math.max(0, Number(total) || 0);
   const safeCurrent = Math.max(0, Math.min(safeTotal || Number(current) || 0, Number(current) || 0));
   solverState.ui.solveProgress = { current: safeCurrent, total: safeTotal };
   els.timingSolveProgress.max = safeTotal > 0 ? safeTotal : 1;
   els.timingSolveProgress.value = safeCurrent;
-  els.timingSolveProgress.classList.toggle("hidden", safeTotal <= 0);
+  renderTimingSolveFloating();
 }
 
 function createSolverWorker() {
@@ -1549,6 +1554,7 @@ function createSolverWorker() {
     }
     if (data.type === "done") {
       solverState.ui.isSolving = false;
+      renderTimingSolveFloating();
       renderTimingModeControls();
       persistTimingStateToProject();
     }
@@ -1558,6 +1564,7 @@ function createSolverWorker() {
     solverState.timingResults = [];
     solverState.ui.activeTimingPreviewIndex = -1;
     solverState.solverMessage = event.message || "Timing solver worker failed.";
+    renderTimingSolveFloating();
     renderTimingModeControls();
     renderTimingResults();
     solverRenderer.render();
@@ -1581,6 +1588,7 @@ function cancelTimingSolve({ keepMessage = false } = {}) {
   resetSolverWorker();
   updateTimingSolveProgress(0, 0);
   if (!keepMessage) solverState.solverMessage = "Solve canceled.";
+  renderTimingSolveFloating();
   renderTimingModeControls();
   renderTimingResults();
   solverRenderer.render();
@@ -1828,6 +1836,7 @@ function startWorkerTimingSolve() {
   solverState.ui.activeTimingPreviewIndex = -1;
   solverState.ui.isSolving = true;
   solverState.solverMessage = "Starting advanced brute force solve...";
+  els.timingSolveStatus.textContent = solverState.solverMessage;
   updateTimingSolveProgress(0, 0);
   renderTimingModeControls();
   renderTimingResults();
