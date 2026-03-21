@@ -102,6 +102,15 @@ Editable fields:
 - `Depth`
 - `Stem Height`
 
+When exactly one hole is selected, the same menu also shows a `Selected Hole Loading` section where you can:
+
+- edit `Hole Depth`
+- edit `Stemming Height`
+- review calculated `Column Depth`
+- review calculated `Explosive Weight`
+- add or remove detonator rows
+- add or remove booster rows
+
 Selection behavior:
 
 - click a hole to select it
@@ -113,6 +122,35 @@ Default diameter behavior:
 
 - choose a shot-level `Hole Diameter` in the `Shot` menu
 - use `Apply Default Diameter` in `Properties` to push that diameter to the selected holes or, if nothing is selected, to the full shot
+
+### Loading Menu
+
+Use `Loading` for shot-level explosive calculations and broad loading assignment.
+
+Inputs and behavior:
+
+- `Density (g/cc)` is one global value for the active shot
+- each hole uses its own `Diameter`, `Depth`, and `Stem Height`
+- `Column Depth` is calculated as `depth - stemming height`
+- explosive weight is calculated as a cylinder and converted to pounds
+
+The menu shows:
+
+- `Total Explosive Weight`
+- `Holes Included`
+- `Average lb/hole`
+- a selected-hole assignment area for detonators
+- a selected-hole assignment area for boosters
+- a live material summary for the full shot
+
+Broad assignment workflow:
+
+- select one or more holes on the diagram
+- add one or more detonator rows and booster rows in `Loading`
+- click `Apply to Selected Holes`
+- edit any individual hole later in `Properties`
+
+If a hole has zero or negative column depth, its explosive weight is set to `0 lb` and the hole is flagged in the single-hole loading section.
 
 ### Volume Menu
 
@@ -141,6 +179,7 @@ Notes:
 - Volume totals are whole-shot totals, not per-hole output.
 - Holes with missing burden, spacing, or depth are excluded from the total.
 - Changing properties or applying a pattern updates the volume summary.
+- Changing loading density, hole depth, stemming height, detonators, or boosters updates the loading summary immediately.
 
 ### Diagram Tools
 

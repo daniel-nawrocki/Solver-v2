@@ -528,6 +528,62 @@
               <button id="diagramApplyPropertiesBtn" type="button">Apply to Selection</button>
               <button id="diagramClearSelectionBtn" type="button">Clear Selection</button>
             </div>
+            <div id="diagramHoleLoadingSection" class="loading-panel hidden">
+              <h3>Selected Hole Loading</h3>
+              <label>Hole Depth (ft)
+                <input id="diagramHoleLoadingDepthInput" type="number" step="0.01">
+              </label>
+              <label>Stemming Height (ft)
+                <input id="diagramHoleLoadingStemHeightInput" type="number" step="0.01">
+              </label>
+              <div id="diagramHoleLoadingColumnDepthStatus" class="status-note">Column Depth: -</div>
+              <div id="diagramHoleLoadingWeightStatus" class="status-note">Explosive Weight: -</div>
+              <div id="diagramHoleLoadingWarning" class="status-note"></div>
+              <div class="loading-editor-block">
+                <div class="loading-editor-head">
+                  <strong>Detonators</strong>
+                  <button id="diagramHoleLoadingAddDetonatorBtn" type="button">Add Detonator</button>
+                </div>
+                <div id="diagramHoleLoadingDetonatorEditor" class="loading-entry-editor"></div>
+              </div>
+              <div class="loading-editor-block">
+                <div class="loading-editor-head">
+                  <strong>Boosters</strong>
+                  <button id="diagramHoleLoadingAddBoosterBtn" type="button">Add Booster</button>
+                </div>
+                <div id="diagramHoleLoadingBoosterEditor" class="loading-entry-editor"></div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="top-menu">
+          <button class="menu-toggle" type="button" data-menu-toggle="diagramLoadingMenu">Loading</button>
+          <section id="diagramLoadingMenu" class="menu-panel panel hidden">
+            <h2>Loading</h2>
+            <label>Density (g/cc)
+              <input id="diagramLoadingDensityInput" type="number" step="0.01" value="1.17">
+            </label>
+            <div id="diagramLoadingTotalWeightStatus" class="status-chip">Total Explosive Weight: 0 lb</div>
+            <div id="diagramLoadingIncludedCountStatus" class="status-note">Holes Included: 0</div>
+            <div id="diagramLoadingAverageStatus" class="status-note">Average: 0 lb/hole</div>
+            <div id="diagramLoadingSelectionStatus" class="status-note">Select one or more holes to assign detonators and boosters.</div>
+            <div class="loading-editor-block">
+              <div class="loading-editor-head">
+                <strong>Detonators for Selected Holes</strong>
+                <button id="diagramLoadingAddDetonatorBtn" type="button">Add Detonator</button>
+              </div>
+              <div id="diagramLoadingDetonatorEditor" class="loading-entry-editor"></div>
+            </div>
+            <div class="loading-editor-block">
+              <div class="loading-editor-head">
+                <strong>Boosters for Selected Holes</strong>
+                <button id="diagramLoadingAddBoosterBtn" type="button">Add Booster</button>
+              </div>
+              <div id="diagramLoadingBoosterEditor" class="loading-entry-editor"></div>
+            </div>
+            <button id="diagramLoadingApplyBtn" type="button">Apply to Selected Holes</button>
+            <div id="diagramLoadingSummary" class="list">Loading summary will appear here.</div>
           </section>
         </div>
 

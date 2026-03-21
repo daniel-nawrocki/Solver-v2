@@ -35,6 +35,8 @@ function cloneHole(hole = {}) {
     toe: clonePointReference(hole.toe),
     original: hole.original ? { ...hole.original } : hole.original,
     coordinates: cloneCoordinateBundle(hole.coordinates),
+    detonators: Array.isArray(hole.detonators) ? hole.detonators.map((entry) => ({ ...entry })) : [],
+    boosters: Array.isArray(hole.boosters) ? hole.boosters.map((entry) => ({ ...entry })) : [],
   };
 }
 
@@ -98,7 +100,7 @@ function cloneShotCorners(corners = []) {
 
 export function serializeProjectDocument(projectState) {
   return {
-    version: 2,
+    version: 3,
     holes: (projectState.holes || []).map(cloneHole),
     csvCache: cloneCsvCache(projectState.csvCache),
     geo: cloneGeo(projectState.geo),

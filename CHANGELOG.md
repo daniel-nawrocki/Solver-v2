@@ -1,0 +1,59 @@
+# Changelog
+
+All notable project changes are tracked here.
+
+## Unreleased
+
+### Added
+- Diagram `Loading` menu with a global explosive density input, whole-shot explosive totals, average lb/hole, selected-hole assignment tools, and a live material summary.
+- Per-hole loading editor inside Diagram `Properties` for hole depth, stemming height, derived column depth, derived explosive pounds, and multi-row detonator / booster editing.
+- Loading calculation utilities in [js/loading.js](/c:/Users/danie/Desktop/Solver-supa-int/Solver-v2/js/loading.js) for:
+  - cylindrical explosive-weight calculation in pounds from diameter, column depth, and density
+  - per-hole loading warnings when calculated column depth is zero or negative
+  - whole-shot aggregation of explosive totals and loading materials
+- Shot print/export integration for loading data in the printable hole table:
+  - per-hole explosive pounds
+  - shot explosive total
+  - detonator summary
+  - booster summary
+
+### Changed
+- Hole objects now persist loading-related fields including detonators, boosters, derived column depth, derived explosive weight, and warning state.
+- Project document serialization version increased to `3` so loading data is carried through save/load flows.
+- Diagram state refresh now recalculates loading-derived values whenever density, depth, stemming, or loading materials change.
+
+## Earlier Delivered Changes
+
+### Unified Planner Foundation
+- Converted the app from a timing-only tool into a shared `Daniel Fire` planner with `Diagram` and `Timing` modes.
+- Added a shared project spine so imported holes, viewport state, diagram data, and timing data persist across mode switches.
+- Kept Diagram UI aligned with Delay Solver styling and menu patterns.
+
+### Diagram Workspace
+- Added a real Diagram workspace with import, selection, per-hole property editing, and shot metadata controls.
+- Added bottom diagram tools for select, box select, polygon select, markup, and text annotations.
+- Added face-hole designation and pattern application for face/interior burden and spacing workflows.
+- Added subdrill support at both pattern level and per-hole level.
+- Added whole-shot volume calculations with editable rock density.
+- Added shot-corner assignment and diagram print corner-coordinate labeling.
+
+### Print Preview
+- Added shared multi-page print preview across timing and diagram workflows.
+- Added printable diagram headers with shot metadata.
+- Added label edit mode for repositioning diagram print labels.
+- Added a label-position dial and per-page independent print settings.
+- Added hole-table print pages and improved browser print layout behavior.
+
+### Timing Workflow
+- Added overlap analysis for timing results with fixed `8 ms` windows and click-to-highlight behavior.
+- Updated timing ranking to prioritize lower overlap density and shorter duration.
+- Added manual timing mode alongside solver mode.
+
+### Data / Import / Geo
+- Added dual-coordinate import support for local, State Plane, and lat/long coordinates.
+- Added quarry EPSG/unit metadata handling and quarry-based project geo defaults.
+- Added shared persistence for diagram/timing data and cloud project integration.
+
+### Documentation
+- Added and maintained [roadmap.md](/c:/Users/danie/Desktop/Solver-supa-int/Solver-v2/roadmap.md) as project memory.
+- Added the repository user guide source in [HOW_TO_USE.md](/c:/Users/danie/Desktop/Solver-supa-int/Solver-v2/HOW_TO_USE.md) and generated PDF guide.

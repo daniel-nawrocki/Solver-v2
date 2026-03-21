@@ -449,6 +449,51 @@ button:active {
   background: var(--surface-soft);
 }
 
+.loading-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(159, 179, 201, 0.34);
+}
+
+.loading-editor-block {
+  display: grid;
+  gap: 8px;
+}
+
+.loading-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.loading-entry-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.loading-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.loading-entry-row button,
+.loading-editor-head button {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.loading-summary-block {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
 .timing-item {
   width: 100%;
   text-align: left;
@@ -1783,6 +1828,17 @@ button:active {
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.print-hole-table-loading-summary {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: calc(8px * var(--hole-table-scale)) calc(10px * var(--hole-table-scale));
+  border: 1px solid rgba(159, 179, 201, 0.45);
+  background: rgba(248, 251, 255, 0.96);
+  font-size: calc(9px * var(--hole-table-scale));
+  color: #314a62;
 }
 
 .print-pages-output {

@@ -1,6 +1,17 @@
 import { parseCsvText, buildHolesFromMapping } from "./csvParser.js";
 import { DiagramRenderer } from "./diagramRenderer.js";
 import { latLonToStatePlane, normalizeGeoContext, statePlaneToLatLon, supportsStatePlaneEpsg } from "./geo.js";
+import {
+  BOOSTER_TYPES,
+  DETONATOR_TYPES,
+  DEFAULT_LOADING_DENSITY_GCC,
+  calculateColumnDepthFeet,
+  cloneMaterialEntries,
+  normalizeLoadingDensity,
+  normalizeMaterialEntries,
+  recalculateHoleLoading,
+  summarizeShotLoading,
+} from "./loading.js";
 import { parseProjectDocument, serializeProjectDocument } from "./projectDocument.js";
 import {
   createCloudProject,
@@ -158,6 +169,10 @@ function createDiagramState() {
       selectionPolygonDraft: null,
       annotationColor: "#000000",
       annotationSize: "medium",
+      loadingDraft: {
+        detonators: [],
+        boosters: [],
+      },
       currentStrokeDraft: null,
       selectedTextId: null,
       dragTextId: null,
@@ -176,6 +191,7 @@ function createDiagramState() {
       faceSpacing: null,
       interiorBurden: null,
       interiorSpacing: null,
+      loadingDensityGcc: DEFAULT_LOADING_DENSITY_GCC,
       rockDensityTonsPerCubicYard: 2.3,
       quarryStatePlaneEpsg: null,
       quarryStatePlaneUnit: "ft",
@@ -231,6 +247,7 @@ function createPrintPageState() {
       faceSpacing: null,
       interiorBurden: null,
       interiorSpacing: null,
+      loadingDensityGcc: DEFAULT_LOADING_DENSITY_GCC,
       rockDensityTonsPerCubicYard: 2.3,
       quarryStatePlaneEpsg: null,
       quarryStatePlaneUnit: "ft",
@@ -479,6 +496,17 @@ const els = {
   diagramAssignFaceBtn: document.getElementById("diagramAssignFaceBtn"),
   diagramClearFaceBtn: document.getElementById("diagramClearFaceBtn"),
   diagramApplyPatternBtn: document.getElementById("diagramApplyPatternBtn"),
+  diagramLoadingDensityInput: document.getElementById("diagramLoadingDensityInput"),
+  diagramLoadingTotalWeightStatus: document.getElementById("diagramLoadingTotalWeightStatus"),
+  diagramLoadingIncludedCountStatus: document.getElementById("diagramLoadingIncludedCountStatus"),
+  diagramLoadingAverageStatus: document.getElementById("diagramLoadingAverageStatus"),
+  diagramLoadingSelectionStatus: document.getElementById("diagramLoadingSelectionStatus"),
+  diagramLoadingDetonatorEditor: document.getElementById("diagramLoadingDetonatorEditor"),
+  diagramLoadingAddDetonatorBtn: document.getElementById("diagramLoadingAddDetonatorBtn"),
+  diagramLoadingBoosterEditor: document.getElementById("diagramLoadingBoosterEditor"),
+  diagramLoadingAddBoosterBtn: document.getElementById("diagramLoadingAddBoosterBtn"),
+  diagramLoadingApplyBtn: document.getElementById("diagramLoadingApplyBtn"),
+  diagramLoadingSummary: document.getElementById("diagramLoadingSummary"),
   diagramRockDensityInput: document.getElementById("diagramRockDensityInput"),
   diagramVolumeRuleStatus: document.getElementById("diagramVolumeRuleStatus"),
   diagramVolumeIncludedStatus: document.getElementById("diagramVolumeIncludedStatus"),
@@ -519,6 +547,16 @@ const els = {
   diagramStemHeightInput: document.getElementById("diagramStemHeightInput"),
   diagramApplyPropertiesBtn: document.getElementById("diagramApplyPropertiesBtn"),
   diagramClearSelectionBtn: document.getElementById("diagramClearSelectionBtn"),
+  diagramHoleLoadingSection: document.getElementById("diagramHoleLoadingSection"),
+  diagramHoleLoadingDepthInput: document.getElementById("diagramHoleLoadingDepthInput"),
+  diagramHoleLoadingStemHeightInput: document.getElementById("diagramHoleLoadingStemHeightInput"),
+  diagramHoleLoadingColumnDepthStatus: document.getElementById("diagramHoleLoadingColumnDepthStatus"),
+  diagramHoleLoadingWeightStatus: document.getElementById("diagramHoleLoadingWeightStatus"),
+  diagramHoleLoadingWarning: document.getElementById("diagramHoleLoadingWarning"),
+  diagramHoleLoadingDetonatorEditor: document.getElementById("diagramHoleLoadingDetonatorEditor"),
+  diagramHoleLoadingAddDetonatorBtn: document.getElementById("diagramHoleLoadingAddDetonatorBtn"),
+  diagramHoleLoadingBoosterEditor: document.getElementById("diagramHoleLoadingBoosterEditor"),
+  diagramHoleLoadingAddBoosterBtn: document.getElementById("diagramHoleLoadingAddBoosterBtn"),
   diagramHolePopupBackdrop: document.getElementById("diagramHolePopupBackdrop"),
   diagramHolePopup: document.getElementById("diagramHolePopup"),
   diagramHolePopupTitle: document.getElementById("diagramHolePopupTitle"),
@@ -1125,6 +1163,8 @@ function cloneHole(hole) {
     toe: cloneHolePoint(hole.toe),
     original: hole.original ? { ...hole.original } : hole.original,
     coordinates: cloneCoordinateBundle(hole.coordinates),
+    detonators: cloneMaterialEntries(hole.detonators),
+    boosters: cloneMaterialEntries(hole.boosters),
   };
 }
 
@@ -1181,6 +1221,7 @@ function cloneDiagramMetadata(metadata = {}) {
     faceSpacing: Number.isFinite(Number(metadata.faceSpacing)) ? Number(metadata.faceSpacing) : null,
     interiorBurden: Number.isFinite(Number(metadata.interiorBurden)) ? Number(metadata.interiorBurden) : null,
     interiorSpacing: Number.isFinite(Number(metadata.interiorSpacing)) ? Number(metadata.interiorSpacing) : null,
+    loadingDensityGcc: normalizeLoadingDensity(metadata.loadingDensityGcc),
     rockDensityTonsPerCubicYard: Number.isFinite(Number(metadata.rockDensityTonsPerCubicYard)) ? Number(metadata.rockDensityTonsPerCubicYard) : 2.3,
     quarryStatePlaneEpsg: Number.isFinite(Number(metadata.quarryStatePlaneEpsg)) ? Number(metadata.quarryStatePlaneEpsg) : null,
     quarryStatePlaneUnit: metadata.quarryStatePlaneUnit || "ft",
@@ -1347,6 +1388,10 @@ function hydrateDiagramFromProject() {
   diagramState.ui.selectionPolygonDraft = null;
   diagramState.ui.annotationColor = projectState.diagram.ui.annotationColor || "#000000";
   diagramState.ui.annotationSize = projectState.diagram.ui.annotationSize || "medium";
+  diagramState.ui.loadingDraft = {
+    detonators: [],
+    boosters: [],
+  };
   diagramState.ui.currentStrokeDraft = null;
   diagramState.ui.selectedTextId = null;
   diagramState.ui.dragTextId = null;
@@ -2522,6 +2567,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
   const pageCount = Number(options.pageCount) || 1;
   const showSummary = options.showSummary === true;
   const totalHoles = Array.isArray(page?.holes) ? page.holes.length : 0;
+  const loadingSummary = summarizeShotLoading(page?.holes || [], page?.metadata?.loadingDensityGcc);
   const totalDrillFootage = (page?.holes || []).reduce((sum, hole) => {
     const depth = Number(hole?.depth);
     return Number.isFinite(depth) ? sum + depth : sum;
@@ -2532,14 +2578,28 @@ function buildHoleTableMarkup(page, holes, options = {}) {
       <td>${escapeHtml(formatHoleTableFeet(hole?.depth))}</td>
       <td>${escapeHtml(formatHoleTableDegrees(hole?.angle))}</td>
       <td>${escapeHtml(formatHoleTableAzimuth(hole?.bearing, hole?.angle))}</td>
+      <td>${escapeHtml(`${formatLoadingWeight(hole?.explosiveWeightLb)} lb`)}</td>
     </tr>
   `).join("");
+  const detonatorSummary = [...loadingSummary.detonatorCounts.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([type, quantity]) => `${quantity} x ${type}`)
+    .join(" | ");
+  const boosterSummary = [...loadingSummary.boosterCounts.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([type, quantity]) => `${quantity} x ${type}`)
+    .join(" | ");
   const summaryMarkup = showSummary
     ? `
       <footer class="print-hole-table-summary">
         <span>${escapeHtml(`Total Holes: ${totalHoles}`)}</span>
         <span>${escapeHtml(`Total Drill Footage: ${Math.round(totalDrillFootage)} ft`)}</span>
+        <span>${escapeHtml(`Explosive: ${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</span>
       </footer>
+      <div class="print-hole-table-loading-summary">
+        <div>${escapeHtml(`Detonators: ${detonatorSummary || "None"}`)}</div>
+        <div>${escapeHtml(`Boosters: ${boosterSummary || "None"}`)}</div>
+      </div>
     `
     : "";
   return `
@@ -2555,6 +2615,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
             <th>Depth</th>
             <th>Angle</th>
             <th>Azimuth (True North)</th>
+            <th>Explosive</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -2871,6 +2932,188 @@ function renderDiagramVolumePanel() {
   els.diagramVolumeTonsStatus.textContent = `Total Tons: ${formatVolumeNumber(summary.tons)}`;
 }
 
+function createBlankMaterialEntry(types) {
+  return {
+    type: types[0] || "",
+    quantity: 1,
+  };
+}
+
+function refreshDiagramLoadingDerivedState() {
+  const density = normalizeLoadingDensity(diagramState.metadata.loadingDensityGcc);
+  diagramState.metadata.loadingDensityGcc = density;
+  diagramState.holes.forEach((hole) => recalculateHoleLoading(hole, density));
+}
+
+function formatLoadingWeight(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "0";
+  return numeric.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+}
+
+function summarizeDiagramLoading() {
+  refreshDiagramLoadingDerivedState();
+  return summarizeShotLoading(diagramState.holes, diagramState.metadata.loadingDensityGcc);
+}
+
+function materialCountsMarkup(countsMap, emptyLabel) {
+  const rows = [...countsMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([type, quantity]) => `<div>${escapeHtml(`${quantity} x ${type}`)}</div>`)
+    .join("");
+  return rows || `<div>${escapeHtml(emptyLabel)}</div>`;
+}
+
+function materialEntryEditorMarkup(entries, types, { scope }) {
+  const rows = entries.map((entry, index) => `
+    <div class="loading-entry-row">
+      <select data-loading-scope="${scope}" data-loading-field="type" data-loading-index="${index}">
+        ${types.map((type) => `<option value="${escapeHtml(type)}"${entry.type === type ? " selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+      </select>
+      <input type="number" min="1" step="1" value="${escapeHtml(String(entry.quantity || 1))}" data-loading-scope="${scope}" data-loading-field="quantity" data-loading-index="${index}">
+      <button type="button" data-loading-scope="${scope}" data-loading-remove="${index}">Remove</button>
+    </div>
+  `).join("");
+  return rows || `<div class="status-note">No entries assigned.</div>`;
+}
+
+function renderDiagramLoadingPanel() {
+  const density = normalizeLoadingDensity(diagramState.metadata.loadingDensityGcc);
+  diagramState.metadata.loadingDensityGcc = density;
+  const summary = summarizeDiagramLoading();
+  const selectedCount = diagramState.selection.size;
+  const warningText = summary.warningHoleCount
+    ? ` | ${summary.warningHoleCount} hole${summary.warningHoleCount === 1 ? "" : "s"} flagged`
+    : "";
+
+  els.diagramLoadingDensityInput.value = String(density);
+  els.diagramLoadingTotalWeightStatus.textContent = `Total Explosive Weight: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`;
+  els.diagramLoadingIncludedCountStatus.textContent = `Holes Included: ${summary.includedHoleCount} of ${summary.totalHoleCount}${warningText}`;
+  els.diagramLoadingAverageStatus.textContent = `Average: ${formatLoadingWeight(summary.averageExplosiveWeightLb)} lb/hole`;
+  els.diagramLoadingSelectionStatus.textContent = selectedCount
+    ? `${selectedCount} selected hole${selectedCount === 1 ? "" : "s"} ready for assignment`
+    : "Select one or more holes to assign detonators and boosters.";
+  els.diagramLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.detonators, DETONATOR_TYPES, { scope: "draft-detonator" });
+  els.diagramLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES, { scope: "draft-booster" });
+  els.diagramLoadingApplyBtn.disabled = !diagramState.selection.size;
+  els.diagramLoadingSummary.innerHTML = `
+    <div><strong>${escapeHtml(`Shot total: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`)}</strong></div>
+    <div>${escapeHtml(`${summary.totalHoleCount} holes`)}</div>
+    <div class="loading-summary-block">
+      <div><strong>Detonators</strong></div>
+      ${materialCountsMarkup(summary.detonatorCounts, "No detonators assigned")}
+    </div>
+    <div class="loading-summary-block">
+      <div><strong>Boosters</strong></div>
+      ${materialCountsMarkup(summary.boosterCounts, "No boosters assigned")}
+    </div>
+  `;
+}
+
+function updateDraftMaterialEntry(kind, index, field, rawValue) {
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
+  const entries = diagramState.ui.loadingDraft[key];
+  const entry = entries[index];
+  if (!entry) return;
+  if (field === "type") entry.type = types.includes(rawValue) ? rawValue : types[0];
+  if (field === "quantity") entry.quantity = Math.max(1, Math.round(Number(rawValue) || 1));
+  renderDiagramLoadingPanel();
+}
+
+function addDraftMaterialEntry(kind) {
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
+  diagramState.ui.loadingDraft[key].push(createBlankMaterialEntry(types));
+  renderDiagramLoadingPanel();
+}
+
+function removeDraftMaterialEntry(kind, index) {
+  const key = kind === "booster" ? "boosters" : "detonators";
+  diagramState.ui.loadingDraft[key].splice(index, 1);
+  renderDiagramLoadingPanel();
+}
+
+function applyLoadingDraftToSelection() {
+  const selected = selectedDiagramHoles();
+  if (!selected.length) {
+    window.alert("Select one or more holes before applying loading assignments.");
+    return;
+  }
+  const detonators = normalizeMaterialEntries(diagramState.ui.loadingDraft.detonators, DETONATOR_TYPES);
+  const boosters = normalizeMaterialEntries(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES);
+  selected.forEach((hole) => {
+    hole.detonators = cloneMaterialEntries(detonators);
+    hole.boosters = cloneMaterialEntries(boosters);
+    recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  });
+  fullDiagramRefresh();
+}
+
+function renderSingleHoleLoadingEditor(hole) {
+  if (!hole) {
+    els.diagramHoleLoadingSection.classList.add("hidden");
+    els.diagramHoleLoadingDepthInput.value = "";
+    els.diagramHoleLoadingStemHeightInput.value = "";
+    els.diagramHoleLoadingDetonatorEditor.innerHTML = "";
+    els.diagramHoleLoadingBoosterEditor.innerHTML = "";
+    els.diagramHoleLoadingColumnDepthStatus.textContent = "Column Depth: -";
+    els.diagramHoleLoadingWeightStatus.textContent = "Explosive Weight: -";
+    els.diagramHoleLoadingWarning.textContent = "";
+    return;
+  }
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  els.diagramHoleLoadingSection.classList.remove("hidden");
+  els.diagramHoleLoadingDepthInput.value = Number.isFinite(Number(hole.depth)) ? String(hole.depth) : "";
+  els.diagramHoleLoadingStemHeightInput.value = Number.isFinite(Number(hole.stemHeight)) ? String(hole.stemHeight) : "";
+  els.diagramHoleLoadingColumnDepthStatus.textContent = `Column Depth: ${formatLoadingWeight(hole.columnDepth)} ft`;
+  els.diagramHoleLoadingWeightStatus.textContent = `Explosive Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
+  els.diagramHoleLoadingWarning.textContent = hole.loadingWarning || "";
+  els.diagramHoleLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(hole.detonators || [], DETONATOR_TYPES, { scope: "hole-detonator" });
+  els.diagramHoleLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(hole.boosters || [], BOOSTER_TYPES, { scope: "hole-booster" });
+}
+
+function updateHoleMaterialEntry(kind, index, field, rawValue) {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
+  const entry = hole[key]?.[index];
+  if (!entry) return;
+  if (field === "type") entry.type = types.includes(rawValue) ? rawValue : types[0];
+  if (field === "quantity") entry.quantity = Math.max(1, Math.round(Number(rawValue) || 1));
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  fullDiagramRefresh();
+}
+
+function addHoleMaterialEntry(kind) {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
+  hole[key].push(createBlankMaterialEntry(types));
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  fullDiagramRefresh();
+}
+
+function removeHoleMaterialEntry(kind, index) {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const key = kind === "booster" ? "boosters" : "detonators";
+  hole[key].splice(index, 1);
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  fullDiagramRefresh();
+}
+
+function updateSelectedHoleLoadingNumericField(field, rawValue) {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const trimmed = String(rawValue ?? "").trim();
+  hole[field] = trimmed === "" ? null : Number(trimmed);
+  normalizeDiagramHoleFields(hole);
+  fullDiagramRefresh();
+}
+
 function annotationSizeConfig(size) {
   return DIAGRAM_ANNOTATION_SIZE_MAP[size] || DIAGRAM_ANNOTATION_SIZE_MAP.medium;
 }
@@ -2915,6 +3158,13 @@ function normalizeDiagramHoleFields(hole, options = {}) {
     const numericSubdrill = Number(hole.subdrill);
     hole.subdrill = Number.isFinite(numericSubdrill) ? numericSubdrill : null;
   }
+  if (hole.stemHeight !== null && hole.stemHeight !== undefined) {
+    const numericStemHeight = Number(hole.stemHeight);
+    hole.stemHeight = Number.isFinite(numericStemHeight) ? numericStemHeight : null;
+  }
+  hole.detonators = normalizeMaterialEntries(hole.detonators, DETONATOR_TYPES);
+  hole.boosters = normalizeMaterialEntries(hole.boosters, BOOSTER_TYPES);
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
 }
 
 function csvEscape(value) {
@@ -3233,6 +3483,11 @@ function ensureDiagramHoleFields(hole) {
   DIAGRAM_FIELDS.forEach((field) => {
     if (!Object.hasOwn(hole, field) || hole[field] === undefined) hole[field] = null;
   });
+  if (!Array.isArray(hole.detonators)) hole.detonators = [];
+  if (!Array.isArray(hole.boosters)) hole.boosters = [];
+  if (!Object.hasOwn(hole, "columnDepth")) hole.columnDepth = calculateColumnDepthFeet(hole);
+  if (!Object.hasOwn(hole, "explosiveWeightLb")) hole.explosiveWeightLb = 0;
+  if (!Object.hasOwn(hole, "loadingWarning")) hole.loadingWarning = null;
 }
 
 function hasAnyToeCoordinates(targetState) {
@@ -3571,6 +3826,7 @@ function applyDiagramHolePopupChanges() {
     return;
   }
   Object.assign(hole, result.patch);
+  normalizeDiagramHoleFields(hole);
   closeDiagramHolePopup();
   fullDiagramRefresh();
 }
@@ -3850,6 +4106,7 @@ function renderDiagramPropertiesPanel() {
     els.diagramApplyPropertiesBtn.disabled = true;
     els.diagramClearSelectionBtn.disabled = true;
     els.diagramApplyDefaultDiameterBtn.disabled = !diagramState.holes.length;
+    renderSingleHoleLoadingEditor(null);
     syncDiagramDefaultDiameterStatus();
     return;
   }
@@ -3872,12 +4129,15 @@ function renderDiagramPropertiesPanel() {
   els.diagramApplyPropertiesBtn.disabled = false;
   els.diagramClearSelectionBtn.disabled = false;
   els.diagramApplyDefaultDiameterBtn.disabled = !diagramState.holes.length;
+  renderSingleHoleLoadingEditor(selected.length === 1 ? selected[0] : null);
   syncDiagramDefaultDiameterStatus();
 }
 
 function fullDiagramRefresh({ fit = false } = {}) {
+  refreshDiagramLoadingDerivedState();
   persistDiagramStateToProject();
   renderDiagramShotPanel();
+  renderDiagramLoadingPanel();
   renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
@@ -3929,7 +4189,10 @@ function applyDiagramPropertyPatchToSelection(result) {
     window.alert("Enter at least one property value to apply.");
     return;
   }
-  selected.forEach((hole) => Object.assign(hole, patch));
+  selected.forEach((hole) => {
+    Object.assign(hole, patch);
+    normalizeDiagramHoleFields(hole);
+  });
   fullDiagramRefresh();
 }
 
@@ -4011,6 +4274,8 @@ function applyDiagramMetadataPatch(field, value) {
     if (Number.isFinite(normalizedValue)) applyShotDefaultDiameterToExistingHoles(normalizedValue);
     diagramState.metadata[field] = normalizedValue;
     syncDiagramDefaultDiameterStatus();
+  } else if (field === "loadingDensityGcc") {
+    diagramState.metadata[field] = normalizeLoadingDensity(value);
   } else if (field === "rockDensityTonsPerCubicYard") {
     diagramState.metadata[field] = Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 2.3;
   } else {
@@ -4021,6 +4286,7 @@ function applyDiagramMetadataPatch(field, value) {
   }
   syncDiagramDefaultDiameterStatus();
   renderDiagramShotPanel();
+  renderDiagramLoadingPanel();
   renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
@@ -4342,6 +4608,30 @@ els.diagramClearTextBtn.addEventListener("click", () => {
   diagramState.ui.dragTextPointerDelta = null;
   fullDiagramRefresh();
 });
+els.diagramLoadingDensityInput.addEventListener("input", () => applyDiagramMetadataPatch("loadingDensityGcc", els.diagramLoadingDensityInput.value));
+els.diagramLoadingAddDetonatorBtn.addEventListener("click", () => addDraftMaterialEntry("detonator"));
+els.diagramLoadingAddBoosterBtn.addEventListener("click", () => addDraftMaterialEntry("booster"));
+els.diagramLoadingApplyBtn.addEventListener("click", () => applyLoadingDraftToSelection());
+els.diagramLoadingDetonatorEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-loading-scope='draft-detonator']");
+  if (!target) return;
+  updateDraftMaterialEntry("detonator", Number(target.getAttribute("data-loading-index")), target.getAttribute("data-loading-field"), target.value);
+});
+els.diagramLoadingDetonatorEditor.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-loading-scope='draft-detonator']");
+  if (!button || !button.hasAttribute("data-loading-remove")) return;
+  removeDraftMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+});
+els.diagramLoadingBoosterEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-loading-scope='draft-booster']");
+  if (!target) return;
+  updateDraftMaterialEntry("booster", Number(target.getAttribute("data-loading-index")), target.getAttribute("data-loading-field"), target.value);
+});
+els.diagramLoadingBoosterEditor.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-loading-scope='draft-booster']");
+  if (!button || !button.hasAttribute("data-loading-remove")) return;
+  removeDraftMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
+});
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramHolePopupSaveBtn.addEventListener("click", () => applyDiagramHolePopupChanges());
 els.diagramHolePopupCancelBtn.addEventListener("click", () => closeDiagramHolePopup());
@@ -4357,6 +4647,30 @@ els.diagramClearSelectionBtn.addEventListener("click", () => {
   diagramState.selection = new Set();
   renderDiagramPropertiesPanel();
   diagramRenderer.render();
+});
+els.diagramHoleLoadingDepthInput.addEventListener("input", () => updateSelectedHoleLoadingNumericField("depth", els.diagramHoleLoadingDepthInput.value));
+els.diagramHoleLoadingStemHeightInput.addEventListener("input", () => updateSelectedHoleLoadingNumericField("stemHeight", els.diagramHoleLoadingStemHeightInput.value));
+els.diagramHoleLoadingAddDetonatorBtn.addEventListener("click", () => addHoleMaterialEntry("detonator"));
+els.diagramHoleLoadingAddBoosterBtn.addEventListener("click", () => addHoleMaterialEntry("booster"));
+els.diagramHoleLoadingDetonatorEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-loading-scope='hole-detonator']");
+  if (!target) return;
+  updateHoleMaterialEntry("detonator", Number(target.getAttribute("data-loading-index")), target.getAttribute("data-loading-field"), target.value);
+});
+els.diagramHoleLoadingDetonatorEditor.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-loading-scope='hole-detonator']");
+  if (!button || !button.hasAttribute("data-loading-remove")) return;
+  removeHoleMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+});
+els.diagramHoleLoadingBoosterEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-loading-scope='hole-booster']");
+  if (!target) return;
+  updateHoleMaterialEntry("booster", Number(target.getAttribute("data-loading-index")), target.getAttribute("data-loading-field"), target.value);
+});
+els.diagramHoleLoadingBoosterEditor.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-loading-scope='hole-booster']");
+  if (!button || !button.hasAttribute("data-loading-remove")) return;
+  removeHoleMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
 });
 
 els.authSignInBtn.addEventListener("click", async () => {
@@ -4736,6 +5050,7 @@ els.coordViewSelect.disabled = true;
 els.diagramCoordViewSelect.value = diagramState.ui.coordView;
 els.diagramCoordViewSelect.disabled = true;
 renderDiagramShotPanel();
+renderDiagramLoadingPanel();
 renderDiagramVolumePanel();
 els.diagramAnnotationColorInput.value = diagramState.ui.annotationColor;
 els.diagramAnnotationSizeSelect.value = diagramState.ui.annotationSize;
