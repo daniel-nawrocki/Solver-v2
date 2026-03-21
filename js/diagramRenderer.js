@@ -1014,15 +1014,15 @@ export class DiagramRenderer {
 
     if (rightLines.length) {
       this.ctx.font = printHeaderMetaFont(13, 600);
-      const boxPaddingX = 16;
-      const boxPaddingY = 12;
-      const lineGap = 7;
+      const boxPaddingX = 13;
+      const boxPaddingY = 9;
+      const lineGap = 5;
       const lineHeight = 13;
       const textWidths = rightLines.map((line) => this.ctx.measureText(line).width);
       const boxWidth = Math.max(...textWidths) + (boxPaddingX * 2);
       const boxHeight = (rightLines.length * lineHeight) + ((rightLines.length - 1) * lineGap) + (boxPaddingY * 2);
       const boxLeft = this.canvas.width - 30 - boxWidth;
-      const boxTop = 32;
+      const boxTop = 24;
 
       this.ctx.save();
       this.ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
