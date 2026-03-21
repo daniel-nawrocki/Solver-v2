@@ -38,6 +38,7 @@ All notable project changes are tracked here.
 - Hole Load Profile grey and pink load fills now expand to fill the outer bore shell interior instead of leaving a narrow inset column.
 - Hole Load Profile load fills now clip directly to the rounded bore interior so the grey/pink areas follow the shell shape without a visible inner rectangular boundary or white gap.
 - The print `Text Size` slider now supports smaller values, lowering the minimum scale from `0.7` to `0.4` for denser print layouts.
+- Diagram print preview now supports `Page Break From Selection`, splitting selected holes onto the active page and creating a complementary page with the remaining holes while preserving the exact same viewport scale.
 
 ## Earlier Delivered Changes
 

@@ -587,6 +587,7 @@ const els = {
   printBackBtn: document.getElementById("printBackBtn"),
   printActionBtn: document.getElementById("printActionBtn"),
   printFitBtn: document.getElementById("printFitBtn"),
+  printPageBreakBtn: document.getElementById("printPageBreakBtn"),
   printEditLabelsBtn: document.getElementById("printEditLabelsBtn"),
   printResetLabelsBtn: document.getElementById("printResetLabelsBtn"),
   printTextScaleInput: document.getElementById("printTextScaleInput"),
@@ -634,7 +635,7 @@ const diagramRenderer = new DiagramRenderer(document.getElementById("diagramMake
 const printRenderer = new DiagramRenderer(document.getElementById("printCanvas"), {
   stateRef: null,
   isPrintRenderer: true,
-  onHoleClick: () => {},
+  onHoleClick: handlePrintHoleClick,
   onHoleHover: () => {},
   onPointerUp: handlePrintPointerUp,
   onPointerDown: handlePrintPointerDown,
@@ -2097,6 +2098,50 @@ function syncPrintPageHolesById(page) {
   page.holesById = new Map(page.holes.map((hole) => [hole.id, hole]));
 }
 
+function filterPrintPageToHoleIds(page, allowedHoleIds) {
+  if (!page || page.pageType !== "diagram") return;
+  const allowed = new Set(allowedHoleIds || []);
+  page.holes = page.holes.filter((hole) => allowed.has(hole.id));
+  syncPrintPageHolesById(page);
+  page.selection = new Set([...page.selection].filter((holeId) => allowed.has(holeId)));
+  page.labelLayoutByHoleId = new Map([...page.labelLayoutByHoleId.entries()].filter(([holeId]) => allowed.has(holeId)));
+  page.cornerLabelLayoutByHoleId = new Map([...page.cornerLabelLayoutByHoleId.entries()].filter(([holeId]) => allowed.has(holeId)));
+  page.shotCorners = page.shotCorners.map((holeId) => (holeId && allowed.has(holeId) ? holeId : null));
+  if (page.dragLabelHoleId && !allowed.has(page.dragLabelHoleId)) {
+    page.dragLabelHoleId = null;
+    page.dragLabelKind = null;
+    page.dragPointerDelta = null;
+  }
+  if (page.ui.hoverLabelHoleId && !allowed.has(page.ui.hoverLabelHoleId)) page.ui.hoverLabelHoleId = null;
+}
+
+function applyPrintPageBreakFromSelection() {
+  const page = activePrintPage();
+  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram") return;
+  const selectedIds = [...(page.selection || [])].filter((holeId) => page.holesById.has(holeId));
+  if (!selectedIds.length) {
+    window.alert("Select one or more holes on the print page first.");
+    return;
+  }
+  if (selectedIds.length >= page.holes.length) {
+    window.alert("Select fewer than all holes to create a page break.");
+    return;
+  }
+
+  const allHoleIds = page.holes.map((hole) => hole.id);
+  const selectedSet = new Set(selectedIds);
+  const remainingIds = allHoleIds.filter((holeId) => !selectedSet.has(holeId));
+  const complementPage = clonePrintPage(page);
+
+  filterPrintPageToHoleIds(page, selectedSet);
+  filterPrintPageToHoleIds(complementPage, remainingIds);
+  page.selection = new Set();
+  complementPage.selection = new Set();
+
+  printSession.pages.splice(printSession.activePageIndex + 1, 0, complementPage);
+  activatePrintPage(printSession.activePageIndex, { render: true });
+}
+
 function selectedProjectTimingResult() {
   const index = Number.isInteger(projectState.timing.ui.activeTimingPreviewIndex)
     ? projectState.timing.ui.activeTimingPreviewIndex
@@ -2408,6 +2453,7 @@ function syncPrintControls() {
   const showAdditionalPages = diagramMode || staticSheetMode;
   els.printTextScaleInput.value = String(page.ui.textScale || 1);
   els.printFitBtn.classList.toggle("hidden", staticSheetMode);
+  els.printPageBreakBtn.classList.toggle("hidden", !diagramMode);
   els.printAdditionalPagesBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printAddTimingPageBtn.classList.toggle("hidden", !hasTimingPageOption);
   els.printAddHoleTablePageBtn.classList.toggle("hidden", !showAdditionalPages);
@@ -3114,6 +3160,16 @@ function handlePrintPointerDown(payload) {
   page.ui.hoverLabelHoleId = hit.hole.id;
   printRenderer.render();
   return true;
+}
+
+function handlePrintHoleClick(hole, event) {
+  const page = activePrintPage();
+  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram" || isDiagramPrintEditing()) return;
+  if (!event.shiftKey) page.selection = new Set([hole.id]);
+  else if (page.selection.has(hole.id)) page.selection.delete(hole.id);
+  else page.selection.add(hole.id);
+  renderPrintPageTabs();
+  printRenderer.render();
 }
 
 function handlePrintPointerMove(payload) {
@@ -5414,6 +5470,7 @@ els.printAddHoleLoadProfilePageBtn.addEventListener("click", () => {
   closeAllMenus();
 });
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
+els.printPageBreakBtn.addEventListener("click", () => applyPrintPageBreakFromSelection());
 els.printPageTabs.addEventListener("click", (event) => {
   const removeBtn = event.target.closest("[data-print-remove]");
   if (removeBtn) {
