@@ -41,6 +41,8 @@ All notable project changes are tracked here.
 - Diagram print preview now supports `Page Break From Selection`, splitting selected holes onto the active page and creating a complementary page with the remaining holes while preserving the exact same viewport scale.
 - Diagram print preview now supports print-only `Shift+drag` box selection to build multi-hole page-break selections directly on the print canvas.
 - Hole Load Profile print output now packs up to four profile cards per printed page, with reduced card spacing and smaller profile-specific scaling to avoid overflow.
+- Diagram print preview page breaks now start from `Additional Pages` as a safe draft flow, leaving the original full diagram page untouched until the split is confirmed.
+- Hole Load Profile print output now uses a dedicated compact 2x2 quarter-page card layout so four profiles fit on a printed page without overlapping.
 
 ## Earlier Delivered Changes
 

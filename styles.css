@@ -1936,8 +1936,8 @@ button:active {
 .print-hole-load-profile-sheet {
   height: 100%;
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
   box-sizing: border-box;
   color: #13263d;
   overflow: hidden;
@@ -1945,37 +1945,37 @@ button:active {
 
 .print-hole-load-profile-stack {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
   min-height: 0;
 }
 
 .print-hole-load-profile-card-shell {
-  display: grid;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(159, 179, 201, 0.35);
+  min-height: 0;
+  border: 1px solid rgba(159, 179, 201, 0.4);
+  background: rgba(248, 251, 255, 0.96);
+  padding: 8px;
   min-height: 0;
 }
 
 .print-hole-load-profile-card-shell:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(159, 179, 201, 0.4);
 }
 
 .print-hole-load-profile-layout {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
   min-height: 0;
 }
 
 .print-hole-load-profile-card {
   display: grid;
-  padding: 8px 10px;
-  border: 1px solid rgba(159, 179, 201, 0.45);
-  background: rgba(248, 251, 255, 0.96);
+  padding: 4px;
+  border: 1px solid rgba(159, 179, 201, 0.35);
+  background: rgba(245, 249, 253, 0.96);
 }
 
 .print-hole-load-profile-diagram {
@@ -1983,65 +1983,140 @@ button:active {
 }
 
 .print-hole-load-profile-bore-wrap {
-  min-height: 210px;
-  max-width: 150px;
+  min-height: 140px;
+  max-width: 96px;
   margin: 0 auto;
 }
 
 .print-hole-load-profile-svg {
   display: block;
   width: 100%;
-  height: 210px;
+  height: 138px;
 }
 
 .print-hole-load-profile-svg-label {
   fill: #173e73;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 
-.print-hole-load-profile-sheet .print-shot-order-header {
+.print-hole-load-profile-data {
+  display: grid;
   gap: 6px;
+  min-width: 0;
+}
+
+.print-hole-load-profile-data h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.print-hole-load-profile-holes {
+  display: grid;
+  gap: 2px;
+  font-size: 10px;
+  min-width: 0;
+}
+
+.print-hole-load-profile-holes span {
+  color: #415973;
+  font-weight: 700;
+}
+
+.print-hole-load-profile-holes strong {
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.print-hole-load-profile-rows {
+  display: grid;
+  gap: 3px;
+}
+
+.print-hole-load-profile-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.print-hole-load-profile-row span {
+  color: #415973;
+}
+
+.print-hole-load-profile-row strong {
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.print-hole-load-profile-materials {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.print-hole-load-profile-material-block {
+  display: grid;
+  gap: 2px;
+  padding: 5px 6px;
+  border: 1px solid rgba(159, 179, 201, 0.32);
+  background: rgba(255, 255, 255, 0.72);
+  min-width: 0;
+}
+
+.print-hole-load-profile-material-block h3 {
+  margin: 0 0 1px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.print-hole-load-profile-material-line {
+  font-size: 9px;
+  line-height: 1.2;
+  color: #314a62;
+  overflow-wrap: anywhere;
+}
+
+.print-hole-load-profile-sheet .print-shot-order-header {
+  gap: 4px;
   padding-bottom: 8px;
 }
 
 .print-hole-load-profile-sheet .print-shot-order-header h1 {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .print-hole-load-profile-sheet .print-shot-order-meta {
-  gap: 3px;
-  font-size: 10px;
-}
-
-.print-hole-load-profile-sheet .print-shot-order-block {
-  gap: 6px;
-  padding: 8px 10px;
-}
-
-.print-hole-load-profile-sheet .print-shot-order-block h2 {
-  font-size: 12px;
-}
-
-.print-hole-load-profile-sheet .print-shot-order-row {
-  gap: 8px;
-  font-size: 11px;
-}
-
-.print-hole-load-profile-sheet .print-shot-order-line {
-  font-size: 10px;
-  line-height: 1.25;
+  gap: 2px;
+  font-size: 9px;
 }
 
 @media (max-width: 820px) {
-  .print-hole-load-profile-layout,
-  .print-hole-load-profile-diagram {
+  .print-hole-load-profile-stack,
+  .print-hole-load-profile-layout {
     grid-template-columns: 1fr;
   }
 
   .print-hole-load-profile-bore-wrap {
-    min-height: 240px;
+    min-height: 180px;
+    max-width: 120px;
+  }
+
+  .print-hole-load-profile-svg {
+    height: 176px;
+  }
+
+  .print-hole-load-profile-materials {
+    grid-template-columns: 1fr;
   }
 }
 

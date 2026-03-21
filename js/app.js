@@ -580,6 +580,7 @@ const els = {
   printWorkspace: document.getElementById("printWorkspace"),
   printPageStrip: document.getElementById("printPageStrip"),
   printPageTabs: document.getElementById("printPageTabs"),
+  printAddPageBreakBtn: document.getElementById("printAddPageBreakBtn"),
   printAddTimingPageBtn: document.getElementById("printAddTimingPageBtn"),
   printAddPageBtn: document.getElementById("printAddPageBtn"),
   printCanvas: document.getElementById("printCanvas"),
@@ -589,6 +590,7 @@ const els = {
   printActionBtn: document.getElementById("printActionBtn"),
   printFitBtn: document.getElementById("printFitBtn"),
   printPageBreakBtn: document.getElementById("printPageBreakBtn"),
+  printCancelPageBreakBtn: document.getElementById("printCancelPageBreakBtn"),
   printEditLabelsBtn: document.getElementById("printEditLabelsBtn"),
   printResetLabelsBtn: document.getElementById("printResetLabelsBtn"),
   printTextScaleInput: document.getElementById("printTextScaleInput"),
@@ -2044,6 +2046,9 @@ function clonePrintPage(page) {
   const holes = page.holes.map(cloneHole);
   return {
     pageType: page.pageType || (page?.ui?.workspaceMode === "diagram" ? "diagram" : "solver"),
+    pageLabel: page?.pageLabel || null,
+    pageBreakDraft: page?.pageBreakDraft === true,
+    pageBreakSourcePage: null,
     profileHoleId: page.profileHoleId || null,
     holes,
     holesById: new Map(holes.map((hole) => [hole.id, hole])),
@@ -2118,9 +2123,31 @@ function filterPrintPageToHoleIds(page, allowedHoleIds) {
   page.ui.selectionBoxDraft = null;
 }
 
-function applyPrintPageBreakFromSelection() {
+function startPrintPageBreakDraft() {
   const page = activePrintPage();
   if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram") return;
+  if (page.pageBreakDraft) {
+    window.alert("Confirm or cancel the current page break draft first.");
+    return;
+  }
+  const draftPage = clonePrintPage(page);
+  draftPage.pageBreakDraft = true;
+  draftPage.pageBreakSourcePage = clonePrintPage(page);
+  draftPage.pageLabel = "Page Break Draft";
+  draftPage.selection = new Set();
+  draftPage.ui.labelEditMode = false;
+  draftPage.ui.hoverLabelHoleId = null;
+  draftPage.ui.selectionBoxDraft = null;
+  draftPage.dragLabelHoleId = null;
+  draftPage.dragLabelKind = null;
+  draftPage.dragPointerDelta = null;
+  printSession.pages.splice(printSession.activePageIndex + 1, 0, draftPage);
+  activatePrintPage(printSession.activePageIndex + 1, { render: true });
+}
+
+function confirmPrintPageBreakDraft() {
+  const page = activePrintPage();
+  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram" || !page.pageBreakDraft) return;
   const selectedIds = [...(page.selection || [])].filter((holeId) => page.holesById.has(holeId));
   if (!selectedIds.length) {
     window.alert("Select one or more holes on the print page first.");
@@ -2131,18 +2158,31 @@ function applyPrintPageBreakFromSelection() {
     return;
   }
 
-  const allHoleIds = page.holes.map((hole) => hole.id);
+  const sourcePage = clonePrintPage(page.pageBreakSourcePage || page);
+  const allHoleIds = sourcePage.holes.map((hole) => hole.id);
   const selectedSet = new Set(selectedIds);
   const remainingIds = allHoleIds.filter((holeId) => !selectedSet.has(holeId));
-  const complementPage = clonePrintPage(page);
+  const complementPage = clonePrintPage(sourcePage);
 
   filterPrintPageToHoleIds(page, selectedSet);
-  filterPrintPageToHoleIds(complementPage, remainingIds);
+  page.pageBreakDraft = false;
+  page.pageBreakSourcePage = null;
+  page.pageLabel = "Diagram Split 1";
   page.selection = new Set();
+  filterPrintPageToHoleIds(complementPage, remainingIds);
+  complementPage.pageBreakDraft = false;
+  complementPage.pageBreakSourcePage = null;
+  complementPage.pageLabel = "Diagram Split 2";
   complementPage.selection = new Set();
 
   printSession.pages.splice(printSession.activePageIndex + 1, 0, complementPage);
   activatePrintPage(printSession.activePageIndex, { render: true });
+}
+
+function cancelPrintPageBreakDraft() {
+  const page = activePrintPage();
+  if (!page?.pageBreakDraft) return;
+  removePrintPage(printSession.activePageIndex);
 }
 
 function selectedProjectTimingResult() {
@@ -2386,6 +2426,7 @@ function createHoleLoadProfilePrintPage() {
 }
 
 function pageWorkspaceLabel(page) {
+  if (page?.pageLabel) return page.pageLabel;
   if (page?.pageType === "holeTable") return "Hole Table";
   if (page?.pageType === "shotOrder") return "Shot Order";
   if (page?.pageType === "holeLoadProfile") return "Hole Load Profile";
@@ -2450,14 +2491,17 @@ function syncPrintControls() {
   const page = activePrintPage();
   if (!page) return;
   const diagramMode = page.pageType === "diagram";
+  const draftMode = page.pageBreakDraft === true;
   const staticSheetMode = page.pageType === "holeTable" || page.pageType === "shotOrder" || page.pageType === "holeLoadProfile";
   const labelModeEnabled = page.ui.labelEditMode === true;
   const hasTimingPageOption = projectState.timing.timingResults.length > 0;
   const showAdditionalPages = diagramMode || staticSheetMode;
   els.printTextScaleInput.value = String(page.ui.textScale || 1);
   els.printFitBtn.classList.toggle("hidden", staticSheetMode);
-  els.printPageBreakBtn.classList.toggle("hidden", !diagramMode);
+  els.printPageBreakBtn.classList.toggle("hidden", !draftMode);
+  els.printCancelPageBreakBtn.classList.toggle("hidden", !draftMode);
   els.printAdditionalPagesBtn.classList.toggle("hidden", !showAdditionalPages);
+  els.printAddPageBreakBtn.classList.toggle("hidden", !diagramMode || draftMode);
   els.printAddTimingPageBtn.classList.toggle("hidden", !hasTimingPageOption);
   els.printAddHoleTablePageBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printAddShotOrderPageBtn.classList.toggle("hidden", !showAdditionalPages);
@@ -2997,6 +3041,7 @@ function buildHoleLoadProfileCard(group) {
     hole.boosters.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
     "No boosters assigned",
   );
+  const holeList = escapeHtml(group.holeLabels.join(", "));
 
   return `
     <section class="print-hole-load-profile-card-shell">
@@ -3013,25 +3058,25 @@ function buildHoleLoadProfileCard(group) {
             </div>
           </div>
         </section>
-        <section class="print-shot-order-block">
+        <section class="print-hole-load-profile-data">
           <h2>Profile Data</h2>
-          <div class="print-shot-order-row"><span>Holes</span><strong>${escapeHtml(group.holeLabels.join(", "))}</strong></div>
-          <div class="print-shot-order-row"><span>Diameter</span><strong>${escapeHtml(Number.isFinite(Number(hole.diameter)) ? `${hole.diameter}"` : "-")}</strong></div>
-          <div class="print-shot-order-row"><span>Depth</span><strong>${escapeHtml(Number.isFinite(Number(hole.depth)) ? `${formatLoadingWeight(hole.depth)} ft` : "-")}</strong></div>
-          <div class="print-shot-order-row"><span>Stemming</span><strong>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</strong></div>
-          <div class="print-shot-order-row"><span>Explosive Column</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
-          <div class="print-shot-order-row"><span>Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</strong></div>
-          <div class="print-shot-order-row"><span>Warning</span><strong>${escapeHtml(hole.loadingWarning || "None")}</strong></div>
-        </section>
-      </div>
-      <div class="print-shot-order-grid">
-        <section class="print-shot-order-block">
-          <h2>Detonators</h2>
-          ${detonatorLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
-        </section>
-        <section class="print-shot-order-block">
-          <h2>Boosters</h2>
-          ${boosterLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
+          <div class="print-hole-load-profile-holes"><span>Holes</span><strong>${holeList}</strong></div>
+          <div class="print-hole-load-profile-rows">
+            <div class="print-hole-load-profile-row"><span>Depth</span><strong>${escapeHtml(Number.isFinite(Number(hole.depth)) ? `${formatLoadingWeight(hole.depth)} ft` : "-")}</strong></div>
+            <div class="print-hole-load-profile-row"><span>Stemming</span><strong>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</strong></div>
+            <div class="print-hole-load-profile-row"><span>Explosive Column</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
+            <div class="print-hole-load-profile-row"><span>Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</strong></div>
+          </div>
+          <div class="print-hole-load-profile-materials">
+            <section class="print-hole-load-profile-material-block">
+              <h3>Detonators</h3>
+              ${detonatorLines.map((line) => `<div class="print-hole-load-profile-material-line">${escapeHtml(line)}</div>`).join("")}
+            </section>
+            <section class="print-hole-load-profile-material-block">
+              <h3>Boosters</h3>
+              ${boosterLines.map((line) => `<div class="print-hole-load-profile-material-line">${escapeHtml(line)}</div>`).join("")}
+            </section>
+          </div>
         </section>
       </div>
     </section>
@@ -5488,6 +5533,10 @@ els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
+els.printAddPageBreakBtn.addEventListener("click", () => {
+  startPrintPageBreakDraft();
+  closeAllMenus();
+});
 els.printAddTimingPageBtn.addEventListener("click", () => {
   addTimingPrintPage();
   closeAllMenus();
@@ -5505,7 +5554,8 @@ els.printAddHoleLoadProfilePageBtn.addEventListener("click", () => {
   closeAllMenus();
 });
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
-els.printPageBreakBtn.addEventListener("click", () => applyPrintPageBreakFromSelection());
+els.printPageBreakBtn.addEventListener("click", () => confirmPrintPageBreakDraft());
+els.printCancelPageBreakBtn.addEventListener("click", () => cancelPrintPageBreakDraft());
 els.printPageTabs.addEventListener("click", (event) => {
   const removeBtn = event.target.closest("[data-print-remove]");
   if (removeBtn) {
