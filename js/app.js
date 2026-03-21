@@ -2869,8 +2869,10 @@ function buildHoleLoadProfileCard(group) {
           <div class="print-hole-load-profile-diagram">
             <div class="print-hole-load-profile-bore-wrap">
               <div class="print-hole-load-profile-bore">
-                <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
-                <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
+                <div class="print-hole-load-profile-fill">
+                  <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
+                  <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
+                </div>
                 ${capItems.map((item) => `
                   <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
                     <div class="print-hole-load-profile-cap-line"></div>
