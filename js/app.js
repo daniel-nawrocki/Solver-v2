@@ -2881,24 +2881,6 @@ function buildHoleLoadProfileCard(group) {
                   <div class="print-hole-load-profile-booster" style="top:${item.topPercent}%; background:${holeLoadProfileBoosterColor(item.type)};"></div>
                 `).join("")}
               </div>
-              ${stemmingPercent > 0 ? `
-                <div class="print-hole-load-profile-callout print-hole-load-profile-callout-stemming" style="top:${clampPercent(stemmingPercent * 0.5, 8, 92)}%;">
-                  <span class="print-hole-load-profile-callout-line"></span>
-                  <div class="print-hole-load-profile-callout-copy">
-                    <strong>Stemming</strong>
-                    <span>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</span>
-                  </div>
-                </div>
-              ` : ""}
-              ${emulsionPercent > 0 ? `
-                <div class="print-hole-load-profile-callout print-hole-load-profile-callout-emulsion" style="top:${clampPercent(emulsionTopPercent + (emulsionPercent * 0.5), 8, 92)}%;">
-                  <span class="print-hole-load-profile-callout-line"></span>
-                  <div class="print-hole-load-profile-callout-copy">
-                    <strong>Explosive Column</strong>
-                    <span>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</span>
-                  </div>
-                </div>
-              ` : ""}
               <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-top">Top / Collar</div>
               <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-bottom">Bottom</div>
             </div>
