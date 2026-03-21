@@ -2850,9 +2850,6 @@ function buildHoleLoadProfileCard(group) {
     ...unit,
     leftPercent: clampPercent(capLeftStart + (index * capSpacing), 24, 76),
   }));
-  const detonatorCount = detonatorUnits.length;
-  const boosterCount = boosterUnits.length;
-
   const detonatorLines = materialSummaryLines(
     hole.detonators.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
     "No detonators assigned",
@@ -2885,24 +2882,6 @@ function buildHoleLoadProfileCard(group) {
               </div>
               <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-top">Top / Collar</div>
               <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-bottom">Bottom</div>
-            </div>
-            <div class="print-hole-load-profile-legend">
-              <div class="print-hole-load-profile-legend-item">
-                <span class="print-hole-load-profile-legend-swatch print-hole-load-profile-legend-swatch-stemming"></span>
-                <div><strong>Stemming</strong><span>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</span></div>
-              </div>
-              <div class="print-hole-load-profile-legend-item">
-                <span class="print-hole-load-profile-legend-swatch print-hole-load-profile-legend-swatch-emulsion"></span>
-                <div><strong>Emulsion</strong><span>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</span></div>
-              </div>
-              <div class="print-hole-load-profile-legend-item">
-                <span class="print-hole-load-profile-legend-marker print-hole-load-profile-legend-marker-cap"></span>
-                <div><strong>Detonators</strong><span>${escapeHtml(`${detonatorCount} total`)}</span></div>
-              </div>
-              <div class="print-hole-load-profile-legend-item">
-                <span class="print-hole-load-profile-legend-marker print-hole-load-profile-legend-marker-booster"></span>
-                <div><strong>Boosters</strong><span>${escapeHtml(`${boosterCount} total`)}</span></div>
-              </div>
             </div>
           </div>
         </section>
