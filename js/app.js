@@ -2739,7 +2739,6 @@ function buildShotOrderMarkup(page) {
         <h2>Loading Usage</h2>
         <div class="print-shot-order-row"><span>Total Holes</span><strong>${escapeHtml(String(loadingSummary.totalHoleCount || 0))}</strong></div>
         <div class="print-shot-order-row"><span>Total Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</strong></div>
-        <div class="print-shot-order-row"><span>Number of Holes</span><strong>${escapeHtml(String(loadingSummary.includedHoleCount || 0))}</strong></div>
       </div>
       <div class="print-shot-order-grid">
         <section class="print-shot-order-block">
@@ -2821,8 +2820,9 @@ function buildHoleLoadProfileCard(group) {
   const boosterUnits = flatMaterialUnits(hole.boosters);
   const emulsionTopPercent = stemmingPercent;
   const emulsionBottomPercent = clampPercent(stemmingPercent + emulsionPercent, 0, 100);
-  const boosterTopLimit = emulsionTopPercent + 4;
-  const boosterBottomLimit = Math.max(boosterTopLimit, emulsionBottomPercent - 6);
+  const boosterMarkerHeight = 4.2;
+  const boosterTopLimit = emulsionTopPercent + 2.5;
+  const boosterBottomLimit = Math.max(boosterTopLimit, emulsionBottomPercent - boosterMarkerHeight - 1.5);
   const topStackSpacing = 8;
   const bottomBoosterTop = boosterBottomLimit;
   const topBoosterTop = boosterTopLimit;
@@ -2843,12 +2843,14 @@ function buildHoleLoadProfileCard(group) {
   });
 
   const capDropStart = 0;
-  const capDropEnd = emulsionPercent > 0 ? clampPercent(emulsionTopPercent + 8, 6, emulsionBottomPercent) : clampPercent(stemmingPercent * 0.6, 6, 88);
-  const capSpacing = detonatorUnits.length > 1 ? 52 / Math.max(1, detonatorUnits.length - 1) : 0;
-  const capLeftStart = 24;
+  const capDropEnd = emulsionPercent > 0
+    ? clampPercent(emulsionTopPercent + Math.min(10, Math.max(6, emulsionPercent * 0.24)), 7, emulsionBottomPercent)
+    : clampPercent(stemmingPercent * 0.6, 7, 88);
+  const capSpacing = detonatorUnits.length > 1 ? 36 / Math.max(1, detonatorUnits.length - 1) : 0;
+  const capLeftStart = 32;
   const capItems = detonatorUnits.map((unit, index) => ({
     ...unit,
-    leftPercent: clampPercent(capLeftStart + (index * capSpacing), 24, 76),
+    leftPercent: clampPercent(capLeftStart + (index * capSpacing), 32, 68),
   }));
   const detonatorLines = materialSummaryLines(
     hole.detonators.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
@@ -2869,6 +2871,7 @@ function buildHoleLoadProfileCard(group) {
                 <div class="print-hole-load-profile-fill">
                   <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
                   <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
+                  ${stemmingPercent > 0 && emulsionPercent > 0 ? `<div class="print-hole-load-profile-divider" style="top:${emulsionTopPercent}%;"></div>` : ""}
                 </div>
                 ${capItems.map((item) => `
                   <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">

@@ -29,6 +29,8 @@ All notable project changes are tracked here.
 - Project document serialization version increased to `3` so loading data is carried through save/load flows.
 - Diagram state refresh now recalculates loading-derived values whenever density, depth, stemming, or loading materials change.
 - User-facing loading copy now labels derived column depth as `Explosive Column` in the Diagram loading UI, warning text, and hole load profile output.
+- Shot Order Sheet loading usage now removes the redundant `Number of Holes` row and keeps `Total Holes` plus `Total Emulsion` as the summary totals.
+- Hole Load Profile print pages now use a wider inner charge tube with a hard grey-to-pink split, clearer hanging cap markers, and more legible booster placement inside the explosive column.
 
 ## Earlier Delivered Changes
 
