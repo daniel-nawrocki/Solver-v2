@@ -2087,17 +2087,21 @@ button:active {
 }
 
 .print-hole-load-profile-sheet .print-shot-order-header {
-  gap: 4px;
-  padding-bottom: 8px;
+  gap: 2px;
+  padding-bottom: 6px;
 }
 
 .print-hole-load-profile-sheet .print-shot-order-header h1 {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .print-hole-load-profile-sheet .print-shot-order-meta {
-  gap: 2px;
-  font-size: 9px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 8.5px;
+  line-height: 1.1;
 }
 
 @media (max-width: 820px) {
