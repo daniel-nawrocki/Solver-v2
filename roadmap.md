@@ -68,6 +68,8 @@ Code-level status:
 - Diagram Maker now includes a `Loading` menu with whole-shot explosive totals, a global explosive density, selected-hole detonator/booster assignment, and a live material summary.
 - Hole Load Profile print pages now render a visual side-view borehole graphic with grey stemming, pink explosive column, hanging caps, and booster colors/placement based on loaded materials.
 - user-facing loading copy now refers to derived column depth as `Explosive Column`
+- Diagram print preview now supports print-only `Shift+drag` box selection plus a safer page-break draft flow started from `Additional Pages`, so the original full diagram page can remain untouched while split pages are created
+- confirmed page breaks now produce `Diagram Split 1` plus a complementary `Diagram Split 2` page with the same locked viewport scale and no duplicated holes between the split pages
 - Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
 - Diagram Maker now supports `Subdrill` as a pattern-level input plus a per-hole editable field in both Hole Properties and the hole popup editor.
 - Diagram Maker volume totals now exclude subdrill by using burden x spacing x (depth - subdrill) for cubic yards and tonnage.
@@ -85,9 +87,10 @@ Code-level status:
 - State Plane import is now treated as international feet (`ft`) and converted through the quarry EPSG definition internally
 - Diagram `Shot` metadata now shows the active quarry EPSG/unit and supports saving four ordered shot-corner hole assignments
 - hole objects now persist loading fields for derived column depth, derived explosive pounds, detonators, boosters, and hole-level loading warnings
-- Shot Order print output now uses `Number of Holes` wording and no longer duplicates `Powder` alongside `Total Emulsion`
+- Shot Order print output now keeps `Total Holes` plus `Total Emulsion` and no longer shows the redundant `Number of Holes` row
 - Diagram print preview now has a separate `Show Corner Coords` toggle that renders saved shot-corner lat/long boxes independently from normal hole labels
 - shot-corner print coordinate boxes are draggable in print label-edit mode and keep their own independent layout offsets
+- Hole Load Profile print output now targets a dedicated compact `2 x 2` quarter-page card layout instead of compressing the original large-format card into four-up output
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -113,8 +116,11 @@ What has not been fully verified yet:
 - whether corner-coordinate print boxes need their own placement defaults or additional styling on dense diagrams
 - whether the new loading workflow feels clear enough when mixing broad selected-hole assignments with per-hole overrides
 - whether the hole-table print layout remains readable on dense shots once loading columns and loading summaries are included
-- whether grouped hole-load profile pages stay readable when a shot has many distinct loading patterns or very long grouped hole-number lists
-- whether the grouped hole-load profile page should eventually support sorting/grouping rules beyond the current exact-match loading definition
+- whether the new compact `2 x 2` hole-load-profile card layout is readable enough on real shots with long hole-number lists and multiple material lines
+- whether the compact hole-load-profile format needs a secondary expanded mode for smaller profile counts or more detailed printouts
+- whether the safer page-break draft flow feels obvious enough in print preview compared with the old direct split action
+- whether split-page tab labeling is clear enough once a print session contains a full diagram page plus multiple split pages
+- whether print-only click / `Shift+click` / `Shift+drag` selection feels discoverable enough for page-break creation without additional status text
 
 ## Completed Work
 
@@ -627,6 +633,12 @@ Important recent context:
     - browser print output order across multiple pages
     - no blank pages between printed sheets
     - `Add Timing Page` from Diagram print when timing results exist
+    - `Add Page Break` draft creation from `Additional Pages`
+    - `Confirm Page Break`
+    - `Cancel Page Break`
+    - original full diagram page remains untouched during page-break drafting
+    - split pages keep the same viewport scale and do not duplicate holes
+    - print-only click / `Shift+click` / `Shift+drag` selection for page-break drafting
   - rotation and fit view in both tools
   - toe/collar switching in Diagram Maker
   - new print-fit vertical centering under reserved header space
@@ -724,5 +736,7 @@ Most important current repo facts to preserve:
   - markup/text annotations that also print
   - print-preview label edit mode with draggable label boxes and leaders
   - multi-page print preview with per-page independent print state
+  - safe page-break drafting from `Additional Pages` with print-only selection and complementary split-page creation
+  - compact `2 x 2` Hole Load Profile print cards for quarter-page output
 
 This file should stay short, practical, and current enough that a new chat can read it and continue work without reconstructing the whole project from memory.

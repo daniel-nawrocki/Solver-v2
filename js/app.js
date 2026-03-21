@@ -210,6 +210,7 @@ function createPrintPageState() {
     pageType: "solver",
     holes: [],
     holesById: new Map(),
+    fullShotHoles: [],
     selection: new Set(),
     ui: {
       workspaceMode: "solver",
@@ -2044,6 +2045,9 @@ function pointerDialAngle(clientX, clientY) {
 
 function clonePrintPage(page) {
   const holes = page.holes.map(cloneHole);
+  const fullShotHoles = Array.isArray(page.fullShotHoles) && page.fullShotHoles.length
+    ? page.fullShotHoles.map(cloneHole)
+    : holes.map(cloneHole);
   return {
     pageType: page.pageType || (page?.ui?.workspaceMode === "diagram" ? "diagram" : "solver"),
     pageLabel: page?.pageLabel || null,
@@ -2052,6 +2056,7 @@ function clonePrintPage(page) {
     profileHoleId: page.profileHoleId || null,
     holes,
     holesById: new Map(holes.map((hole) => [hole.id, hole])),
+    fullShotHoles,
     selection: new Set(page.selection || []),
     ui: {
       ...page.ui,
@@ -2274,6 +2279,7 @@ function createDiagramPrintPage() {
   page.pageType = "diagram";
   page.holes = diagramState.holes.map(cloneHole);
   syncPrintPageHolesById(page);
+  page.fullShotHoles = diagramState.holes.map(cloneHole);
   page.selection = new Set();
   page.relationships = { originHoleId: null, edges: [], nextId: 1 };
   page.timingResults = [];

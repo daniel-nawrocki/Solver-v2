@@ -1,3 +1,4 @@
+import { summarizeShotLoading } from "./loading.js";
 import { relationshipColor } from "./relationshipManager.js";
 
 function timingColor(value, min, max) {
@@ -81,6 +82,35 @@ function printHeaderMetaFont(sizePx, weight = 600) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function formatHeaderNumber(value, maximumFractionDigits = 2) {
+  if (!Number.isFinite(value)) return null;
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  });
+}
+
+function summarizeDiagramPrintVolume(holes = [], metadata = {}) {
+  const density = Number.isFinite(Number(metadata.rockDensityTonsPerCubicYard))
+    ? Number(metadata.rockDensityTonsPerCubicYard)
+    : 2.3;
+  let cubicYards = 0;
+  (holes || []).forEach((hole) => {
+    const burden = Number(hole?.burden);
+    const spacing = Number(hole?.spacing);
+    const depth = Number(hole?.depth);
+    const subdrill = Number(hole?.subdrill);
+    if (!Number.isFinite(burden) || !Number.isFinite(spacing) || !Number.isFinite(depth)) return;
+    const effectiveDepth = depth - (Number.isFinite(subdrill) ? subdrill : 0);
+    if (!(effectiveDepth > 0)) return;
+    cubicYards += (burden * spacing * effectiveDepth) / 27;
+  });
+  return {
+    cubicYards,
+    tons: cubicYards * density,
+  };
 }
 
 export class DiagramRenderer {
@@ -944,6 +974,14 @@ export class DiagramRenderer {
   drawDiagramPrintHeader() {
     if (!this.isPrintRenderer || !this.isDiagramMode()) return;
     const metadata = this.stateRef.metadata || {};
+    const summaryHoles = Array.isArray(this.stateRef.fullShotHoles) && this.stateRef.fullShotHoles.length
+      ? this.stateRef.fullShotHoles
+      : (Array.isArray(this.stateRef.holes) ? this.stateRef.holes : []);
+    const volumeSummary = summarizeDiagramPrintVolume(summaryHoles, metadata);
+    const loadingSummary = summarizeShotLoading(summaryHoles, metadata.loadingDensityGcc);
+    const powderFactor = loadingSummary.totalExplosiveWeightLb > 0
+      ? volumeSummary.tons / loadingSummary.totalExplosiveWeightLb
+      : null;
     const shotNumber = metadata.shotNumber || "Shot Number";
     const leftLines = [
       metadata.location ? `Location: ${metadata.location}` : null,
@@ -954,6 +992,8 @@ export class DiagramRenderer {
       Number.isFinite(Number(metadata.patternSubdrill)) ? `Subdrill: ${Math.round(Number(metadata.patternSubdrill) * 100) / 100} ft` : null,
       formatPatternPair(metadata.faceBurden, metadata.faceSpacing) ? `Face Pattern: ${formatPatternPair(metadata.faceBurden, metadata.faceSpacing)}` : null,
       formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing) ? `Interior Pattern: ${formatPatternPair(metadata.interiorBurden, metadata.interiorSpacing)}` : null,
+      `Tonnage: ${formatHeaderNumber(volumeSummary.tons) || "0"} tons`,
+      `Powder Factor: ${formatHeaderNumber(powderFactor, 3) || "0"} tons/lb`,
     ].filter(Boolean);
 
     this.ctx.save();
