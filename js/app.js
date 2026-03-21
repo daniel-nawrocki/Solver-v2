@@ -2935,7 +2935,7 @@ function groupedHoleLoadProfiles(page) {
   }));
 }
 
-function chunkHoleLoadProfileGroups(groups, groupsPerPage = 2) {
+function chunkHoleLoadProfileGroups(groups, groupsPerPage = 4) {
   if (!groups.length) return [[]];
   const chunks = [];
   for (let index = 0; index < groups.length; index += groupsPerPage) {

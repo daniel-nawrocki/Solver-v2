@@ -40,6 +40,7 @@ All notable project changes are tracked here.
 - The print `Text Size` slider now supports smaller values, lowering the minimum scale from `0.7` to `0.4` for denser print layouts.
 - Diagram print preview now supports `Page Break From Selection`, splitting selected holes onto the active page and creating a complementary page with the remaining holes while preserving the exact same viewport scale.
 - Diagram print preview now supports print-only `Shift+drag` box selection to build multi-hole page-break selections directly on the print canvas.
+- Hole Load Profile print output now packs up to four profile cards per printed page, with reduced card spacing and smaller profile-specific scaling to avoid overflow.
 
 ## Earlier Delivered Changes
 
