@@ -2799,10 +2799,12 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
     ? `<line x1="${innerX}" y1="${innerY + stemmingHeightPx}" x2="${innerX + innerWidth}" y2="${innerY + stemmingHeightPx}" stroke="rgba(142,72,103,0.55)" stroke-width="3"></line>`
     : "";
 
+  const wireOffsetPattern = [0, -7, 7, -12, 12, -16, 16];
   const boosterMarkerData = boosterPositions.map((item, index) => {
-    const boosterWidth = 18;
-    const boosterHeight = 10;
-    const x = innerX + ((innerWidth - boosterWidth) / 2);
+    const boosterWidth = 10;
+    const boosterHeight = 18;
+    const offsetX = wireOffsetPattern[index] || 0;
+    const x = innerX + ((innerWidth - boosterWidth) / 2) + offsetX;
     const y = innerY + ((innerHeight * item.topPercent) / 100) + 4;
     const fill = holeLoadProfileBoosterColor(item.type);
     return {
@@ -2817,7 +2819,8 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   });
 
   const capsSvg = capItems.map((item, index) => {
-    const fallbackX = innerX + ((innerWidth * item.leftPercent) / 100);
+    const offsetX = wireOffsetPattern[index] || 0;
+    const fallbackX = innerX + ((innerWidth * item.leftPercent) / 100) + offsetX;
     const attachedBooster = boosterMarkerData[index] || null;
     const x = attachedBooster ? attachedBooster.centerX : fallbackX;
     const lineEndY = attachedBooster
@@ -2828,7 +2831,7 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
 
   const boostersSvg = boosterMarkerData.map((item) => `
       <rect x="${item.x}" y="${item.y}" width="${item.boosterWidth}" height="${item.boosterHeight}" rx="5" fill="${item.fill}" stroke="rgba(86,96,54,0.6)" stroke-width="1"></rect>
-      <line x1="${item.x + 3}" y1="${item.y + 2.2}" x2="${item.x + item.boosterWidth - 3}" y2="${item.y + 2.2}" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-linecap="round"></line>
+      <line x1="${item.x + 2.2}" y1="${item.y + 3}" x2="${item.x + 2.2}" y2="${item.y + item.boosterHeight - 3}" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-linecap="round"></line>
     `).join("");
 
   return `
