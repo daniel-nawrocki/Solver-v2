@@ -16,11 +16,19 @@ All notable project changes are tracked here.
   - shot explosive total
   - detonator summary
   - booster summary
+- Hole Load Profile print pages now render a visual side-view borehole graphic to scale with:
+  - light grey stemming
+  - light pink explosive column
+  - hanging cap lines from the collar
+  - booster cylinders placed through the explosive column without overlap
+  - yellow `350 Shield` / `450 Shield` boosters and green non-shield boosters
+  - grouped-hole profile cards based on matching load definitions
 
 ### Changed
 - Hole objects now persist loading-related fields including detonators, boosters, derived column depth, derived explosive weight, and warning state.
 - Project document serialization version increased to `3` so loading data is carried through save/load flows.
 - Diagram state refresh now recalculates loading-derived values whenever density, depth, stemming, or loading materials change.
+- User-facing loading copy now labels derived column depth as `Explosive Column` in the Diagram loading UI, warning text, and hole load profile output.
 
 ## Earlier Delivered Changes
 

@@ -66,6 +66,8 @@ Code-level status:
 - Diagram Maker `Assign Face` now keeps the `Shot` menu open while polygon designation is active.
 - Diagram Maker now includes a `Volume` menu with whole-shot cubic-yard and tonnage totals using editable rock density.
 - Diagram Maker now includes a `Loading` menu with whole-shot explosive totals, a global explosive density, selected-hole detonator/booster assignment, and a live material summary.
+- Hole Load Profile print pages now render a visual side-view borehole graphic with grey stemming, pink explosive column, hanging caps, and booster colors/placement based on loaded materials.
+- user-facing loading copy now refers to derived column depth as `Explosive Column`
 - Diagram Maker `View` menu checkbox rows were cleaned up so the checkbox and label text sit on the same line.
 - Diagram Maker now supports `Subdrill` as a pattern-level input plus a per-hole editable field in both Hole Properties and the hole popup editor.
 - Diagram Maker volume totals now exclude subdrill by using burden x spacing x (depth - subdrill) for cubic yards and tonnage.
@@ -76,12 +78,14 @@ Code-level status:
 - Timing overlap analysis rows were restyled into a cleaner horizontal bar-chart presentation while keeping the current bin-click highlight workflow.
 - Diagram print preview now includes a circular `Label Position` dial that rotates the default label anchor direction for all labels on the active print page.
 - printable hole-table output now includes loading totals, per-hole explosive pounds, and detonator/booster summaries.
+- print preview now includes a grouped `Hole Load Profiles` page that clusters holes with identical loading layouts and lists the matching hole numbers for each profile.
 - Diagram polygon-selection drafts now store vertices in world coordinates so placed points stay fixed relative to holes during pan/zoom/scroll/rotation.
 - the planner now carries quarry geospatial metadata with assigned State Plane EPSG + unit defaults for the supported quarry list
 - hole import now builds a dual-coordinate foundation so each imported hole can retain local render coordinates, State Plane coordinates, and lat/long coordinates together
 - State Plane import is now treated as international feet (`ft`) and converted through the quarry EPSG definition internally
 - Diagram `Shot` metadata now shows the active quarry EPSG/unit and supports saving four ordered shot-corner hole assignments
 - hole objects now persist loading fields for derived column depth, derived explosive pounds, detonators, boosters, and hole-level loading warnings
+- Shot Order print output now uses `Number of Holes` wording and no longer duplicates `Powder` alongside `Total Emulsion`
 - Diagram print preview now has a separate `Show Corner Coords` toggle that renders saved shot-corner lat/long boxes independently from normal hole labels
 - shot-corner print coordinate boxes are draggable in print label-edit mode and keep their own independent layout offsets
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
@@ -109,6 +113,8 @@ What has not been fully verified yet:
 - whether corner-coordinate print boxes need their own placement defaults or additional styling on dense diagrams
 - whether the new loading workflow feels clear enough when mixing broad selected-hole assignments with per-hole overrides
 - whether the hole-table print layout remains readable on dense shots once loading columns and loading summaries are included
+- whether grouped hole-load profile pages stay readable when a shot has many distinct loading patterns or very long grouped hole-number lists
+- whether the grouped hole-load profile page should eventually support sorting/grouping rules beyond the current exact-match loading definition
 
 ## Completed Work
 
@@ -686,6 +692,10 @@ Whenever meaningful work is completed, append or revise:
 - `Current Known Limitations`
 - `High-Priority Next Steps`
 - `Current Snapshot` if the architecture or workflow meaningfully changes
+- `CHANGELOG.md` with a GitHub-ready summary of the delivered change
+
+Prompt rule for future code changes:
+- code-change requests should end with a GitHub-ready changelog entry in the response, matching the pattern used in this discussion
 
 ## Resume Notes
 If a new chat starts, it should read this file first.

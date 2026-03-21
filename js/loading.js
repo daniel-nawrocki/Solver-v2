@@ -88,7 +88,7 @@ export function recalculateHoleLoading(hole = {}, densityGcc = DEFAULT_LOADING_D
     densityGcc,
   });
   let loadingWarning = null;
-  if (hasDepth && rawColumnDepth <= 0) loadingWarning = "Column depth is zero or negative.";
+  if (hasDepth && rawColumnDepth <= 0) loadingWarning = "Explosive column is zero or negative.";
   else if (hasDepth && !Number.isFinite(Number(hole.diameter))) loadingWarning = "Hole diameter is required for explosive weight.";
 
   hole.columnDepth = columnDepth;

@@ -2850,6 +2850,8 @@ function buildHoleLoadProfileCard(group) {
     ...unit,
     leftPercent: clampPercent(capLeftStart + (index * capSpacing), 24, 76),
   }));
+  const detonatorCount = detonatorUnits.length;
+  const boosterCount = boosterUnits.length;
 
   const detonatorLines = materialSummaryLines(
     hole.detonators.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
@@ -2865,22 +2867,58 @@ function buildHoleLoadProfileCard(group) {
       <div class="print-hole-load-profile-layout">
         <section class="print-hole-load-profile-card">
           <div class="print-hole-load-profile-diagram">
-            <div class="print-hole-load-profile-bore">
-              <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
-              <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
-              ${capItems.map((item) => `
-                <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
-                  <div class="print-hole-load-profile-cap-line"></div>
-                  <div class="print-hole-load-profile-cap-body"></div>
+            <div class="print-hole-load-profile-bore-wrap">
+              <div class="print-hole-load-profile-bore">
+                <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
+                <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
+                ${capItems.map((item) => `
+                  <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
+                    <div class="print-hole-load-profile-cap-line"></div>
+                    <div class="print-hole-load-profile-cap-body"></div>
+                  </div>
+                `).join("")}
+                ${boosterPositions.map((item) => `
+                  <div class="print-hole-load-profile-booster" style="top:${item.topPercent}%; background:${holeLoadProfileBoosterColor(item.type)};"></div>
+                `).join("")}
+              </div>
+              ${stemmingPercent > 0 ? `
+                <div class="print-hole-load-profile-callout print-hole-load-profile-callout-stemming" style="top:${clampPercent(stemmingPercent * 0.5, 8, 92)}%;">
+                  <span class="print-hole-load-profile-callout-line"></span>
+                  <div class="print-hole-load-profile-callout-copy">
+                    <strong>Stemming</strong>
+                    <span>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</span>
+                  </div>
                 </div>
-              `).join("")}
-              ${boosterPositions.map((item) => `
-                <div class="print-hole-load-profile-booster" style="top:${item.topPercent}%; background:${holeLoadProfileBoosterColor(item.type)};"></div>
-              `).join("")}
+              ` : ""}
+              ${emulsionPercent > 0 ? `
+                <div class="print-hole-load-profile-callout print-hole-load-profile-callout-emulsion" style="top:${clampPercent(emulsionTopPercent + (emulsionPercent * 0.5), 8, 92)}%;">
+                  <span class="print-hole-load-profile-callout-line"></span>
+                  <div class="print-hole-load-profile-callout-copy">
+                    <strong>Explosive Column</strong>
+                    <span>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</span>
+                  </div>
+                </div>
+              ` : ""}
+              <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-top">Top / Collar</div>
+              <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-bottom">Bottom</div>
             </div>
-            <div class="print-hole-load-profile-scale">
-              <div>Top / Collar</div>
-              <div>Bottom</div>
+            <div class="print-hole-load-profile-legend">
+              <div class="print-hole-load-profile-legend-item">
+                <span class="print-hole-load-profile-legend-swatch print-hole-load-profile-legend-swatch-stemming"></span>
+                <div><strong>Stemming</strong><span>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</span></div>
+              </div>
+              <div class="print-hole-load-profile-legend-item">
+                <span class="print-hole-load-profile-legend-swatch print-hole-load-profile-legend-swatch-emulsion"></span>
+                <div><strong>Emulsion</strong><span>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</span></div>
+              </div>
+              <div class="print-hole-load-profile-legend-item">
+                <span class="print-hole-load-profile-legend-marker print-hole-load-profile-legend-marker-cap"></span>
+                <div><strong>Detonators</strong><span>${escapeHtml(`${detonatorCount} total`)}</span></div>
+              </div>
+              <div class="print-hole-load-profile-legend-item">
+                <span class="print-hole-load-profile-legend-marker print-hole-load-profile-legend-marker-booster"></span>
+                <div><strong>Boosters</strong><span>${escapeHtml(`${boosterCount} total`)}</span></div>
+              </div>
             </div>
           </div>
         </section>
@@ -2890,7 +2928,7 @@ function buildHoleLoadProfileCard(group) {
           <div class="print-shot-order-row"><span>Diameter</span><strong>${escapeHtml(Number.isFinite(Number(hole.diameter)) ? `${hole.diameter}"` : "-")}</strong></div>
           <div class="print-shot-order-row"><span>Depth</span><strong>${escapeHtml(Number.isFinite(Number(hole.depth)) ? `${formatLoadingWeight(hole.depth)} ft` : "-")}</strong></div>
           <div class="print-shot-order-row"><span>Stemming</span><strong>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</strong></div>
-          <div class="print-shot-order-row"><span>Column Depth</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
+          <div class="print-shot-order-row"><span>Explosive Column</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
           <div class="print-shot-order-row"><span>Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</strong></div>
           <div class="print-shot-order-row"><span>Warning</span><strong>${escapeHtml(hole.loadingWarning || "None")}</strong></div>
         </section>
@@ -3415,7 +3453,7 @@ function renderSingleHoleLoadingEditor(hole) {
     els.diagramHoleLoadingStemHeightInput.value = "";
     els.diagramHoleLoadingDetonatorEditor.innerHTML = "";
     els.diagramHoleLoadingBoosterEditor.innerHTML = "";
-    els.diagramHoleLoadingColumnDepthStatus.textContent = "Column Depth: -";
+    els.diagramHoleLoadingColumnDepthStatus.textContent = "Explosive Column: -";
     els.diagramHoleLoadingWeightStatus.textContent = "Emulsion Weight: -";
     els.diagramHoleLoadingWarning.textContent = "";
     return;
@@ -3424,7 +3462,7 @@ function renderSingleHoleLoadingEditor(hole) {
   els.diagramHoleLoadingSection.classList.remove("hidden");
   els.diagramHoleLoadingDepthInput.value = Number.isFinite(Number(hole.depth)) ? String(hole.depth) : "";
   els.diagramHoleLoadingStemHeightInput.value = Number.isFinite(Number(hole.stemHeight)) ? String(hole.stemHeight) : "";
-  els.diagramHoleLoadingColumnDepthStatus.textContent = `Column Depth: ${formatLoadingWeight(hole.columnDepth)} ft`;
+  els.diagramHoleLoadingColumnDepthStatus.textContent = `Explosive Column: ${formatLoadingWeight(hole.columnDepth)} ft`;
   els.diagramHoleLoadingWeightStatus.textContent = `Emulsion Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
   els.diagramHoleLoadingWarning.textContent = hole.loadingWarning || "";
   els.diagramHoleLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(hole.detonators || [], DETONATOR_TYPES, { scope: "hole-detonator" });
