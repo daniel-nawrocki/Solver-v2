@@ -231,6 +231,7 @@ function createPrintPageState() {
       showCornerCoordinates: false,
       labelEditMode: false,
       hoverLabelHoleId: null,
+      selectionBoxDraft: null,
     },
     labelLayoutByHoleId: new Map(),
     cornerLabelLayoutByHoleId: new Map(),
@@ -2051,6 +2052,7 @@ function clonePrintPage(page) {
       ...page.ui,
       relationshipDraft: null,
       hoverLabelHoleId: null,
+      selectionBoxDraft: null,
     },
     labelLayoutByHoleId: cloneLabelLayoutMap(page.labelLayoutByHoleId),
     cornerLabelLayoutByHoleId: cloneLabelLayoutMap(page.cornerLabelLayoutByHoleId),
@@ -2113,6 +2115,7 @@ function filterPrintPageToHoleIds(page, allowedHoleIds) {
     page.dragPointerDelta = null;
   }
   if (page.ui.hoverLabelHoleId && !allowed.has(page.ui.hoverLabelHoleId)) page.ui.hoverLabelHoleId = null;
+  page.ui.selectionBoxDraft = null;
 }
 
 function applyPrintPageBreakFromSelection() {
@@ -3148,7 +3151,17 @@ function preparePrintablePages() {
 
 function handlePrintPointerDown(payload) {
   const page = activePrintPage();
-  if (!page || !isDiagramPrintEditing()) return false;
+  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram") return false;
+  if (!isDiagramPrintEditing() && payload.event.shiftKey) {
+    page.ui.selectionBoxDraft = {
+      start: { x: payload.x, y: payload.y },
+      current: { x: payload.x, y: payload.y },
+      addMode: true,
+    };
+    printRenderer.render();
+    return true;
+  }
+  if (!isDiagramPrintEditing()) return false;
   const hit = printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y);
   if (!hit) return false;
   page.dragLabelHoleId = hit.hole.id;
@@ -3175,6 +3188,11 @@ function handlePrintHoleClick(hole, event) {
 function handlePrintPointerMove(payload) {
   const page = activePrintPage();
   if (!page || page.ui.workspaceMode !== "diagram") return false;
+  if (!isDiagramPrintEditing() && page.ui.selectionBoxDraft) {
+    page.ui.selectionBoxDraft.current = { x: payload.x, y: payload.y };
+    printRenderer.render();
+    return true;
+  }
   const hit = isDiagramPrintEditing() ? printRenderer.findDiagramPrintLabelAtScreen(payload.x, payload.y) : null;
   const nextHover = isDiagramPrintEditing() && hit ? hit.hole.id : null;
   if (page.ui.hoverLabelHoleId !== nextHover) {
@@ -3198,6 +3216,23 @@ function handlePrintPointerMove(payload) {
 
 function handlePrintPointerUp() {
   const page = activePrintPage();
+  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && page.ui.selectionBoxDraft) {
+    const draft = page.ui.selectionBoxDraft;
+    page.ui.selectionBoxDraft = null;
+    const rect = {
+      left: Math.min(draft.start.x, draft.current.x),
+      right: Math.max(draft.start.x, draft.current.x),
+      top: Math.min(draft.start.y, draft.current.y),
+      bottom: Math.max(draft.start.y, draft.current.y),
+    };
+    const holeIds = page.holes
+      .filter((hole) => pointInRect(printRenderer.worldToScreen(hole.x, hole.y), rect))
+      .map((hole) => hole.id);
+    page.selection = new Set([...page.selection, ...holeIds]);
+    renderPrintPageTabs();
+    printRenderer.render();
+    return true;
+  }
   if (!page || !page.dragLabelHoleId) return false;
   page.dragLabelHoleId = null;
   page.dragLabelKind = null;
