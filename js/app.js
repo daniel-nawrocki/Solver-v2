@@ -464,6 +464,7 @@ const els = {
   printLabelDistanceUpBtn: document.getElementById("printLabelDistanceUpBtn"),
   printAddHoleTablePageBtn: document.getElementById("printAddHoleTablePageBtn"),
   printAddShotOrderPageBtn: document.getElementById("printAddShotOrderPageBtn"),
+  printAddHoleLoadProfilePageBtn: document.getElementById("printAddHoleLoadProfilePageBtn"),
   printHoleTablePreview: document.getElementById("printHoleTablePreview"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
@@ -2041,6 +2042,7 @@ function clonePrintPage(page) {
   const holes = page.holes.map(cloneHole);
   return {
     pageType: page.pageType || (page?.ui?.workspaceMode === "diagram" ? "diagram" : "solver"),
+    profileHoleId: page.profileHoleId || null,
     holes,
     holesById: new Map(holes.map((hole) => [hole.id, hole])),
     selection: new Set(page.selection || []),
@@ -2296,9 +2298,53 @@ function createShotOrderPrintPage() {
   return page;
 }
 
+function createHoleLoadProfilePrintPage() {
+  const selected = selectedDiagramHoles();
+  if (selected.length !== 1) {
+    window.alert(selected.length === 0
+      ? "Select exactly one hole before adding a Hole Load Profile page."
+      : "Select only one hole before adding a Hole Load Profile page.");
+    return null;
+  }
+  const page = createPrintPageState();
+  page.pageType = "holeLoadProfile";
+  page.profileHoleId = selected[0].id;
+  page.holes = diagramState.holes.map(cloneHole).sort(compareHoleTableRows);
+  syncPrintPageHolesById(page);
+  page.selection = new Set([selected[0].id]);
+  page.relationships = { originHoleId: null, edges: [], nextId: 1 };
+  page.timingResults = [];
+  page.ui.workspaceMode = "diagram";
+  page.ui.activeTimingPreviewIndex = -1;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = false;
+  page.ui.showOverlayText = false;
+  page.ui.showAngleLabels = false;
+  page.ui.showBearingLabels = false;
+  page.ui.showBearingArrows = false;
+  page.ui.bearingArrowWeight = 1;
+  page.ui.bearingArrowLength = 16;
+  page.ui.labelAngleDeg = 315;
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
+  page.ui.showDepthLabels = false;
+  page.ui.showCornerCoordinates = false;
+  page.ui.labelEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata(diagramState.metadata);
+  page.annotations = cloneDiagramAnnotations();
+  page.shotCorners = cloneShotCorners(diagramState.shotCorners);
+  page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
+  return page;
+}
+
 function pageWorkspaceLabel(page) {
   if (page?.pageType === "holeTable") return "Hole Table";
   if (page?.pageType === "shotOrder") return "Shot Order";
+  if (page?.pageType === "holeLoadProfile") return "Hole Load Profile";
   return page?.ui?.workspaceMode === "diagram" ? "Diagram" : "Timing";
 }
 
@@ -2309,7 +2355,7 @@ function applyPrintPageChrome(page) {
 }
 
 function setPrintRendererPage(page, options = {}) {
-  const showStaticPreview = page?.pageType === "holeTable" || page?.pageType === "shotOrder";
+  const showStaticPreview = page?.pageType === "holeTable" || page?.pageType === "shotOrder" || page?.pageType === "holeLoadProfile";
   applyPrintPageChrome(page);
   els.printCanvas.classList.toggle("hidden", showStaticPreview);
   els.printHoleTablePreview.classList.toggle("hidden", !showStaticPreview);
@@ -2360,7 +2406,7 @@ function syncPrintControls() {
   const page = activePrintPage();
   if (!page) return;
   const diagramMode = page.pageType === "diagram";
-  const staticSheetMode = page.pageType === "holeTable" || page.pageType === "shotOrder";
+  const staticSheetMode = page.pageType === "holeTable" || page.pageType === "shotOrder" || page.pageType === "holeLoadProfile";
   const labelModeEnabled = page.ui.labelEditMode === true;
   const hasTimingPageOption = projectState.timing.timingResults.length > 0;
   const showAdditionalPages = diagramMode || staticSheetMode;
@@ -2370,6 +2416,7 @@ function syncPrintControls() {
   els.printAddTimingPageBtn.classList.toggle("hidden", !hasTimingPageOption);
   els.printAddHoleTablePageBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printAddShotOrderPageBtn.classList.toggle("hidden", !showAdditionalPages);
+  els.printAddHoleLoadProfilePageBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode || staticSheetMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
@@ -2436,6 +2483,14 @@ function addHoleTablePrintPage() {
 function addShotOrderPrintPage() {
   if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable" && activePrintPage()?.pageType !== "shotOrder") return;
   const page = createShotOrderPrintPage();
+  printSession.pages.push(page);
+  activatePrintPage(printSession.pages.length - 1);
+}
+
+function addHoleLoadProfilePrintPage() {
+  if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable" && activePrintPage()?.pageType !== "shotOrder" && activePrintPage()?.pageType !== "holeLoadProfile") return;
+  const page = createHoleLoadProfilePrintPage();
+  if (!page) return;
   printSession.pages.push(page);
   activatePrintPage(printSession.pages.length - 1);
 }
@@ -2533,7 +2588,7 @@ function applyPrintSettings() {
   page.ui.orientation = "landscape";
   page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
   applyPrintPageChrome(page);
-  if (page.pageType === "holeTable" || page.pageType === "shotOrder") {
+  if (page.pageType === "holeTable" || page.pageType === "shotOrder" || page.pageType === "holeLoadProfile") {
     renderStaticPrintPreview(page, els.printHoleTablePreview);
   } else {
     printRenderer.render();
@@ -2688,8 +2743,148 @@ function buildShotOrderMarkup(page) {
         <h2>Loading Usage</h2>
         <div class="print-shot-order-row"><span>Total Holes</span><strong>${escapeHtml(String(loadingSummary.totalHoleCount || 0))}</strong></div>
         <div class="print-shot-order-row"><span>Total Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</strong></div>
-        <div class="print-shot-order-row"><span>Powder</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb emulsion`)}</strong></div>
         <div class="print-shot-order-row"><span>Included Holes</span><strong>${escapeHtml(String(loadingSummary.includedHoleCount || 0))}</strong></div>
+      </div>
+      <div class="print-shot-order-grid">
+        <section class="print-shot-order-block">
+          <h2>Detonators</h2>
+          ${detonatorLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
+        </section>
+        <section class="print-shot-order-block">
+          <h2>Boosters</h2>
+          ${boosterLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+function flatMaterialUnits(entries = []) {
+  const units = [];
+  (entries || []).forEach((entry) => {
+    const quantity = Math.max(0, Math.round(Number(entry.quantity) || 0));
+    for (let index = 0; index < quantity; index += 1) {
+      units.push({ type: entry.type || "" });
+    }
+  });
+  return units;
+}
+
+function holeLoadProfileBoosterColor(type) {
+  return type === "Spartan 350 Shield" || type === "Spartan 450 Shield" ? "#f6d54a" : "#69b86e";
+}
+
+function clampPercent(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function buildHoleLoadProfileMarkup(page) {
+  const hole = page?.profileHoleId ? page.holesById.get(page.profileHoleId) : null;
+  if (!hole) {
+    return `
+      <section class="print-shot-order-sheet">
+        <header class="print-shot-order-header">
+          <h1>Hole Load Profile</h1>
+        </header>
+        <div class="print-shot-order-block">
+          <div class="print-shot-order-line">The selected hole for this profile is no longer available.</div>
+        </div>
+      </section>
+    `;
+  }
+
+  const depth = Number(hole.depth);
+  const totalDepth = Number.isFinite(depth) && depth > 0 ? depth : 1;
+  const stemmingHeight = Math.max(0, Number(hole.stemHeight) || 0);
+  const columnDepth = Math.max(0, Number(hole.columnDepth) || 0);
+  const stemmingPercent = clampPercent((stemmingHeight / totalDepth) * 100, 0, 100);
+  const emulsionPercent = clampPercent((columnDepth / totalDepth) * 100, 0, 100);
+  const detonatorUnits = flatMaterialUnits(hole.detonators);
+  const boosterUnits = flatMaterialUnits(hole.boosters);
+  const emulsionTopPercent = stemmingPercent;
+  const emulsionBottomPercent = clampPercent(stemmingPercent + emulsionPercent, 0, 100);
+  const boosterTopLimit = emulsionTopPercent + 4;
+  const boosterBottomLimit = Math.max(boosterTopLimit, emulsionBottomPercent - 6);
+  const topStackSpacing = 8;
+  const bottomBoosterTop = boosterBottomLimit;
+  const topBoosterTop = boosterTopLimit;
+  const topStackCount = Math.max(0, boosterUnits.length - 1);
+  const topStackStep = topStackCount > 1
+    ? Math.min(topStackSpacing, Math.max(0, (boosterBottomLimit - topBoosterTop) / (topStackCount - 1)))
+    : 0;
+
+  const boosterPositions = boosterUnits.map((unit, index) => {
+    let topPercent = boosterTopLimit;
+    if (index === 0) topPercent = bottomBoosterTop;
+    else if (index === 1) topPercent = topBoosterTop;
+    else topPercent = Math.min(boosterBottomLimit, topBoosterTop + ((index - 1) * topStackStep));
+    return {
+      ...unit,
+      topPercent: clampPercent(topPercent, boosterTopLimit, boosterBottomLimit),
+    };
+  });
+
+  const capDropStart = 0;
+  const capDropEnd = emulsionPercent > 0 ? clampPercent(emulsionTopPercent + 8, 6, emulsionBottomPercent) : clampPercent(stemmingPercent * 0.6, 6, 88);
+  const capSpacing = detonatorUnits.length > 1 ? 52 / Math.max(1, detonatorUnits.length - 1) : 0;
+  const capLeftStart = 24;
+  const capItems = detonatorUnits.map((unit, index) => ({
+    ...unit,
+    leftPercent: clampPercent(capLeftStart + (index * capSpacing), 24, 76),
+  }));
+
+  const detonatorLines = materialSummaryLines(
+    hole.detonators.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
+    "No detonators assigned",
+  );
+  const boosterLines = materialSummaryLines(
+    hole.boosters.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
+    "No boosters assigned",
+  );
+
+  return `
+    <section class="print-hole-load-profile-sheet">
+      <header class="print-shot-order-header">
+        <h1>Hole Load Profile</h1>
+        <div class="print-shot-order-meta">
+          <div>${escapeHtml(`Shot Number: ${page?.metadata?.shotNumber || "-"}`)}</div>
+          <div>${escapeHtml(`Location: ${page?.metadata?.location || "-"}`)}</div>
+          <div>${escapeHtml(`Bench: ${page?.metadata?.bench || "-"}`)}</div>
+          <div>${escapeHtml(`Hole: ${hole.holeNumber || hole.id}`)}</div>
+        </div>
+      </header>
+      <div class="print-hole-load-profile-layout">
+        <section class="print-hole-load-profile-card">
+          <div class="print-hole-load-profile-diagram">
+            <div class="print-hole-load-profile-bore">
+              <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
+              <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
+              ${capItems.map((item) => `
+                <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
+                  <div class="print-hole-load-profile-cap-line"></div>
+                  <div class="print-hole-load-profile-cap-body"></div>
+                </div>
+              `).join("")}
+              ${boosterPositions.map((item) => `
+                <div class="print-hole-load-profile-booster" style="top:${item.topPercent}%; background:${holeLoadProfileBoosterColor(item.type)};"></div>
+              `).join("")}
+            </div>
+            <div class="print-hole-load-profile-scale">
+              <div>Top / Collar</div>
+              <div>Bottom</div>
+            </div>
+          </div>
+        </section>
+        <section class="print-shot-order-block">
+          <h2>Hole Data</h2>
+          <div class="print-shot-order-row"><span>Hole ID</span><strong>${escapeHtml(hole.holeNumber || hole.id || "-")}</strong></div>
+          <div class="print-shot-order-row"><span>Diameter</span><strong>${escapeHtml(Number.isFinite(Number(hole.diameter)) ? `${hole.diameter}"` : "-")}</strong></div>
+          <div class="print-shot-order-row"><span>Depth</span><strong>${escapeHtml(Number.isFinite(Number(hole.depth)) ? `${formatLoadingWeight(hole.depth)} ft` : "-")}</strong></div>
+          <div class="print-shot-order-row"><span>Stemming</span><strong>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</strong></div>
+          <div class="print-shot-order-row"><span>Column Depth</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
+          <div class="print-shot-order-row"><span>Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</strong></div>
+          <div class="print-shot-order-row"><span>Warning</span><strong>${escapeHtml(hole.loadingWarning || "None")}</strong></div>
+        </section>
       </div>
       <div class="print-shot-order-grid">
         <section class="print-shot-order-block">
@@ -2709,6 +2904,10 @@ function renderStaticPrintPreview(page, container) {
   if (!container) return;
   if (page?.pageType === "shotOrder") {
     container.innerHTML = buildShotOrderMarkup(page);
+    return;
+  }
+  if (page?.pageType === "holeLoadProfile") {
+    container.innerHTML = buildHoleLoadProfileMarkup(page);
     return;
   }
   const chunks = chunkHoleTableRows(page);
@@ -2753,6 +2952,15 @@ function preparePrintablePages() {
       frame.className = "print-paper-frame";
       if (page.colorMode === "greyscale") frame.classList.add("greyscale");
       frame.innerHTML = buildShotOrderMarkup(page);
+      wrapper.appendChild(frame);
+      els.printPagesOutput.appendChild(wrapper);
+    } else if (page.pageType === "holeLoadProfile") {
+      const wrapper = document.createElement("section");
+      wrapper.className = "print-output-page";
+      const frame = document.createElement("div");
+      frame.className = "print-paper-frame";
+      if (page.colorMode === "greyscale") frame.classList.add("greyscale");
+      frame.innerHTML = buildHoleLoadProfileMarkup(page);
       wrapper.appendChild(frame);
       els.printPagesOutput.appendChild(wrapper);
     } else {
@@ -5081,6 +5289,10 @@ els.printAddHoleTablePageBtn.addEventListener("click", () => {
 });
 els.printAddShotOrderPageBtn.addEventListener("click", () => {
   addShotOrderPrintPage();
+  closeAllMenus();
+});
+els.printAddHoleLoadProfilePageBtn.addEventListener("click", () => {
+  addHoleLoadProfilePrintPage();
   closeAllMenus();
 });
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
