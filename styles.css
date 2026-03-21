@@ -2005,6 +2005,8 @@ button:active {
   transform: translateX(-50%);
   border-radius: 18px;
   background: #f3f7fb;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(120, 138, 160, 0.55);
   box-shadow:
@@ -2013,30 +2015,23 @@ button:active {
 }
 
 .print-hole-load-profile-stemming,
-.print-hole-load-profile-emulsion {
-  position: absolute;
-  left: 0;
+.print-hole-load-profile-emulsion,
+.print-hole-load-profile-empty {
   width: 100%;
-  z-index: 0;
+  flex: 0 0 auto;
 }
 
 .print-hole-load-profile-stemming {
-  top: 0;
   background: #d7dee7;
+  border-bottom: 3px solid rgba(142, 72, 103, 0.45);
 }
 
 .print-hole-load-profile-emulsion {
   background: #f2b5ca;
 }
 
-.print-hole-load-profile-divider {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  transform: translateY(-50%);
-  background: rgba(142, 72, 103, 0.55);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+.print-hole-load-profile-empty {
+  background: linear-gradient(180deg, #f4f8fb 0%, #ebf1f7 100%);
 }
 
 .print-hole-load-profile-cap {

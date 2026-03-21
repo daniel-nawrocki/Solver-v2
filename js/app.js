@@ -2816,6 +2816,7 @@ function buildHoleLoadProfileCard(group) {
   const columnDepth = Math.max(0, Number(hole.columnDepth) || 0);
   const stemmingPercent = clampPercent((stemmingHeight / totalDepth) * 100, 0, 100);
   const emulsionPercent = clampPercent((columnDepth / totalDepth) * 100, 0, 100);
+  const emptyPercent = clampPercent(100 - (stemmingPercent + emulsionPercent), 0, 100);
   const detonatorUnits = flatMaterialUnits(hole.detonators);
   const boosterUnits = flatMaterialUnits(hole.boosters);
   const emulsionTopPercent = stemmingPercent;
@@ -2869,9 +2870,9 @@ function buildHoleLoadProfileCard(group) {
             <div class="print-hole-load-profile-bore-wrap">
               <div class="print-hole-load-profile-bore">
                 <div class="print-hole-load-profile-fill">
-                  <div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>
-                  <div class="print-hole-load-profile-emulsion" style="top:${emulsionTopPercent}%; height:${emulsionPercent}%;"></div>
-                  ${stemmingPercent > 0 && emulsionPercent > 0 ? `<div class="print-hole-load-profile-divider" style="top:${emulsionTopPercent}%;"></div>` : ""}
+                  ${stemmingPercent > 0 ? `<div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>` : ""}
+                  ${emulsionPercent > 0 ? `<div class="print-hole-load-profile-emulsion" style="height:${emulsionPercent}%;"></div>` : ""}
+                  ${emptyPercent > 0 ? `<div class="print-hole-load-profile-empty" style="height:${emptyPercent}%;"></div>` : ""}
                 </div>
                 ${capItems.map((item) => `
                   <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
