@@ -2299,19 +2299,15 @@ function createShotOrderPrintPage() {
 }
 
 function createHoleLoadProfilePrintPage() {
-  const selected = selectedDiagramHoles();
-  if (selected.length !== 1) {
-    window.alert(selected.length === 0
-      ? "Select exactly one hole before adding a Hole Load Profile page."
-      : "Select only one hole before adding a Hole Load Profile page.");
+  if (!diagramState.holes.length) {
+    window.alert("Import or create holes before adding a Hole Load Profile page.");
     return null;
   }
   const page = createPrintPageState();
   page.pageType = "holeLoadProfile";
-  page.profileHoleId = selected[0].id;
   page.holes = diagramState.holes.map(cloneHole).sort(compareHoleTableRows);
   syncPrintPageHolesById(page);
-  page.selection = new Set([selected[0].id]);
+  page.selection = new Set();
   page.relationships = { originHoleId: null, edges: [], nextId: 1 };
   page.timingResults = [];
   page.ui.workspaceMode = "diagram";
@@ -2743,7 +2739,7 @@ function buildShotOrderMarkup(page) {
         <h2>Loading Usage</h2>
         <div class="print-shot-order-row"><span>Total Holes</span><strong>${escapeHtml(String(loadingSummary.totalHoleCount || 0))}</strong></div>
         <div class="print-shot-order-row"><span>Total Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</strong></div>
-        <div class="print-shot-order-row"><span>Included Holes</span><strong>${escapeHtml(String(loadingSummary.includedHoleCount || 0))}</strong></div>
+        <div class="print-shot-order-row"><span>Number of Holes</span><strong>${escapeHtml(String(loadingSummary.includedHoleCount || 0))}</strong></div>
       </div>
       <div class="print-shot-order-grid">
         <section class="print-shot-order-block">
@@ -2778,21 +2774,43 @@ function clampPercent(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function buildHoleLoadProfileMarkup(page) {
-  const hole = page?.profileHoleId ? page.holesById.get(page.profileHoleId) : null;
-  if (!hole) {
-    return `
-      <section class="print-shot-order-sheet">
-        <header class="print-shot-order-header">
-          <h1>Hole Load Profile</h1>
-        </header>
-        <div class="print-shot-order-block">
-          <div class="print-shot-order-line">The selected hole for this profile is no longer available.</div>
-        </div>
-      </section>
-    `;
-  }
+function holeLoadProfileGroupKey(hole) {
+  const detonators = (hole.detonators || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
+  const boosters = (hole.boosters || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
+  return [
+    Number(hole.depth) || 0,
+    Number(hole.stemHeight) || 0,
+    Number(hole.columnDepth) || 0,
+    Number(hole.diameter) || 0,
+    detonators,
+    boosters,
+  ].join("~");
+}
 
+function groupedHoleLoadProfiles(page) {
+  const groups = new Map();
+  (page?.holes || []).forEach((hole) => {
+    const key = holeLoadProfileGroupKey(hole);
+    if (!groups.has(key)) groups.set(key, { hole: cloneHole(hole), holeLabels: [] });
+    groups.get(key).holeLabels.push(hole.holeNumber || hole.id || "");
+  });
+  return [...groups.values()].map((group) => ({
+    ...group,
+    holeLabels: [...group.holeLabels].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" })),
+  }));
+}
+
+function chunkHoleLoadProfileGroups(groups, groupsPerPage = 2) {
+  if (!groups.length) return [[]];
+  const chunks = [];
+  for (let index = 0; index < groups.length; index += groupsPerPage) {
+    chunks.push(groups.slice(index, index + groupsPerPage));
+  }
+  return chunks;
+}
+
+function buildHoleLoadProfileCard(group) {
+  const hole = group.hole;
   const depth = Number(hole.depth);
   const totalDepth = Number.isFinite(depth) && depth > 0 ? depth : 1;
   const stemmingHeight = Math.max(0, Number(hole.stemHeight) || 0);
@@ -2843,16 +2861,7 @@ function buildHoleLoadProfileMarkup(page) {
   );
 
   return `
-    <section class="print-hole-load-profile-sheet">
-      <header class="print-shot-order-header">
-        <h1>Hole Load Profile</h1>
-        <div class="print-shot-order-meta">
-          <div>${escapeHtml(`Shot Number: ${page?.metadata?.shotNumber || "-"}`)}</div>
-          <div>${escapeHtml(`Location: ${page?.metadata?.location || "-"}`)}</div>
-          <div>${escapeHtml(`Bench: ${page?.metadata?.bench || "-"}`)}</div>
-          <div>${escapeHtml(`Hole: ${hole.holeNumber || hole.id}`)}</div>
-        </div>
-      </header>
+    <section class="print-hole-load-profile-card-shell">
       <div class="print-hole-load-profile-layout">
         <section class="print-hole-load-profile-card">
           <div class="print-hole-load-profile-diagram">
@@ -2876,8 +2885,8 @@ function buildHoleLoadProfileMarkup(page) {
           </div>
         </section>
         <section class="print-shot-order-block">
-          <h2>Hole Data</h2>
-          <div class="print-shot-order-row"><span>Hole ID</span><strong>${escapeHtml(hole.holeNumber || hole.id || "-")}</strong></div>
+          <h2>Profile Data</h2>
+          <div class="print-shot-order-row"><span>Holes</span><strong>${escapeHtml(group.holeLabels.join(", "))}</strong></div>
           <div class="print-shot-order-row"><span>Diameter</span><strong>${escapeHtml(Number.isFinite(Number(hole.diameter)) ? `${hole.diameter}"` : "-")}</strong></div>
           <div class="print-shot-order-row"><span>Depth</span><strong>${escapeHtml(Number.isFinite(Number(hole.depth)) ? `${formatLoadingWeight(hole.depth)} ft` : "-")}</strong></div>
           <div class="print-shot-order-row"><span>Stemming</span><strong>${escapeHtml(`${formatLoadingWeight(stemmingHeight)} ft`)}</strong></div>
@@ -2900,6 +2909,27 @@ function buildHoleLoadProfileMarkup(page) {
   `;
 }
 
+function buildHoleLoadProfileMarkup(page, groups, options = {}) {
+  const pageNumber = Number(options.pageNumber) || 1;
+  const pageCount = Number(options.pageCount) || 1;
+  return `
+    <section class="print-hole-load-profile-sheet">
+      <header class="print-shot-order-header">
+        <h1>Hole Load Profiles</h1>
+        <div class="print-shot-order-meta">
+          <div>${escapeHtml(`Shot Number: ${page?.metadata?.shotNumber || "-"}`)}</div>
+          <div>${escapeHtml(`Location: ${page?.metadata?.location || "-"}`)}</div>
+          <div>${escapeHtml(`Bench: ${page?.metadata?.bench || "-"}`)}</div>
+          <div>${escapeHtml(`Page ${pageNumber} of ${pageCount}`)}</div>
+        </div>
+      </header>
+      <div class="print-hole-load-profile-stack">
+        ${groups.map((group) => buildHoleLoadProfileCard(group)).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderStaticPrintPreview(page, container) {
   if (!container) return;
   if (page?.pageType === "shotOrder") {
@@ -2907,7 +2937,11 @@ function renderStaticPrintPreview(page, container) {
     return;
   }
   if (page?.pageType === "holeLoadProfile") {
-    container.innerHTML = buildHoleLoadProfileMarkup(page);
+    const groups = groupedHoleLoadProfiles(page);
+    const chunks = chunkHoleLoadProfileGroups(groups);
+    container.innerHTML = chunks
+      .map((groupChunk, index) => buildHoleLoadProfileMarkup(page, groupChunk, { pageNumber: index + 1, pageCount: chunks.length }))
+      .join("");
     return;
   }
   const chunks = chunkHoleTableRows(page);
@@ -2955,14 +2989,18 @@ function preparePrintablePages() {
       wrapper.appendChild(frame);
       els.printPagesOutput.appendChild(wrapper);
     } else if (page.pageType === "holeLoadProfile") {
-      const wrapper = document.createElement("section");
-      wrapper.className = "print-output-page";
-      const frame = document.createElement("div");
-      frame.className = "print-paper-frame";
-      if (page.colorMode === "greyscale") frame.classList.add("greyscale");
-      frame.innerHTML = buildHoleLoadProfileMarkup(page);
-      wrapper.appendChild(frame);
-      els.printPagesOutput.appendChild(wrapper);
+      const groups = groupedHoleLoadProfiles(page);
+      const chunks = chunkHoleLoadProfileGroups(groups);
+      chunks.forEach((groupChunk, chunkIndex) => {
+        const wrapper = document.createElement("section");
+        wrapper.className = "print-output-page";
+        const frame = document.createElement("div");
+        frame.className = "print-paper-frame";
+        if (page.colorMode === "greyscale") frame.classList.add("greyscale");
+        frame.innerHTML = buildHoleLoadProfileMarkup(page, groupChunk, { pageNumber: chunkIndex + 1, pageCount: chunks.length });
+        wrapper.appendChild(frame);
+        els.printPagesOutput.appendChild(wrapper);
+      });
     } else {
       const wrapper = document.createElement("section");
       wrapper.className = "print-output-page";

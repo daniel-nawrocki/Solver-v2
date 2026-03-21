@@ -1942,6 +1942,23 @@ button:active {
   color: #13263d;
 }
 
+.print-hole-load-profile-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.print-hole-load-profile-card-shell {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(159, 179, 201, 0.35);
+}
+
+.print-hole-load-profile-card-shell:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
 .print-hole-load-profile-layout {
   display: grid;
   grid-template-columns: minmax(260px, 340px) 1fr;
