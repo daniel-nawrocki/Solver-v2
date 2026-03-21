@@ -2773,6 +2773,67 @@ function clampPercent(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItems, boosterPositions }) {
+  const outerX = 52;
+  const outerY = 16;
+  const outerWidth = 78;
+  const outerHeight = 372;
+  const innerX = 72;
+  const innerY = 34;
+  const innerWidth = 38;
+  const innerHeight = 332;
+  const collarX = 77;
+  const collarY = 12;
+  const collarWidth = 28;
+  const collarHeight = 16;
+  const topLabelX = 118;
+  const topLabelY = 26;
+  const bottomLabelX = 136;
+  const bottomLabelY = 390;
+  const fillInset = 1.5;
+  const stemmingHeightPx = Math.max(0, (innerHeight * stemmingPercent) / 100);
+  const emulsionHeightPx = Math.max(0, (innerHeight * emulsionPercent) / 100);
+  const stemmingRect = stemmingPercent > 0
+    ? `<rect x="${innerX + fillInset}" y="${innerY + fillInset}" width="${innerWidth - (fillInset * 2)}" height="${Math.max(0, stemmingHeightPx - fillInset)}" fill="#d7dee7"></rect>`
+    : "";
+  const emulsionRect = emulsionPercent > 0
+    ? `<rect x="${innerX + fillInset}" y="${innerY + stemmingHeightPx}" width="${innerWidth - (fillInset * 2)}" height="${Math.max(0, emulsionHeightPx - fillInset)}" fill="#f2b5ca"></rect>`
+    : "";
+  const dividerLine = stemmingPercent > 0 && emulsionPercent > 0
+    ? `<line x1="${innerX}" y1="${innerY + stemmingHeightPx}" x2="${innerX + innerWidth}" y2="${innerY + stemmingHeightPx}" stroke="rgba(142,72,103,0.55)" stroke-width="3"></line>`
+    : "";
+
+  const capsSvg = capItems.map((item) => {
+    const x = innerX + ((innerWidth * item.leftPercent) / 100);
+    const capEndY = innerY + ((innerHeight * Math.max(4, Number(item.dropPercent) || 0)) / 100);
+    return `
+      <line x1="${x}" y1="${outerY + 4}" x2="${x}" y2="${capEndY}" stroke="#49596b" stroke-width="3" stroke-linecap="round"></line>
+      <rect x="${x - 6}" y="${capEndY - 4}" width="12" height="20" rx="6" fill="#cdd4db" stroke="rgba(73,89,107,0.78)" stroke-width="1.2"></rect>
+    `;
+  }).join("");
+
+  const boostersSvg = boosterPositions.map((item) => {
+    const y = innerY + ((innerHeight * item.topPercent) / 100);
+    return `<rect x="${innerX - 1}" y="${y}" width="${innerWidth + 2}" height="18" rx="9" fill="${holeLoadProfileBoosterColor(item.type)}" stroke="rgba(78,96,54,0.55)" stroke-width="1.2"></rect>`;
+  }).join("");
+
+  return `
+    <svg class="print-hole-load-profile-svg" viewBox="0 0 220 404" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <rect x="${outerX}" y="${outerY}" width="${outerWidth}" height="${outerHeight}" rx="20" fill="#f8fbfe" stroke="rgba(71,85,105,0.72)" stroke-width="2"></rect>
+      <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" rx="16" fill="#eef4f9"></rect>
+      ${stemmingRect}
+      ${emulsionRect}
+      <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" rx="16" fill="none" stroke="rgba(120,138,160,0.55)" stroke-width="1.2"></rect>
+      ${dividerLine}
+      ${boostersSvg}
+      ${capsSvg}
+      <rect x="${collarX}" y="${collarY}" width="${collarWidth}" height="${collarHeight}" rx="8" fill="#edf1e7" stroke="rgba(126,134,95,0.92)" stroke-width="1.2"></rect>
+      <text x="${topLabelX}" y="${topLabelY}" class="print-hole-load-profile-svg-label">Top / Collar</text>
+      <text x="${bottomLabelX}" y="${bottomLabelY}" class="print-hole-load-profile-svg-label">Bottom</text>
+    </svg>
+  `;
+}
+
 function holeLoadProfileGroupKey(hole) {
   const detonators = (hole.detonators || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
   const boosters = (hole.boosters || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
@@ -2816,22 +2877,6 @@ function buildHoleLoadProfileCard(group) {
   const columnDepth = Math.max(0, Number(hole.columnDepth) || 0);
   const stemmingPercent = clampPercent((stemmingHeight / totalDepth) * 100, 0, 100);
   const emulsionPercent = clampPercent((columnDepth / totalDepth) * 100, 0, 100);
-  const emptyPercent = clampPercent(100 - (stemmingPercent + emulsionPercent), 0, 100);
-  const fillStops = [];
-  let fillCursor = 0;
-  if (stemmingPercent > 0) {
-    fillStops.push(`#d7dee7 ${fillCursor}%`, `#d7dee7 ${fillCursor + stemmingPercent}%`);
-    fillCursor += stemmingPercent;
-  }
-  if (emulsionPercent > 0) {
-    fillStops.push(`#f2b5ca ${fillCursor}%`, `#f2b5ca ${fillCursor + emulsionPercent}%`);
-    fillCursor += emulsionPercent;
-  }
-  if (emptyPercent > 0) {
-    fillStops.push(`#eef4f9 ${fillCursor}%`, `#eef4f9 100%`);
-  }
-  if (!fillStops.length) fillStops.push(`#eef4f9 0%`, `#eef4f9 100%`);
-  const fillBackground = `linear-gradient(to bottom, ${fillStops.join(", ")})`;
   const detonatorUnits = flatMaterialUnits(hole.detonators);
   const boosterUnits = flatMaterialUnits(hole.boosters);
   const emulsionTopPercent = stemmingPercent;
@@ -2867,6 +2912,7 @@ function buildHoleLoadProfileCard(group) {
   const capItems = detonatorUnits.map((unit, index) => ({
     ...unit,
     leftPercent: clampPercent(capLeftStart + (index * capSpacing), 32, 68),
+    dropPercent: Math.max(4, capDropEnd),
   }));
   const detonatorLines = materialSummaryLines(
     hole.detonators.reduce((map, entry) => map.set(entry.type, (map.get(entry.type) || 0) + (Number(entry.quantity) || 0)), new Map()),
@@ -2883,20 +2929,12 @@ function buildHoleLoadProfileCard(group) {
         <section class="print-hole-load-profile-card">
           <div class="print-hole-load-profile-diagram">
             <div class="print-hole-load-profile-bore-wrap">
-              <div class="print-hole-load-profile-bore">
-                <div class="print-hole-load-profile-fill" style="background:${fillBackground};"></div>
-                ${capItems.map((item) => `
-                  <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
-                    <div class="print-hole-load-profile-cap-line"></div>
-                    <div class="print-hole-load-profile-cap-body"></div>
-                  </div>
-                `).join("")}
-                ${boosterPositions.map((item) => `
-                  <div class="print-hole-load-profile-booster" style="top:${item.topPercent}%; background:${holeLoadProfileBoosterColor(item.type)};"></div>
-                `).join("")}
-              </div>
-              <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-top">Top / Collar</div>
-              <div class="print-hole-load-profile-end-label print-hole-load-profile-end-label-bottom">Bottom</div>
+              ${buildHoleLoadProfileBoreSvg({
+                stemmingPercent,
+                emulsionPercent,
+                capItems,
+                boosterPositions,
+              })}
             </div>
           </div>
         </section>
