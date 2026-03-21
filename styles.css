@@ -476,7 +476,7 @@ button:active {
 
 .loading-entry-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px auto;
+  grid-template-columns: minmax(0, 1fr) 108px auto;
   gap: 8px;
   align-items: center;
 }
@@ -486,6 +486,27 @@ button:active {
   width: auto;
   min-width: 0;
   margin: 0;
+}
+
+.loading-qty-stepper {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  gap: 4px;
+  align-items: center;
+}
+
+.loading-qty-stepper input {
+  min-width: 0;
+  text-align: center;
+  padding: 8px 6px;
+  font-weight: 700;
+}
+
+.loading-qty-stepper button {
+  min-width: 28px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
 }
 
 .loading-summary-block {
@@ -1838,6 +1859,77 @@ button:active {
   border: 1px solid rgba(159, 179, 201, 0.45);
   background: rgba(248, 251, 255, 0.96);
   font-size: calc(9px * var(--hole-table-scale));
+  color: #314a62;
+}
+
+.print-shot-order-sheet {
+  height: 100%;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  box-sizing: border-box;
+  color: #13263d;
+}
+
+.print-shot-order-header {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(159, 179, 201, 0.45);
+}
+
+.print-shot-order-header h1,
+.print-shot-order-block h2 {
+  margin: 0;
+}
+
+.print-shot-order-header h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.print-shot-order-meta {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: #415973;
+  font-weight: 700;
+}
+
+.print-shot-order-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.print-shot-order-block {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(159, 179, 201, 0.45);
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.print-shot-order-block h2 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.print-shot-order-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.print-shot-order-line {
+  font-size: 13px;
+  line-height: 1.4;
   color: #314a62;
 }
 

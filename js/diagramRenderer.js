@@ -1069,12 +1069,19 @@ export class DiagramRenderer {
 
   attachEvents() {
     this.canvas.addEventListener("mousedown", (event) => {
-      if (event.button !== 0) return;
+      if (event.button !== 0 && event.button !== 1) return;
+      if (event.button === 1) event.preventDefault();
       this.pointerCaptureActive = true;
       const rect = this.canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
       this.pointerScreen = { x, y };
+      if (event.button === 1) {
+        this.dragging = true;
+        this.dragMoved = false;
+        this.lastMouse = { x: event.clientX, y: event.clientY };
+        return;
+      }
       const downHandled = this.onPointerDown({ x, y, event, hole: this.findHoleAtScreen(x, y) });
       if (downHandled) return;
       const hole = this.findHoleAtScreen(x, y);
@@ -1090,6 +1097,18 @@ export class DiagramRenderer {
     window.addEventListener("mousemove", (event) => {
       const rect = this.canvas.getBoundingClientRect();
       this.pointerScreen = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const middlePanActive = this.dragging && (event.buttons & 4) === 4;
+      if (middlePanActive) {
+        const dx = event.clientX - this.lastMouse.x;
+        const dy = event.clientY - this.lastMouse.y;
+        if (Math.abs(dx) > 0 || Math.abs(dy) > 0) this.dragMoved = true;
+        this.panX += dx;
+        this.panY -= dy;
+        this.lastMouse = { x: event.clientX, y: event.clientY };
+        this.render();
+        this.syncViewState();
+        return;
+      }
       const moveHandled = this.onPointerMove({ x: this.pointerScreen.x, y: this.pointerScreen.y, event, hole: this.findHoleAtScreen(this.pointerScreen.x, this.pointerScreen.y) });
       if (moveHandled) return;
       const hoverHole = this.findHoleAtScreen(this.pointerScreen.x, this.pointerScreen.y);
@@ -1119,6 +1138,7 @@ export class DiagramRenderer {
       this.dragging = false;
       this.dragMoved = false;
       this.lastMouse = null;
+      if (event.button === 1) return;
       const upHandled = this.onPointerUp({ hole: this.findHoleAtScreen(x, y), event, x, y, didDrag });
       if (upHandled) return;
     });

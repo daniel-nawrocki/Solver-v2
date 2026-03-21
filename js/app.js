@@ -463,6 +463,7 @@ const els = {
   printLabelDistanceDownBtn: document.getElementById("printLabelDistanceDownBtn"),
   printLabelDistanceUpBtn: document.getElementById("printLabelDistanceUpBtn"),
   printAddHoleTablePageBtn: document.getElementById("printAddHoleTablePageBtn"),
+  printAddShotOrderPageBtn: document.getElementById("printAddShotOrderPageBtn"),
   printHoleTablePreview: document.getElementById("printHoleTablePreview"),
   originToolBtn: document.getElementById("originToolBtn"),
   holeRelationPositiveToolBtn: document.getElementById("holeRelationPositiveToolBtn"),
@@ -2260,8 +2261,44 @@ function createHoleTablePrintPage() {
   return page;
 }
 
+function createShotOrderPrintPage() {
+  const page = createPrintPageState();
+  page.pageType = "shotOrder";
+  page.holes = diagramState.holes.map(cloneHole).sort(compareHoleTableRows);
+  syncPrintPageHolesById(page);
+  page.selection = new Set();
+  page.relationships = { originHoleId: null, edges: [], nextId: 1 };
+  page.timingResults = [];
+  page.ui.workspaceMode = "diagram";
+  page.ui.activeTimingPreviewIndex = -1;
+  page.ui.showGrid = false;
+  page.ui.showRelationships = false;
+  page.ui.showOverlayText = false;
+  page.ui.showAngleLabels = false;
+  page.ui.showBearingLabels = false;
+  page.ui.showBearingArrows = false;
+  page.ui.bearingArrowWeight = 1;
+  page.ui.bearingArrowLength = 16;
+  page.ui.labelAngleDeg = 315;
+  page.ui.labelDistancePx = PRINT_LABEL_DISTANCE_MIN + PRINT_LABEL_DISTANCE_DEFAULT_TICK;
+  page.ui.showDepthLabels = false;
+  page.ui.showCornerCoordinates = false;
+  page.ui.labelEditMode = false;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
+  page.ui.orientation = "landscape";
+  page.labelLayoutByHoleId = new Map();
+  page.cornerLabelLayoutByHoleId = new Map();
+  page.metadata = cloneDiagramMetadata(diagramState.metadata);
+  page.annotations = cloneDiagramAnnotations();
+  page.shotCorners = cloneShotCorners(diagramState.shotCorners);
+  page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
+  return page;
+}
+
 function pageWorkspaceLabel(page) {
   if (page?.pageType === "holeTable") return "Hole Table";
+  if (page?.pageType === "shotOrder") return "Shot Order";
   return page?.ui?.workspaceMode === "diagram" ? "Diagram" : "Timing";
 }
 
@@ -2272,12 +2309,12 @@ function applyPrintPageChrome(page) {
 }
 
 function setPrintRendererPage(page, options = {}) {
-  const showHoleTable = page?.pageType === "holeTable";
+  const showStaticPreview = page?.pageType === "holeTable" || page?.pageType === "shotOrder";
   applyPrintPageChrome(page);
-  els.printCanvas.classList.toggle("hidden", showHoleTable);
-  els.printHoleTablePreview.classList.toggle("hidden", !showHoleTable);
-  if (showHoleTable) {
-    renderHoleTablePreview(page, els.printHoleTablePreview);
+  els.printCanvas.classList.toggle("hidden", showStaticPreview);
+  els.printHoleTablePreview.classList.toggle("hidden", !showStaticPreview);
+  if (showStaticPreview) {
+    renderStaticPrintPreview(page, els.printHoleTablePreview);
     printRenderer.stateRef = null;
     return;
   }
@@ -2323,16 +2360,17 @@ function syncPrintControls() {
   const page = activePrintPage();
   if (!page) return;
   const diagramMode = page.pageType === "diagram";
-  const holeTableMode = page.pageType === "holeTable";
+  const staticSheetMode = page.pageType === "holeTable" || page.pageType === "shotOrder";
   const labelModeEnabled = page.ui.labelEditMode === true;
   const hasTimingPageOption = projectState.timing.timingResults.length > 0;
-  const showAdditionalPages = diagramMode || holeTableMode;
+  const showAdditionalPages = diagramMode || staticSheetMode;
   els.printTextScaleInput.value = String(page.ui.textScale || 1);
-  els.printFitBtn.classList.toggle("hidden", holeTableMode);
+  els.printFitBtn.classList.toggle("hidden", staticSheetMode);
   els.printAdditionalPagesBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printAddTimingPageBtn.classList.toggle("hidden", !hasTimingPageOption);
   els.printAddHoleTablePageBtn.classList.toggle("hidden", !showAdditionalPages);
-  els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode || holeTableMode);
+  els.printAddShotOrderPageBtn.classList.toggle("hidden", !showAdditionalPages);
+  els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode || staticSheetMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
@@ -2389,8 +2427,15 @@ function addTimingPrintPage() {
 }
 
 function addHoleTablePrintPage() {
-  if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable") return;
+  if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable" && activePrintPage()?.pageType !== "shotOrder") return;
   const page = createHoleTablePrintPage();
+  printSession.pages.push(page);
+  activatePrintPage(printSession.pages.length - 1);
+}
+
+function addShotOrderPrintPage() {
+  if (!isDiagramWorkspaceActive() && activePrintPage()?.pageType !== "diagram" && activePrintPage()?.pageType !== "holeTable" && activePrintPage()?.pageType !== "shotOrder") return;
+  const page = createShotOrderPrintPage();
   printSession.pages.push(page);
   activatePrintPage(printSession.pages.length - 1);
 }
@@ -2488,8 +2533,8 @@ function applyPrintSettings() {
   page.ui.orientation = "landscape";
   page.colorMode = els.printColorModeToggle.checked ? "color" : "greyscale";
   applyPrintPageChrome(page);
-  if (page.pageType === "holeTable") {
-    renderHoleTablePreview(page, els.printHoleTablePreview);
+  if (page.pageType === "holeTable" || page.pageType === "shotOrder") {
+    renderStaticPrintPreview(page, els.printHoleTablePreview);
   } else {
     printRenderer.render();
   }
@@ -2594,7 +2639,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
       <footer class="print-hole-table-summary">
         <span>${escapeHtml(`Total Holes: ${totalHoles}`)}</span>
         <span>${escapeHtml(`Total Drill Footage: ${Math.round(totalDrillFootage)} ft`)}</span>
-        <span>${escapeHtml(`Explosive: ${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</span>
+        <span>${escapeHtml(`Total Emulsion: ${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</span>
       </footer>
       <div class="print-hole-table-loading-summary">
         <div>${escapeHtml(`Detonators: ${detonatorSummary || "None"}`)}</div>
@@ -2615,7 +2660,7 @@ function buildHoleTableMarkup(page, holes, options = {}) {
             <th>Depth</th>
             <th>Angle</th>
             <th>Azimuth (True North)</th>
-            <th>Explosive</th>
+            <th>Emulsion</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -2625,8 +2670,47 @@ function buildHoleTableMarkup(page, holes, options = {}) {
   `;
 }
 
-function renderHoleTablePreview(page, container) {
+function buildShotOrderMarkup(page) {
+  const loadingSummary = summarizeShotLoading(page?.holes || [], page?.metadata?.loadingDensityGcc);
+  const detonatorLines = materialSummaryLines(loadingSummary.detonatorCounts, "No detonators assigned");
+  const boosterLines = materialSummaryLines(loadingSummary.boosterCounts, "No boosters assigned");
+  return `
+    <section class="print-shot-order-sheet">
+      <header class="print-shot-order-header">
+        <h1>Shot Order Sheet</h1>
+        <div class="print-shot-order-meta">
+          <div>${escapeHtml(`Shot Number: ${page?.metadata?.shotNumber || "-"}`)}</div>
+          <div>${escapeHtml(`Location: ${page?.metadata?.location || "-"}`)}</div>
+          <div>${escapeHtml(`Bench: ${page?.metadata?.bench || "-"}`)}</div>
+        </div>
+      </header>
+      <div class="print-shot-order-block">
+        <h2>Loading Usage</h2>
+        <div class="print-shot-order-row"><span>Total Holes</span><strong>${escapeHtml(String(loadingSummary.totalHoleCount || 0))}</strong></div>
+        <div class="print-shot-order-row"><span>Total Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb`)}</strong></div>
+        <div class="print-shot-order-row"><span>Powder</span><strong>${escapeHtml(`${formatLoadingWeight(loadingSummary.totalExplosiveWeightLb)} lb emulsion`)}</strong></div>
+        <div class="print-shot-order-row"><span>Included Holes</span><strong>${escapeHtml(String(loadingSummary.includedHoleCount || 0))}</strong></div>
+      </div>
+      <div class="print-shot-order-grid">
+        <section class="print-shot-order-block">
+          <h2>Detonators</h2>
+          ${detonatorLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
+        </section>
+        <section class="print-shot-order-block">
+          <h2>Boosters</h2>
+          ${boosterLines.map((line) => `<div class="print-shot-order-line">${escapeHtml(line)}</div>`).join("")}
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+function renderStaticPrintPreview(page, container) {
   if (!container) return;
+  if (page?.pageType === "shotOrder") {
+    container.innerHTML = buildShotOrderMarkup(page);
+    return;
+  }
   const chunks = chunkHoleTableRows(page);
   container.innerHTML = chunks
     .map((holes, index) => buildHoleTableMarkup(page, holes, { pageNumber: index + 1, pageCount: chunks.length, showSummary: index === chunks.length - 1 }))
@@ -2662,6 +2746,15 @@ function preparePrintablePages() {
         wrapper.appendChild(frame);
         els.printPagesOutput.appendChild(wrapper);
       });
+    } else if (page.pageType === "shotOrder") {
+      const wrapper = document.createElement("section");
+      wrapper.className = "print-output-page";
+      const frame = document.createElement("div");
+      frame.className = "print-paper-frame";
+      if (page.colorMode === "greyscale") frame.classList.add("greyscale");
+      frame.innerHTML = buildShotOrderMarkup(page);
+      wrapper.appendChild(frame);
+      els.printPagesOutput.appendChild(wrapper);
     } else {
       const wrapper = document.createElement("section");
       wrapper.className = "print-output-page";
@@ -2964,13 +3057,24 @@ function materialCountsMarkup(countsMap, emptyLabel) {
   return rows || `<div>${escapeHtml(emptyLabel)}</div>`;
 }
 
+function materialSummaryLines(countsMap, emptyLabel) {
+  const rows = [...countsMap.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([type, quantity]) => `${quantity} x ${type}`);
+  return rows.length ? rows : [emptyLabel];
+}
+
 function materialEntryEditorMarkup(entries, types, { scope }) {
   const rows = entries.map((entry, index) => `
     <div class="loading-entry-row">
       <select data-loading-scope="${scope}" data-loading-field="type" data-loading-index="${index}">
         ${types.map((type) => `<option value="${escapeHtml(type)}"${entry.type === type ? " selected" : ""}>${escapeHtml(type)}</option>`).join("")}
       </select>
-      <input type="number" min="1" step="1" value="${escapeHtml(String(entry.quantity || 1))}" data-loading-scope="${scope}" data-loading-field="quantity" data-loading-index="${index}">
+      <div class="loading-qty-stepper">
+        <button type="button" data-loading-scope="${scope}" data-loading-step="-1" data-loading-index="${index}" aria-label="Decrease quantity">-</button>
+        <input type="text" value="${escapeHtml(String(entry.quantity || 1))}" readonly aria-label="Quantity">
+        <button type="button" data-loading-scope="${scope}" data-loading-step="1" data-loading-index="${index}" aria-label="Increase quantity">+</button>
+      </div>
       <button type="button" data-loading-scope="${scope}" data-loading-remove="${index}">Remove</button>
     </div>
   `).join("");
@@ -2987,7 +3091,7 @@ function renderDiagramLoadingPanel() {
     : "";
 
   els.diagramLoadingDensityInput.value = String(density);
-  els.diagramLoadingTotalWeightStatus.textContent = `Total Explosive Weight: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`;
+  els.diagramLoadingTotalWeightStatus.textContent = `Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`;
   els.diagramLoadingIncludedCountStatus.textContent = `Holes Included: ${summary.includedHoleCount} of ${summary.totalHoleCount}${warningText}`;
   els.diagramLoadingAverageStatus.textContent = `Average: ${formatLoadingWeight(summary.averageExplosiveWeightLb)} lb/hole`;
   els.diagramLoadingSelectionStatus.textContent = selectedCount
@@ -2997,7 +3101,7 @@ function renderDiagramLoadingPanel() {
   els.diagramLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES, { scope: "draft-booster" });
   els.diagramLoadingApplyBtn.disabled = !diagramState.selection.size;
   els.diagramLoadingSummary.innerHTML = `
-    <div><strong>${escapeHtml(`Shot total: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`)}</strong></div>
+    <div><strong>${escapeHtml(`Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`)}</strong></div>
     <div>${escapeHtml(`${summary.totalHoleCount} holes`)}</div>
     <div class="loading-summary-block">
       <div><strong>Detonators</strong></div>
@@ -3018,6 +3122,14 @@ function updateDraftMaterialEntry(kind, index, field, rawValue) {
   if (!entry) return;
   if (field === "type") entry.type = types.includes(rawValue) ? rawValue : types[0];
   if (field === "quantity") entry.quantity = Math.max(1, Math.round(Number(rawValue) || 1));
+  renderDiagramLoadingPanel();
+}
+
+function stepDraftMaterialEntry(kind, index, delta) {
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const entry = diagramState.ui.loadingDraft[key]?.[index];
+  if (!entry) return;
+  entry.quantity = Math.max(1, Math.round(Number(entry.quantity) || 1) + delta);
   renderDiagramLoadingPanel();
 }
 
@@ -3058,7 +3170,7 @@ function renderSingleHoleLoadingEditor(hole) {
     els.diagramHoleLoadingDetonatorEditor.innerHTML = "";
     els.diagramHoleLoadingBoosterEditor.innerHTML = "";
     els.diagramHoleLoadingColumnDepthStatus.textContent = "Column Depth: -";
-    els.diagramHoleLoadingWeightStatus.textContent = "Explosive Weight: -";
+    els.diagramHoleLoadingWeightStatus.textContent = "Emulsion Weight: -";
     els.diagramHoleLoadingWarning.textContent = "";
     return;
   }
@@ -3067,7 +3179,7 @@ function renderSingleHoleLoadingEditor(hole) {
   els.diagramHoleLoadingDepthInput.value = Number.isFinite(Number(hole.depth)) ? String(hole.depth) : "";
   els.diagramHoleLoadingStemHeightInput.value = Number.isFinite(Number(hole.stemHeight)) ? String(hole.stemHeight) : "";
   els.diagramHoleLoadingColumnDepthStatus.textContent = `Column Depth: ${formatLoadingWeight(hole.columnDepth)} ft`;
-  els.diagramHoleLoadingWeightStatus.textContent = `Explosive Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
+  els.diagramHoleLoadingWeightStatus.textContent = `Emulsion Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
   els.diagramHoleLoadingWarning.textContent = hole.loadingWarning || "";
   els.diagramHoleLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(hole.detonators || [], DETONATOR_TYPES, { scope: "hole-detonator" });
   els.diagramHoleLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(hole.boosters || [], BOOSTER_TYPES, { scope: "hole-booster" });
@@ -3082,6 +3194,17 @@ function updateHoleMaterialEntry(kind, index, field, rawValue) {
   if (!entry) return;
   if (field === "type") entry.type = types.includes(rawValue) ? rawValue : types[0];
   if (field === "quantity") entry.quantity = Math.max(1, Math.round(Number(rawValue) || 1));
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  fullDiagramRefresh();
+}
+
+function stepHoleMaterialEntry(kind, index, delta) {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const key = kind === "booster" ? "boosters" : "detonators";
+  const entry = hole[key]?.[index];
+  if (!entry) return;
+  entry.quantity = Math.max(1, Math.round(Number(entry.quantity) || 1) + delta);
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
   fullDiagramRefresh();
 }
@@ -4619,8 +4742,12 @@ els.diagramLoadingDetonatorEditor.addEventListener("change", (event) => {
 });
 els.diagramLoadingDetonatorEditor.addEventListener("click", (event) => {
   const button = event.target.closest("[data-loading-scope='draft-detonator']");
-  if (!button || !button.hasAttribute("data-loading-remove")) return;
-  removeDraftMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+  if (!button) return;
+  if (button.hasAttribute("data-loading-remove")) {
+    removeDraftMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+    return;
+  }
+  if (button.hasAttribute("data-loading-step")) stepDraftMaterialEntry("detonator", Number(button.getAttribute("data-loading-index")), Number(button.getAttribute("data-loading-step")) || 0);
 });
 els.diagramLoadingBoosterEditor.addEventListener("change", (event) => {
   const target = event.target.closest("[data-loading-scope='draft-booster']");
@@ -4629,8 +4756,12 @@ els.diagramLoadingBoosterEditor.addEventListener("change", (event) => {
 });
 els.diagramLoadingBoosterEditor.addEventListener("click", (event) => {
   const button = event.target.closest("[data-loading-scope='draft-booster']");
-  if (!button || !button.hasAttribute("data-loading-remove")) return;
-  removeDraftMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
+  if (!button) return;
+  if (button.hasAttribute("data-loading-remove")) {
+    removeDraftMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
+    return;
+  }
+  if (button.hasAttribute("data-loading-step")) stepDraftMaterialEntry("booster", Number(button.getAttribute("data-loading-index")), Number(button.getAttribute("data-loading-step")) || 0);
 });
 els.diagramApplyPropertiesBtn.addEventListener("click", () => applyDiagramPropertyPatchToSelection(collectDiagramPropertyPatch()));
 els.diagramHolePopupSaveBtn.addEventListener("click", () => applyDiagramHolePopupChanges());
@@ -4659,8 +4790,12 @@ els.diagramHoleLoadingDetonatorEditor.addEventListener("change", (event) => {
 });
 els.diagramHoleLoadingDetonatorEditor.addEventListener("click", (event) => {
   const button = event.target.closest("[data-loading-scope='hole-detonator']");
-  if (!button || !button.hasAttribute("data-loading-remove")) return;
-  removeHoleMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+  if (!button) return;
+  if (button.hasAttribute("data-loading-remove")) {
+    removeHoleMaterialEntry("detonator", Number(button.getAttribute("data-loading-remove")));
+    return;
+  }
+  if (button.hasAttribute("data-loading-step")) stepHoleMaterialEntry("detonator", Number(button.getAttribute("data-loading-index")), Number(button.getAttribute("data-loading-step")) || 0);
 });
 els.diagramHoleLoadingBoosterEditor.addEventListener("change", (event) => {
   const target = event.target.closest("[data-loading-scope='hole-booster']");
@@ -4669,8 +4804,12 @@ els.diagramHoleLoadingBoosterEditor.addEventListener("change", (event) => {
 });
 els.diagramHoleLoadingBoosterEditor.addEventListener("click", (event) => {
   const button = event.target.closest("[data-loading-scope='hole-booster']");
-  if (!button || !button.hasAttribute("data-loading-remove")) return;
-  removeHoleMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
+  if (!button) return;
+  if (button.hasAttribute("data-loading-remove")) {
+    removeHoleMaterialEntry("booster", Number(button.getAttribute("data-loading-remove")));
+    return;
+  }
+  if (button.hasAttribute("data-loading-step")) stepHoleMaterialEntry("booster", Number(button.getAttribute("data-loading-index")), Number(button.getAttribute("data-loading-step")) || 0);
 });
 
 els.authSignInBtn.addEventListener("click", async () => {
@@ -4938,6 +5077,10 @@ els.printAddTimingPageBtn.addEventListener("click", () => {
 });
 els.printAddHoleTablePageBtn.addEventListener("click", () => {
   addHoleTablePrintPage();
+  closeAllMenus();
+});
+els.printAddShotOrderPageBtn.addEventListener("click", () => {
+  addShotOrderPrintPage();
   closeAllMenus();
 });
 els.printAddPageBtn.addEventListener("click", () => addPrintPage());
