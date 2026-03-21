@@ -2817,6 +2817,21 @@ function buildHoleLoadProfileCard(group) {
   const stemmingPercent = clampPercent((stemmingHeight / totalDepth) * 100, 0, 100);
   const emulsionPercent = clampPercent((columnDepth / totalDepth) * 100, 0, 100);
   const emptyPercent = clampPercent(100 - (stemmingPercent + emulsionPercent), 0, 100);
+  const fillStops = [];
+  let fillCursor = 0;
+  if (stemmingPercent > 0) {
+    fillStops.push(`#d7dee7 ${fillCursor}%`, `#d7dee7 ${fillCursor + stemmingPercent}%`);
+    fillCursor += stemmingPercent;
+  }
+  if (emulsionPercent > 0) {
+    fillStops.push(`#f2b5ca ${fillCursor}%`, `#f2b5ca ${fillCursor + emulsionPercent}%`);
+    fillCursor += emulsionPercent;
+  }
+  if (emptyPercent > 0) {
+    fillStops.push(`#eef4f9 ${fillCursor}%`, `#eef4f9 100%`);
+  }
+  if (!fillStops.length) fillStops.push(`#eef4f9 0%`, `#eef4f9 100%`);
+  const fillBackground = `linear-gradient(to bottom, ${fillStops.join(", ")})`;
   const detonatorUnits = flatMaterialUnits(hole.detonators);
   const boosterUnits = flatMaterialUnits(hole.boosters);
   const emulsionTopPercent = stemmingPercent;
@@ -2869,11 +2884,7 @@ function buildHoleLoadProfileCard(group) {
           <div class="print-hole-load-profile-diagram">
             <div class="print-hole-load-profile-bore-wrap">
               <div class="print-hole-load-profile-bore">
-                <div class="print-hole-load-profile-fill">
-                  ${stemmingPercent > 0 ? `<div class="print-hole-load-profile-stemming" style="height:${stemmingPercent}%;"></div>` : ""}
-                  ${emulsionPercent > 0 ? `<div class="print-hole-load-profile-emulsion" style="height:${emulsionPercent}%;"></div>` : ""}
-                  ${emptyPercent > 0 ? `<div class="print-hole-load-profile-empty" style="height:${emptyPercent}%;"></div>` : ""}
-                </div>
+                <div class="print-hole-load-profile-fill" style="background:${fillBackground};"></div>
                 ${capItems.map((item) => `
                   <div class="print-hole-load-profile-cap" style="left:${item.leftPercent}%; top:${capDropStart}%; height:${Math.max(4, capDropEnd)}%;">
                     <div class="print-hole-load-profile-cap-line"></div>
