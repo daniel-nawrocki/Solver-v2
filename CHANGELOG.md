@@ -35,6 +35,7 @@ All notable project changes are tracked here.
 - Hole Load Profile booster markers now render as small cylinder-style booster shapes, and the extra cream rounded rectangle at the collar was removed from the bore graphic.
 - Hole Load Profile detonator lines now terminate at the booster markers so the boosters sit on the ends of the lines instead of floating separately.
 - Hole Load Profile booster cylinders now render vertically, and cap wires are staggered left/right so multiple lines remain individually visible.
+- Hole Load Profile grey and pink load fills now expand to fill the outer bore shell interior instead of leaving a narrow inset column.
 
 ## Earlier Delivered Changes
 

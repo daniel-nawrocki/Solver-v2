@@ -2778,10 +2778,13 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const outerY = 16;
   const outerWidth = 78;
   const outerHeight = 372;
-  const innerX = 63;
-  const innerY = 34;
-  const innerWidth = 56;
-  const innerHeight = 332;
+  const innerInsetX = 6;
+  const innerInsetTop = 18;
+  const innerInsetBottom = 18;
+  const innerX = outerX + innerInsetX;
+  const innerY = outerY + innerInsetTop;
+  const innerWidth = outerWidth - (innerInsetX * 2);
+  const innerHeight = outerHeight - innerInsetTop - innerInsetBottom;
   const topLabelX = 118;
   const topLabelY = 26;
   const bottomLabelX = 136;
