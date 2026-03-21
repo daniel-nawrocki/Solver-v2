@@ -32,6 +32,8 @@ All notable project changes are tracked here.
 - Shot Order Sheet loading usage now removes the redundant `Number of Holes` row and keeps `Total Holes` plus `Total Emulsion` as the summary totals.
 - Hole Load Profile print pages now use a wider inner charge tube with a hard grey-to-pink split, clearer hanging cap markers, and more legible booster placement inside the explosive column.
 - Hole Load Profile bore graphics now remove the oval cap/booster bodies and expand the grey/pink fill to occupy more of the white borehole interior.
+- Hole Load Profile booster markers now render as small cylinder-style booster shapes, and the extra cream rounded rectangle at the collar was removed from the bore graphic.
+- Hole Load Profile detonator lines now terminate at the booster markers so the boosters sit on the ends of the lines instead of floating separately.
 
 ## Earlier Delivered Changes
 

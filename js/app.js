@@ -2782,10 +2782,6 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const innerY = 34;
   const innerWidth = 56;
   const innerHeight = 332;
-  const collarX = 77;
-  const collarY = 12;
-  const collarWidth = 28;
-  const collarHeight = 16;
   const topLabelX = 118;
   const topLabelY = 26;
   const bottomLabelX = 136;
@@ -2803,18 +2799,37 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
     ? `<line x1="${innerX}" y1="${innerY + stemmingHeightPx}" x2="${innerX + innerWidth}" y2="${innerY + stemmingHeightPx}" stroke="rgba(142,72,103,0.55)" stroke-width="3"></line>`
     : "";
 
-  const capsSvg = capItems.map((item) => {
-    const x = innerX + ((innerWidth * item.leftPercent) / 100);
-    const capEndY = innerY + ((innerHeight * Math.max(4, Number(item.dropPercent) || 0)) / 100);
-    return `
-      <line x1="${x}" y1="${outerY + 4}" x2="${x}" y2="${capEndY}" stroke="#49596b" stroke-width="3" stroke-linecap="round"></line>
-    `;
+  const boosterMarkerData = boosterPositions.map((item, index) => {
+    const boosterWidth = 18;
+    const boosterHeight = 10;
+    const x = innerX + ((innerWidth - boosterWidth) / 2);
+    const y = innerY + ((innerHeight * item.topPercent) / 100) + 4;
+    const fill = holeLoadProfileBoosterColor(item.type);
+    return {
+      index,
+      x,
+      y,
+      centerX: x + (boosterWidth / 2),
+      fill,
+      boosterWidth,
+      boosterHeight,
+    };
+  });
+
+  const capsSvg = capItems.map((item, index) => {
+    const fallbackX = innerX + ((innerWidth * item.leftPercent) / 100);
+    const attachedBooster = boosterMarkerData[index] || null;
+    const x = attachedBooster ? attachedBooster.centerX : fallbackX;
+    const lineEndY = attachedBooster
+      ? attachedBooster.y
+      : innerY + ((innerHeight * Math.max(4, Number(item.dropPercent) || 0)) / 100);
+    return `<line x1="${x}" y1="${outerY + 4}" x2="${x}" y2="${lineEndY}" stroke="#49596b" stroke-width="3" stroke-linecap="round"></line>`;
   }).join("");
 
-  const boostersSvg = boosterPositions.map((item) => {
-    const y = innerY + ((innerHeight * item.topPercent) / 100);
-    return `<line x1="${innerX + 3}" y1="${y + 9}" x2="${innerX + innerWidth - 3}" y2="${y + 9}" stroke="${holeLoadProfileBoosterColor(item.type)}" stroke-width="8" stroke-linecap="round"></line>`;
-  }).join("");
+  const boostersSvg = boosterMarkerData.map((item) => `
+      <rect x="${item.x}" y="${item.y}" width="${item.boosterWidth}" height="${item.boosterHeight}" rx="5" fill="${item.fill}" stroke="rgba(86,96,54,0.6)" stroke-width="1"></rect>
+      <line x1="${item.x + 3}" y1="${item.y + 2.2}" x2="${item.x + item.boosterWidth - 3}" y2="${item.y + 2.2}" stroke="rgba(255,255,255,0.45)" stroke-width="1.2" stroke-linecap="round"></line>
+    `).join("");
 
   return `
     <svg class="print-hole-load-profile-svg" viewBox="0 0 220 404" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
@@ -2826,7 +2841,6 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
       ${dividerLine}
       ${boostersSvg}
       ${capsSvg}
-      <rect x="${collarX}" y="${collarY}" width="${collarWidth}" height="${collarHeight}" rx="8" fill="#edf1e7" stroke="rgba(126,134,95,0.92)" stroke-width="1.2"></rect>
       <text x="${topLabelX}" y="${topLabelY}" class="print-hole-load-profile-svg-label">Top / Collar</text>
       <text x="${bottomLabelX}" y="${bottomLabelY}" class="print-hole-load-profile-svg-label">Bottom</text>
     </svg>
