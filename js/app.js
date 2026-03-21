@@ -2642,7 +2642,7 @@ function formatHoleTableAzimuth(value, angle) {
 }
 
 function holeTableRowsPerPage(page) {
-  const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
+  const scale = Math.max(0.4, Math.min(1.8, Number(page?.ui?.textScale) || 1));
   return Math.max(8, Math.floor(23 / scale));
 }
 
@@ -2658,7 +2658,7 @@ function chunkHoleTableRows(page) {
 }
 
 function buildHoleTableMarkup(page, holes, options = {}) {
-  const scale = Math.max(0.7, Math.min(1.8, Number(page?.ui?.textScale) || 1));
+  const scale = Math.max(0.4, Math.min(1.8, Number(page?.ui?.textScale) || 1));
   const pageNumber = Number(options.pageNumber) || 1;
   const pageCount = Number(options.pageCount) || 1;
   const showSummary = options.showSummary === true;
