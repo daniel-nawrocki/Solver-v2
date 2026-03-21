@@ -2778,9 +2778,9 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const outerY = 16;
   const outerWidth = 78;
   const outerHeight = 372;
-  const innerInsetX = 6;
-  const innerInsetTop = 18;
-  const innerInsetBottom = 18;
+  const innerInsetX = 3;
+  const innerInsetTop = 3;
+  const innerInsetBottom = 3;
   const innerX = outerX + innerInsetX;
   const innerY = outerY + innerInsetTop;
   const innerWidth = outerWidth - (innerInsetX * 2);
@@ -2789,7 +2789,8 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const topLabelY = 26;
   const bottomLabelX = 136;
   const bottomLabelY = 390;
-  const fillInset = 1.5;
+  const fillInset = 0;
+  const fillClipId = `hole-load-shell-${Math.random().toString(36).slice(2, 10)}`;
   const stemmingHeightPx = Math.max(0, (innerHeight * stemmingPercent) / 100);
   const emulsionHeightPx = Math.max(0, (innerHeight * emulsionPercent) / 100);
   const stemmingRect = stemmingPercent > 0
@@ -2839,11 +2840,17 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
 
   return `
     <svg class="print-hole-load-profile-svg" viewBox="0 0 220 404" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <clipPath id="${fillClipId}">
+          <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" rx="20"></rect>
+        </clipPath>
+      </defs>
       <rect x="${outerX}" y="${outerY}" width="${outerWidth}" height="${outerHeight}" rx="20" fill="#f8fbfe" stroke="rgba(71,85,105,0.72)" stroke-width="2"></rect>
-      <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" rx="16" fill="#eef4f9"></rect>
-      ${stemmingRect}
-      ${emulsionRect}
-      <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" rx="16" fill="none" stroke="rgba(120,138,160,0.55)" stroke-width="1.2"></rect>
+      <g clip-path="url(#${fillClipId})">
+        <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" fill="#eef4f9"></rect>
+        ${stemmingRect}
+        ${emulsionRect}
+      </g>
       ${dividerLine}
       ${boostersSvg}
       ${capsSvg}
