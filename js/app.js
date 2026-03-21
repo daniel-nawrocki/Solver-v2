@@ -2778,9 +2778,9 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const outerY = 16;
   const outerWidth = 78;
   const outerHeight = 372;
-  const innerX = 72;
+  const innerX = 63;
   const innerY = 34;
-  const innerWidth = 38;
+  const innerWidth = 56;
   const innerHeight = 332;
   const collarX = 77;
   const collarY = 12;
@@ -2808,13 +2808,12 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
     const capEndY = innerY + ((innerHeight * Math.max(4, Number(item.dropPercent) || 0)) / 100);
     return `
       <line x1="${x}" y1="${outerY + 4}" x2="${x}" y2="${capEndY}" stroke="#49596b" stroke-width="3" stroke-linecap="round"></line>
-      <rect x="${x - 6}" y="${capEndY - 4}" width="12" height="20" rx="6" fill="#cdd4db" stroke="rgba(73,89,107,0.78)" stroke-width="1.2"></rect>
     `;
   }).join("");
 
   const boostersSvg = boosterPositions.map((item) => {
     const y = innerY + ((innerHeight * item.topPercent) / 100);
-    return `<rect x="${innerX - 1}" y="${y}" width="${innerWidth + 2}" height="18" rx="9" fill="${holeLoadProfileBoosterColor(item.type)}" stroke="rgba(78,96,54,0.55)" stroke-width="1.2"></rect>`;
+    return `<line x1="${innerX + 3}" y1="${y + 9}" x2="${innerX + innerWidth - 3}" y2="${y + 9}" stroke="${holeLoadProfileBoosterColor(item.type)}" stroke-width="8" stroke-linecap="round"></line>`;
   }).join("");
 
   return `
