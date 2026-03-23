@@ -22,17 +22,19 @@ export function findRelationshipLimitConflict(state, input, excludeRelationshipI
   if (!input?.type || input.type === "offset") return null;
   const relationships = ensureRelationshipState(state);
   const edges = relationships.edges.filter((edge) => edge.id !== excludeRelationshipId && edge.type === input.type);
-  const fromConflict = edges.find((edge) => edge.fromHoleId === input.fromHoleId || edge.toHoleId === input.fromHoleId);
+  const fromConflict = edges.find((edge) => edge.fromHoleId === input.fromHoleId);
   if (fromConflict) {
     return {
       holeId: input.fromHoleId,
+      direction: "outgoing",
       edge: fromConflict,
     };
   }
-  const toConflict = edges.find((edge) => edge.fromHoleId === input.toHoleId || edge.toHoleId === input.toHoleId);
+  const toConflict = edges.find((edge) => edge.toHoleId === input.toHoleId);
   if (toConflict) {
     return {
       holeId: input.toHoleId,
+      direction: "incoming",
       edge: toConflict,
     };
   }

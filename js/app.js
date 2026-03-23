@@ -4841,7 +4841,8 @@ function finalizeRelationshipPath(holeIds, relationshipType, sign) {
     const conflict = findRelationshipLimitConflict(pendingState, { type: relationshipType, fromHoleId, toHoleId });
     if (conflict) {
       const hole = solverState.holesById.get(conflict.holeId);
-      window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has a ${relationshipLabel(relationshipType)} assignment.`);
+      const directionLabel = conflict.direction === "incoming" ? "incoming" : "outgoing";
+      window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has an ${directionLabel} ${relationshipLabel(relationshipType)} assignment.`);
       return false;
     }
     pendingEdges.push({ type: relationshipType, fromHoleId, toHoleId, sign });
@@ -4868,7 +4869,8 @@ function validateRelationshipAssignmentLimit(input, excludeRelationshipId = null
   const conflict = findRelationshipLimitConflict(solverState, input, excludeRelationshipId);
   if (!conflict) return true;
   const hole = solverState.holesById.get(conflict.holeId);
-  window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has a ${relationshipLabel(input.type)} assignment.`);
+  const directionLabel = conflict.direction === "incoming" ? "incoming" : "outgoing";
+  window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has an ${directionLabel} ${relationshipLabel(input.type)} assignment.`);
   return false;
 }
 
