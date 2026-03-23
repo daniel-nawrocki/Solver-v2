@@ -80,6 +80,12 @@ function printHeaderMetaFont(sizePx, weight = 600) {
   return `${weight} ${sizePx}px "Trebuchet MS", "Segoe UI", sans-serif`;
 }
 
+const TIMING_VISUALIZATION_DECK_COLORS = [
+  { fill: "#f59e0b", stroke: "#f97316" },
+  { fill: "#22c55e", stroke: "#0f766e" },
+  { fill: "#38bdf8", stroke: "#2563eb" },
+];
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -937,28 +943,36 @@ export class DiagramRenderer {
     const pulseWindowMs = 120;
     this.ctx.save();
     for (const hole of this.stateRef.holes) {
-      const holeTime = preview.holeTimes.get(hole.id);
-      if (!Number.isFinite(holeTime)) continue;
-      const delta = elapsedMs - holeTime;
-      if (delta < 0 || delta > pulseWindowMs) continue;
-
       const point = this.worldToScreen(hole.x, hole.y);
-      const progress = delta / pulseWindowMs;
-      const alpha = 1 - progress;
-      const ringRadius = this.holeRadius + 6 + (progress * 18);
+      const displayTimes = preview.displayTimesByHoleId?.get?.(hole.id);
+      const pulseTimes = Array.isArray(displayTimes) && displayTimes.length
+        ? displayTimes
+        : [preview.holeTimes.get(hole.id)];
 
-      this.ctx.globalAlpha = 0.42 * alpha;
-      this.ctx.fillStyle = "#f59e0b";
-      this.ctx.beginPath();
-      this.ctx.arc(point.x, point.y, this.holeRadius + 2 + (progress * 8), 0, Math.PI * 2);
-      this.ctx.fill();
+      pulseTimes.forEach((pulseTime, deckIndex) => {
+        if (!Number.isFinite(pulseTime)) return;
+        const delta = elapsedMs - pulseTime;
+        if (delta < 0 || delta > pulseWindowMs) return;
 
-      this.ctx.globalAlpha = 0.95 * alpha;
-      this.ctx.strokeStyle = "#f97316";
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.arc(point.x, point.y, ringRadius, 0, Math.PI * 2);
-      this.ctx.stroke();
+        const progress = delta / pulseWindowMs;
+        const alpha = 1 - progress;
+        const deckColor = TIMING_VISUALIZATION_DECK_COLORS[deckIndex] || TIMING_VISUALIZATION_DECK_COLORS[TIMING_VISUALIZATION_DECK_COLORS.length - 1];
+        const deckRadiusOffset = pulseTimes.length > 1 ? deckIndex * 4 : 0;
+        const ringRadius = this.holeRadius + 6 + deckRadiusOffset + (progress * 18);
+
+        this.ctx.globalAlpha = 0.42 * alpha;
+        this.ctx.fillStyle = deckColor.fill;
+        this.ctx.beginPath();
+        this.ctx.arc(point.x, point.y, this.holeRadius + 2 + deckRadiusOffset + (progress * 8), 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.globalAlpha = 0.95 * alpha;
+        this.ctx.strokeStyle = deckColor.stroke;
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(point.x, point.y, ringRadius, 0, Math.PI * 2);
+        this.ctx.stroke();
+      });
     }
     this.ctx.restore();
   }
