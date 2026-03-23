@@ -966,7 +966,7 @@ export class DiagramRenderer {
   }
 
   drawTimingPreviewInfo(preview) {
-    if (!preview || this.isDiagramMode()) return;
+    if (!preview || this.isDiagramMode() || this.isPrintRenderer) return;
     const topOverlayOffset = 92;
     this.ctx.save();
     this.ctx.fillStyle = "#0f172a";
