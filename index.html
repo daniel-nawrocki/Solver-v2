@@ -231,6 +231,12 @@
               <label>Offset Max (ms)
                 <input id="offsetDelayMaxInput" type="number" min="0" value="42">
               </label>
+              <label>Interdeck Min (ms)
+                <input id="interdeckDelayMinInput" type="number" min="0" value="0">
+              </label>
+              <label>Interdeck Max (ms)
+                <input id="interdeckDelayMaxInput" type="number" min="0" value="0">
+              </label>
             </div>
             <div id="timingManualFields" class="hidden">
               <label>Hole-to-Hole Delay (ms)
@@ -241,6 +247,9 @@
               </label>
               <label>Offset Delay (ms)
                 <input id="manualOffsetDelayInput" type="number" min="0" value="17">
+              </label>
+              <label>Interdeck Delay (ms)
+                <input id="manualInterdeckDelayInput" type="number" min="0" value="0">
               </label>
               <div class="status-note">Manual mode applies these values directly to the current timing pathing graph.</div>
             </div>
@@ -554,6 +563,26 @@
                 <div id="diagramHoleLoadingBoosterEditor" class="loading-entry-editor"></div>
               </div>
             </div>
+            <div id="diagramHoleDeckingSection" class="loading-panel hidden">
+              <h3>Selected Hole Decking</h3>
+              <label class="menu-checkbox-row"><input id="diagramDeckingEnabledInput" type="checkbox"><span>Enable Decking</span></label>
+              <label>Deck Count
+                <select id="diagramDeckCountSelect">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                </select>
+              </label>
+              <label>Interdeck Timing Mode
+                <select id="diagramInterdeckTimingModeSelect">
+                  <option value="top-first">Top First</option>
+                  <option value="simultaneous">Simultaneous</option>
+                </select>
+              </label>
+              <div id="diagramHoleDeckingStatus" class="status-note">Select a single hole to edit decking.</div>
+              <div id="diagramHoleDeckingDelaySummary" class="status-note">Deck delays: -</div>
+              <div id="diagramHoleDeckingEditor" class="loading-entry-editor"></div>
+            </div>
           </section>
         </div>
 
@@ -568,6 +597,29 @@
             <div id="diagramLoadingIncludedCountStatus" class="status-note">Holes Included: 0</div>
             <div id="diagramLoadingAverageStatus" class="status-note">Average: 0 lb/hole</div>
             <div id="diagramLoadingSelectionStatus" class="status-note">Select one or more holes to assign detonators and boosters.</div>
+            <label>Deck Preset
+              <select id="diagramDeckPresetSelect">
+                <option value="single">Single deck</option>
+                <option value="two-equal">2-deck equal</option>
+                <option value="three-equal">3-deck equal</option>
+              </select>
+            </label>
+            <div class="loading-editor-block">
+              <div class="loading-editor-head">
+                <strong>Deck Layout for Apply</strong>
+              </div>
+              <div id="diagramDeckingDraftStatus" class="status-note">Choose a deck preset to edit a batch deck layout.</div>
+              <div id="diagramDeckingDraftEditor" class="loading-entry-editor"></div>
+            </div>
+            <div class="row-actions">
+              <button id="diagramApplyDeckingToSelectionBtn" type="button">Apply Decking to Selection</button>
+              <button id="diagramApplyDeckingToBoxBtn" type="button">Apply to Box</button>
+            </div>
+            <div class="row-actions">
+              <button id="diagramApplyDeckingToPolygonBtn" type="button">Apply to Polygon</button>
+              <button id="diagramClearDeckingBtn" type="button">Clear Decking</button>
+            </div>
+            <div id="diagramDeckingApplyStatus" class="status-note">Choose a preset, then apply it to the current selection or arm box/polygon apply.</div>
             <div class="loading-editor-block">
               <div class="loading-editor-head">
                 <strong>Detonators for Selected Holes</strong>

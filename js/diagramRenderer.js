@@ -821,8 +821,8 @@ export class DiagramRenderer {
     const activeOverlapKey = !diagramMode ? this.stateRef?.ui?.activeOverlapBinKey || null : null;
     const activeOverlapHoleIds = !diagramMode && preview && activeOverlapKey
       ? new Set(
-        (preview.overlapGroups || []).find((group) => group.key === activeOverlapKey)?.holeIds
-        || (preview.overlapBins || []).find((bin) => bin.key === activeOverlapKey)?.holeIds
+        (preview.overlapBins || []).find((bin) => bin.key === activeOverlapKey)?.holeIds
+        || (preview.overlapGroups || []).find((group) => group.key === activeOverlapKey)?.holeIds
         || []
       )
       : null;
@@ -909,7 +909,15 @@ export class DiagramRenderer {
       } else if (!diagramMode && preview && Number.isFinite(time)) {
         this.ctx.fillStyle = "#334155";
         this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 600);
-        this.ctx.fillText(`${time.toFixed(0)}ms`, point.x + 8, point.y + 8);
+        const displayTimes = preview.displayTimesByHoleId?.get?.(hole.id) || [time];
+        const timingText = displayTimes.map((value) => `${value.toFixed(0)}`);
+        if (timingText.join(" / ").length > 10 || timingText.length > 2) {
+          timingText.forEach((line, index) => {
+            this.ctx.fillText(`${line}ms`, point.x + 8, point.y + 8 + (index * 11));
+          });
+        } else {
+          this.ctx.fillText(`${timingText.join(" / ")}ms`, point.x + 8, point.y + 8);
+        }
       }
     }
   }
@@ -967,7 +975,11 @@ export class DiagramRenderer {
     const offsetText = preview.mode === "manual" && preview.offsetAssignments?.size
       ? ` | Offset ${preview.manualOffsetDelay}ms`
       : "";
-    this.ctx.fillText(`${prefix}: H2H ${preview.holeDelay}ms | R2R ${preview.rowDelay}ms${offsetText} | Peak(8ms): ${preview.density8ms}`, 14, topOverlayOffset);
+    const peakText = preview.hasDecking
+      ? `Peak(8ms): ${preview.peakBinCount} decks / ${Math.round((preview.peakBinWeightLb || 0) * 10) / 10} lb`
+      : `Peak(8ms): ${preview.density8ms}`;
+    const interdeckText = preview.hasDecking ? ` | Interdeck ${preview.interdeckDelay}ms` : "";
+    this.ctx.fillText(`${prefix}: H2H ${preview.holeDelay}ms | R2R ${preview.rowDelay}ms${offsetText}${interdeckText} | ${peakText}`, 14, topOverlayOffset);
     this.ctx.restore();
   }
 

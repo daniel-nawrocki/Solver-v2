@@ -515,6 +515,31 @@ button:active {
   margin-top: 6px;
 }
 
+.decking-entry-row {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(159, 179, 201, 0.34);
+  border-radius: 12px;
+  background: rgba(248, 251, 255, 0.96);
+}
+
+.decking-entry-head {
+  display: grid;
+  gap: 4px;
+}
+
+.decking-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.decking-entry-grid label {
+  display: grid;
+  gap: 6px;
+}
+
 .timing-item {
   width: 100%;
   text-align: left;

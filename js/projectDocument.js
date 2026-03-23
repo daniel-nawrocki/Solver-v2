@@ -37,6 +37,19 @@ function cloneHole(hole = {}) {
     coordinates: cloneCoordinateBundle(hole.coordinates),
     detonators: Array.isArray(hole.detonators) ? hole.detonators.map((entry) => ({ ...entry })) : [],
     boosters: Array.isArray(hole.boosters) ? hole.boosters.map((entry) => ({ ...entry })) : [],
+    deckStemIntervals: Array.isArray(hole.deckStemIntervals)
+      ? hole.deckStemIntervals.map((interval) => ({
+        startDepth: Number.isFinite(Number(interval.startDepth)) ? Number(interval.startDepth) : 0,
+        endDepth: Number.isFinite(Number(interval.endDepth)) ? Number(interval.endDepth) : 0,
+      }))
+      : [],
+    decks: Array.isArray(hole.decks)
+      ? hole.decks.map((deck) => ({
+        ...deck,
+        detonators: Array.isArray(deck.detonators) ? deck.detonators.map((entry) => ({ ...entry })) : [],
+        boosters: Array.isArray(deck.boosters) ? deck.boosters.map((entry) => ({ ...entry })) : [],
+      }))
+      : [],
   };
 }
 
@@ -72,16 +85,20 @@ function cloneTimingResults(results = []) {
     originalHoleTimes: Array.isArray(result.originalHoleTimes)
       ? result.originalHoleTimes.map((entry) => [...entry])
       : Array.from(result.originalHoleTimes || []),
+    deckTimes: Array.isArray(result.deckTimes) ? result.deckTimes.map((entry) => [...entry]) : Array.from(result.deckTimes || []),
+    displayTimesByHoleId: Array.isArray(result.displayTimesByHoleId)
+      ? result.displayTimesByHoleId.map(([holeId, values]) => [holeId, [...values]])
+      : Array.from(result.displayTimesByHoleId || []).map(([holeId, values]) => [holeId, [...values]]),
     offsetAssignments: Array.isArray(result.offsetAssignments)
       ? result.offsetAssignments.map((entry) => [...entry])
       : Array.from(result.offsetAssignments || []),
     timingAdjustments: Array.isArray(result.timingAdjustments) ? result.timingAdjustments.map((entry) => ({ ...entry })) : [],
     delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
     overlapBins: Array.isArray(result.overlapBins)
-      ? result.overlapBins.map((bin) => ({ ...bin, holeIds: Array.isArray(bin.holeIds) ? [...bin.holeIds] : [] }))
+      ? result.overlapBins.map((bin) => ({ ...bin, holeIds: Array.isArray(bin.holeIds) ? [...bin.holeIds] : [], deckIds: Array.isArray(bin.deckIds) ? [...bin.deckIds] : [] }))
       : [],
     overlapGroups: Array.isArray(result.overlapGroups)
-      ? result.overlapGroups.map((group) => ({ ...group, holeIds: Array.isArray(group.holeIds) ? [...group.holeIds] : [] }))
+      ? result.overlapGroups.map((group) => ({ ...group, holeIds: Array.isArray(group.holeIds) ? [...group.holeIds] : [], deckIds: Array.isArray(group.deckIds) ? [...group.deckIds] : [] }))
       : [],
   }));
 }
@@ -100,7 +117,7 @@ function cloneShotCorners(corners = []) {
 
 export function serializeProjectDocument(projectState) {
   return {
-    version: 3,
+    version: 4,
     holes: (projectState.holes || []).map(cloneHole),
     csvCache: cloneCsvCache(projectState.csvCache),
     geo: cloneGeo(projectState.geo),
@@ -123,6 +140,7 @@ export function serializeProjectDocument(projectState) {
         holeToHole: { ...(projectState.timing?.timing?.holeToHole || {}) },
         rowToRow: { ...(projectState.timing?.timing?.rowToRow || {}) },
         offset: { ...(projectState.timing?.timing?.offset || {}) },
+        interdeck: { ...(projectState.timing?.timing?.interdeck || {}) },
       },
       manualTiming: { ...(projectState.timing?.manualTiming || {}) },
       relationships: {
@@ -166,6 +184,7 @@ export function parseProjectDocument(document) {
         holeToHole: { ...(document.timing?.timing?.holeToHole || {}) },
         rowToRow: { ...(document.timing?.timing?.rowToRow || {}) },
         offset: { ...(document.timing?.timing?.offset || {}) },
+        interdeck: { ...(document.timing?.timing?.interdeck || {}) },
       },
       manualTiming: { ...(document.timing?.manualTiming || {}) },
       relationships: {

@@ -36,6 +36,7 @@ import {
   validateTimingGraph,
   buildManualTimingResult,
   deriveTimingAnalysis,
+  solveTimingCombinations,
 } from "./timingSolver.js";
 import {
   addRelationship,
@@ -136,11 +137,13 @@ function createSolverState() {
       holeToHole: { min: 16, max: 34 },
       rowToRow: { min: 84, max: 142 },
       offset: { min: 17, max: 42 },
+      interdeck: { min: 0, max: 0 },
     },
     manualTiming: {
       holeDelay: 16,
       rowDelay: 84,
       offsetDelay: 17,
+      interdeckDelay: 0,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     csvCache: null,
@@ -173,6 +176,12 @@ function createDiagramState() {
         detonators: [],
         boosters: [],
       },
+      deckingDraft: {
+        interdeckTimingMode: "top-first",
+        decks: [],
+        stemIntervals: [],
+      },
+      pendingDeckingApplyMode: null,
       currentStrokeDraft: null,
       selectedTextId: null,
       dragTextId: null,
@@ -322,11 +331,13 @@ const projectState = {
       holeToHole: { min: 16, max: 34 },
       rowToRow: { min: 84, max: 142 },
       offset: { min: 17, max: 42 },
+      interdeck: { min: 0, max: 0 },
     },
     manualTiming: {
       holeDelay: 16,
       rowDelay: 84,
       offsetDelay: 17,
+      interdeckDelay: 0,
     },
     relationships: { originHoleId: null, edges: [], nextId: 1 },
     timingResults: [],
@@ -437,9 +448,12 @@ const els = {
   rowDelayMax: document.getElementById("rowDelayMaxInput"),
   offsetDelayMin: document.getElementById("offsetDelayMinInput"),
   offsetDelayMax: document.getElementById("offsetDelayMaxInput"),
+  interdeckDelayMin: document.getElementById("interdeckDelayMinInput"),
+  interdeckDelayMax: document.getElementById("interdeckDelayMaxInput"),
   manualHoleDelayInput: document.getElementById("manualHoleDelayInput"),
   manualRowDelayInput: document.getElementById("manualRowDelayInput"),
   manualOffsetDelayInput: document.getElementById("manualOffsetDelayInput"),
+  manualInterdeckDelayInput: document.getElementById("manualInterdeckDelayInput"),
   timingSolveFloating: document.getElementById("timingSolveFloating"),
   timingSolveFloatingHandle: document.getElementById("timingSolveFloatingHandle"),
   timingFloatingOriginValue: document.getElementById("timingFloatingOriginValue"),
@@ -561,6 +575,21 @@ const els = {
   diagramHoleLoadingAddDetonatorBtn: document.getElementById("diagramHoleLoadingAddDetonatorBtn"),
   diagramHoleLoadingBoosterEditor: document.getElementById("diagramHoleLoadingBoosterEditor"),
   diagramHoleLoadingAddBoosterBtn: document.getElementById("diagramHoleLoadingAddBoosterBtn"),
+  diagramHoleDeckingSection: document.getElementById("diagramHoleDeckingSection"),
+  diagramDeckingEnabledInput: document.getElementById("diagramDeckingEnabledInput"),
+  diagramDeckCountSelect: document.getElementById("diagramDeckCountSelect"),
+  diagramInterdeckTimingModeSelect: document.getElementById("diagramInterdeckTimingModeSelect"),
+  diagramHoleDeckingStatus: document.getElementById("diagramHoleDeckingStatus"),
+  diagramHoleDeckingDelaySummary: document.getElementById("diagramHoleDeckingDelaySummary"),
+  diagramHoleDeckingEditor: document.getElementById("diagramHoleDeckingEditor"),
+  diagramDeckPresetSelect: document.getElementById("diagramDeckPresetSelect"),
+  diagramDeckingDraftStatus: document.getElementById("diagramDeckingDraftStatus"),
+  diagramDeckingDraftEditor: document.getElementById("diagramDeckingDraftEditor"),
+  diagramApplyDeckingToSelectionBtn: document.getElementById("diagramApplyDeckingToSelectionBtn"),
+  diagramApplyDeckingToBoxBtn: document.getElementById("diagramApplyDeckingToBoxBtn"),
+  diagramApplyDeckingToPolygonBtn: document.getElementById("diagramApplyDeckingToPolygonBtn"),
+  diagramClearDeckingBtn: document.getElementById("diagramClearDeckingBtn"),
+  diagramDeckingApplyStatus: document.getElementById("diagramDeckingApplyStatus"),
   diagramHolePopupBackdrop: document.getElementById("diagramHolePopupBackdrop"),
   diagramHolePopup: document.getElementById("diagramHolePopup"),
   diagramHolePopupTitle: document.getElementById("diagramHolePopupTitle"),
@@ -1145,6 +1174,8 @@ function cloneSelectedTiming(selectedTiming) {
     holeTimes,
     originalHoleTimes,
     adjustedHoleTimes,
+    deckTimes: selectedTiming.deckTimes ? new Map(selectedTiming.deckTimes) : new Map(),
+    displayTimesByHoleId: selectedTiming.displayTimesByHoleId ? new Map(selectedTiming.displayTimesByHoleId) : new Map(),
     offsetAssignments: selectedTiming.offsetAssignments ? new Map(selectedTiming.offsetAssignments) : new Map(),
     timingAdjustments: Array.isArray(selectedTiming.timingAdjustments) ? selectedTiming.timingAdjustments.map((entry) => ({ ...entry })) : [],
     delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
@@ -1155,10 +1186,10 @@ function cloneSelectedTiming(selectedTiming) {
       ? selectedTiming.fixedOverlapGroupCount
       : derived.fixedOverlapGroupCount,
     overlapBins: Array.isArray(selectedTiming.overlapBins) && selectedTiming.overlapBins.length
-      ? selectedTiming.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+      ? selectedTiming.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
       : derived.overlapBins,
     overlapGroups: Array.isArray(selectedTiming.overlapGroups) && selectedTiming.overlapGroups.length
-      ? selectedTiming.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
+      ? selectedTiming.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
       : derived.overlapGroups,
   }];
 }
@@ -1172,6 +1203,19 @@ function cloneHole(hole) {
     coordinates: cloneCoordinateBundle(hole.coordinates),
     detonators: cloneMaterialEntries(hole.detonators),
     boosters: cloneMaterialEntries(hole.boosters),
+    deckStemIntervals: Array.isArray(hole.deckStemIntervals)
+      ? hole.deckStemIntervals.map((interval) => ({
+        startDepth: Number.isFinite(Number(interval.startDepth)) ? Number(interval.startDepth) : 0,
+        endDepth: Number.isFinite(Number(interval.endDepth)) ? Number(interval.endDepth) : 0,
+      }))
+      : [],
+    decks: Array.isArray(hole.decks)
+      ? hole.decks.map((deck) => ({
+        ...deck,
+        detonators: cloneMaterialEntries(deck.detonators),
+        boosters: cloneMaterialEntries(deck.boosters),
+      }))
+      : [],
   };
 }
 
@@ -1274,6 +1318,10 @@ function cloneTimingRanges(timing = {}) {
       min: Number(timing.offset?.min) || 17,
       max: Number(timing.offset?.max) || 42,
     },
+    interdeck: {
+      min: Number(timing.interdeck?.min) || 0,
+      max: Number(timing.interdeck?.max) || 0,
+    },
   };
 }
 
@@ -1282,6 +1330,7 @@ function cloneManualTiming(manualTiming = {}) {
     holeDelay: Number.isFinite(Number(manualTiming.holeDelay)) ? Number(manualTiming.holeDelay) : 16,
     rowDelay: Number.isFinite(Number(manualTiming.rowDelay)) ? Number(manualTiming.rowDelay) : 84,
     offsetDelay: Number.isFinite(Number(manualTiming.offsetDelay)) ? Number(manualTiming.offsetDelay) : 17,
+    interdeckDelay: Number.isFinite(Number(manualTiming.interdeckDelay)) ? Number(manualTiming.interdeckDelay) : 0,
   };
 }
 
@@ -1294,6 +1343,8 @@ function cloneTimingResults(results = []) {
       ...result,
       holeTimes,
       originalHoleTimes,
+      deckTimes: result.deckTimes ? new Map(result.deckTimes) : new Map(),
+      displayTimesByHoleId: result.displayTimesByHoleId ? new Map(result.displayTimesByHoleId) : new Map(),
       offsetAssignments: result.offsetAssignments ? new Map(result.offsetAssignments) : new Map(),
       timingAdjustments: Array.isArray(result.timingAdjustments) ? result.timingAdjustments.map((entry) => ({ ...entry })) : [],
       delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
@@ -1304,10 +1355,10 @@ function cloneTimingResults(results = []) {
         ? result.fixedOverlapGroupCount
         : derived.fixedOverlapGroupCount,
       overlapBins: Array.isArray(result.overlapBins) && result.overlapBins.length
-        ? result.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+        ? result.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
         : derived.overlapBins,
       overlapGroups: Array.isArray(result.overlapGroups) && result.overlapGroups.length
-        ? result.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
+        ? result.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
         : derived.overlapGroups,
     };
   });
@@ -1399,6 +1450,12 @@ function hydrateDiagramFromProject() {
     detonators: [],
     boosters: [],
   };
+  diagramState.ui.deckingDraft = {
+    interdeckTimingMode: "top-first",
+    decks: [],
+    stemIntervals: [],
+  };
+  diagramState.ui.pendingDeckingApplyMode = null;
   diagramState.ui.currentStrokeDraft = null;
   diagramState.ui.selectedTextId = null;
   diagramState.ui.dragTextId = null;
@@ -1543,7 +1600,7 @@ function activeTimingMode() {
 
 function defaultTimingMessage() {
   return activeTimingMode() === "manual"
-    ? "Enter manual H2H, R2R, and Offset values, then apply manual timing."
+    ? "Enter manual H2H, R2R, Offset, and Interdeck values, then apply manual timing."
     : "Run solver to see best delay combinations.";
 }
 
@@ -1557,6 +1614,7 @@ function advancedSolveCombinationCount() {
   const offsetEdgeCount = solverState.relationships.edges.filter((edge) => edge.type === "offset").length;
   return timingRangeCount(solverState.timing.holeToHole.min, solverState.timing.holeToHole.max)
     * timingRangeCount(solverState.timing.rowToRow.min, solverState.timing.rowToRow.max)
+    * timingRangeCount(solverState.timing.interdeck.min, solverState.timing.interdeck.max)
     * (timingRangeCount(solverState.timing.offset.min, solverState.timing.offset.max) ** offsetEdgeCount);
 }
 
@@ -1817,6 +1875,7 @@ function syncManualTimingInputs() {
   els.manualHoleDelayInput.value = String(solverState.manualTiming.holeDelay);
   els.manualRowDelayInput.value = String(solverState.manualTiming.rowDelay);
   els.manualOffsetDelayInput.value = String(solverState.manualTiming.offsetDelay);
+  els.manualInterdeckDelayInput.value = String(solverState.manualTiming.interdeckDelay || 0);
 }
 
 function renderTimingModeControls() {
@@ -1830,6 +1889,15 @@ function renderTimingModeControls() {
   els.solveTimingBtn.disabled = solverState.ui.isSolving && !manualMode;
   els.cancelTimingSolveBtn.classList.toggle("hidden", manualMode || !solverState.ui.isSolving);
   els.cancelTimingSolveBtn.disabled = !solverState.ui.isSolving;
+  els.holeDelayMin.value = String(solverState.timing.holeToHole.min);
+  els.holeDelayMax.value = String(solverState.timing.holeToHole.max);
+  els.rowDelayMin.value = String(solverState.timing.rowToRow.min);
+  els.rowDelayMax.value = String(solverState.timing.rowToRow.max);
+  els.offsetDelayMin.value = String(solverState.timing.offset.min);
+  els.offsetDelayMax.value = String(solverState.timing.offset.max);
+  els.interdeckDelayMin.value = String(solverState.timing.interdeck.min);
+  els.interdeckDelayMax.value = String(solverState.timing.interdeck.max);
+  syncManualTimingInputs();
   updateTimingSolveProgress(solverState.ui.solveProgress.current, solverState.ui.solveProgress.total);
   syncTimingSolveFloating();
 }
@@ -1851,7 +1919,7 @@ function setTimingMode(mode) {
 function manualDelayCountsMarkup(result) {
   if (!Array.isArray(result.delayCounts) || !result.delayCounts.length) return "";
   const rows = result.delayCounts
-    .map((entry) => `<div class="timing-delay-count-row"><span>${escapeHtml(`${entry.time}ms`)}</span><strong>${escapeHtml(`${entry.count} hole${entry.count === 1 ? "" : "s"}`)}</strong></div>`)
+    .map((entry) => `<div class="timing-delay-count-row"><span>${escapeHtml(`${entry.time}ms`)}</span><strong>${escapeHtml(`${entry.count} ${result.hasDecking ? `hole start${entry.count === 1 ? "" : "s"}` : `hole${entry.count === 1 ? "" : "s"}`}`)}</strong></div>`)
     .join("");
   return `<div class="timing-delay-counts">${rows}</div>`;
 }
@@ -1859,8 +1927,8 @@ function manualDelayCountsMarkup(result) {
 function currentTimingOverlapBin() {
   const result = selectedTimingResult();
   if (!result || !solverState.ui.activeOverlapBinKey) return null;
-  return (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey)
-    || (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey)
+  return (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey)
+    || (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey)
     || null;
 }
 
@@ -1873,7 +1941,7 @@ function renderTimingOverlapAnalysis() {
   const result = selectedTimingResult();
   const hasResult = Boolean(result);
   const showPanel = hasResult && solverState.ui.showOverlapAnalysis === true;
-  const overlapGroups = (result?.overlapGroups || []).filter((group) => group.isOverlapGroup && group.count > 1);
+  const overlapBins = (result?.overlapBins || []).filter((bin) => bin.isOverlapGroup && (bin.deckCount || bin.count) > 1);
   const activeBin = currentTimingOverlapBin();
 
   els.timingOverlapAnalysisBtn.classList.toggle("hidden", !hasResult);
@@ -1887,26 +1955,30 @@ function renderTimingOverlapAnalysis() {
     return;
   }
 
-  if (!overlapGroups.length) {
-    els.timingOverlapSummary.textContent = `No holes are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"}.`;
+  if (!overlapBins.length) {
+    els.timingOverlapSummary.textContent = result.hasDecking
+      ? `No decks are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} deck${result.peakBinCount === 1 ? "" : "s"} | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb.`
+      : `No holes are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"}.`;
     els.timingOverlapChart.innerHTML = "";
     return;
   }
 
-  const sortedGroups = [...overlapGroups].sort((a, b) => b.count - a.count || a.startMs - b.startMs);
-  els.timingOverlapSummary.textContent = `Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`;
+  const sortedGroups = [...overlapBins].sort((a, b) => (b.deckCount || b.count) - (a.deckCount || a.count) || a.startMs - b.startMs);
+  els.timingOverlapSummary.textContent = result.hasDecking
+    ? `Peak 8 ms window: ${result.peakBinCount} decks | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`
+    : `Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`;
   els.timingOverlapChart.innerHTML = `
     <div class="timing-overlap-list">
       ${sortedGroups.map((group) => {
         const active = activeBin?.key === group.key ? "active" : "";
         const durationMs = Math.max(0, group.endMs - group.startMs);
-        const holeMarkup = group.holeIds
+        const holeMarkup = [...new Set(group.holeIds || [])]
           .map((holeId) => `<span class="timing-overlap-hole">${escapeHtml(String(overlapHoleLabel(holeId)))}</span>`)
           .join("");
         return `
           <button class="timing-overlap-card ${active}" type="button" data-overlap-bin="${escapeHtml(group.key)}" aria-pressed="${active ? "true" : "false"}">
             <span class="timing-overlap-card-head">
-              <span class="timing-overlap-card-title">${escapeHtml(`${group.count} holes within 8 ms`)}</span>
+              <span class="timing-overlap-card-title">${escapeHtml(result.hasDecking ? `${group.deckCount || group.count} decks | ${formatLoadingWeight(group.totalExplosiveWeightLb || 0)} lb` : `${group.count} holes within 8 ms`)}</span>
               <span class="timing-overlap-card-window">${escapeHtml(`${group.startMs.toFixed(1)}-${group.endMs.toFixed(1)} ms`)}</span>
             </span>
             <span class="timing-overlap-card-meta">${escapeHtml(`Spread: ${durationMs.toFixed(1)} ms`)}</span>
@@ -1914,7 +1986,7 @@ function renderTimingOverlapAnalysis() {
           </button>
         `;
       }).join("")}
-      <div class="timing-overlap-note">Each row lists the holes whose firing times land within the same 8 ms period.</div>
+      <div class="timing-overlap-note">${escapeHtml(result.hasDecking ? "Each row lists the holes contributing decks that fire within the same 8 ms period." : "Each row lists the holes whose firing times land within the same 8 ms period.")}</div>
     </div>
   `;
 }
@@ -1923,6 +1995,7 @@ function syncManualTimingFromInputs() {
   solverState.manualTiming.holeDelay = Number(els.manualHoleDelayInput.value) || 0;
   solverState.manualTiming.rowDelay = Number(els.manualRowDelayInput.value) || 0;
   solverState.manualTiming.offsetDelay = Number(els.manualOffsetDelayInput.value) || 0;
+  solverState.manualTiming.interdeckDelay = Number(els.manualInterdeckDelayInput.value) || 0;
   persistTimingStateToProject();
 }
 
@@ -1937,30 +2010,28 @@ function startWorkerTimingSolve() {
   if (!validation.valid) {
     resetTimingResults(validation.reason);
     solverRenderer.render();
-      return;
+    return;
   }
   if (!confirmLargeSolveIfNeeded()) return;
-
-  if (solverState.ui.isSolving) cancelTimingSolve({ keepMessage: true });
   resetTimingVisualization();
   resetTimingOverlapAnalysis();
-  solverState.timingResults = [];
-  solverState.ui.activeTimingPreviewIndex = -1;
   solverState.ui.readinessDismissed = false;
-  solverState.ui.isSolving = true;
-  solverState.solverMessage = "Starting advanced brute force solve...";
-  showTimingSolveFloating();
-  updateTimingSolveProgress(0, 0);
+  solverState.solverMessage = "Running advanced solve...";
+  const results = solveTimingCombinations(solverState);
+  if (!results.length) {
+    resetTimingResults("No valid timing combinations were found.");
+    solverRenderer.render();
+    return;
+  }
+  solverState.timingResults = results;
+  solverState.ui.activeTimingPreviewIndex = 0;
+  solverState.ui.isSolving = false;
+  solverState.solverMessage = "";
+  updateTimingSolveProgress(advancedSolveCombinationCount(), advancedSolveCombinationCount());
   renderTimingModeControls();
   renderTimingResults();
+  if (solverState.timingResults.length) openMenu("timingResultsMenu");
   solverRenderer.render();
-
-  ensureSolverWorker().postMessage({
-    type: "start",
-    mode: "advanced",
-    inputs: buildSolverWorkerPayload(),
-    ranges: cloneTimingRanges(solverState.timing),
-  });
 }
 
 function cloneLabelLayoutMap(layoutMap = new Map()) {
@@ -2082,14 +2153,16 @@ function clonePrintPage(page) {
       holeTimes: new Map(timing.holeTimes),
       originalHoleTimes: timing.originalHoleTimes ? new Map(timing.originalHoleTimes) : new Map(timing.holeTimes),
       adjustedHoleTimes: timing.adjustedHoleTimes ? new Map(timing.adjustedHoleTimes) : new Map(timing.holeTimes),
+      deckTimes: timing.deckTimes ? new Map(timing.deckTimes) : new Map(),
+      displayTimesByHoleId: timing.displayTimesByHoleId ? new Map(timing.displayTimesByHoleId) : new Map(),
       offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
       timingAdjustments: Array.isArray(timing.timingAdjustments) ? timing.timingAdjustments.map((entry) => ({ ...entry })) : [],
       delayCounts: Array.isArray(timing.delayCounts) ? timing.delayCounts.map((entry) => ({ ...entry })) : [],
       overlapBins: Array.isArray(timing.overlapBins)
-        ? timing.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])] }))
+        ? timing.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
         : [],
       overlapGroups: Array.isArray(timing.overlapGroups)
-        ? timing.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])] }))
+        ? timing.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
         : [],
     })),
     viewport: {
@@ -2872,7 +2945,7 @@ function clampPercent(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItems, boosterPositions }) {
+function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItems, boosterPositions, deckSegments = [], totalDepthFt = 1 }) {
   const outerX = 52;
   const outerY = 16;
   const outerWidth = 78;
@@ -2892,10 +2965,13 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
   const fillClipId = `hole-load-shell-${Math.random().toString(36).slice(2, 10)}`;
   const stemmingHeightPx = Math.max(0, (innerHeight * stemmingPercent) / 100);
   const emulsionHeightPx = Math.max(0, (innerHeight * emulsionPercent) / 100);
-  const stemmingRect = stemmingPercent > 0
+  const segmentRects = deckSegments.length
+    ? buildHoleLoadProfileDeckRects(deckSegments, innerX + fillInset, innerY + fillInset, innerWidth - (fillInset * 2), innerHeight - (fillInset * 2), Math.max(1, totalDepthFt))
+    : "";
+  const stemmingRect = !deckSegments.length && stemmingPercent > 0
     ? `<rect x="${innerX + fillInset}" y="${innerY + fillInset}" width="${innerWidth - (fillInset * 2)}" height="${Math.max(0, stemmingHeightPx - fillInset)}" fill="#d7dee7"></rect>`
     : "";
-  const emulsionRect = emulsionPercent > 0
+  const emulsionRect = !deckSegments.length && emulsionPercent > 0
     ? `<rect x="${innerX + fillInset}" y="${innerY + stemmingHeightPx}" width="${innerWidth - (fillInset * 2)}" height="${Math.max(0, emulsionHeightPx - fillInset)}" fill="#f2b5ca"></rect>`
     : "";
   const dividerLine = stemmingPercent > 0 && emulsionPercent > 0
@@ -2947,6 +3023,7 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
       <rect x="${outerX}" y="${outerY}" width="${outerWidth}" height="${outerHeight}" rx="20" fill="#f8fbfe" stroke="rgba(71,85,105,0.72)" stroke-width="2"></rect>
       <g clip-path="url(#${fillClipId})">
         <rect x="${innerX}" y="${innerY}" width="${innerWidth}" height="${innerHeight}" fill="#eef4f9"></rect>
+        ${segmentRects}
         ${stemmingRect}
         ${emulsionRect}
       </g>
@@ -2960,6 +3037,12 @@ function buildHoleLoadProfileBoreSvg({ stemmingPercent, emulsionPercent, capItem
 }
 
 function holeLoadProfileGroupKey(hole) {
+  const decks = (hole.decks || []).map((deck) => [
+    Number(deck.stemmingAbove) || 0,
+    Number(deck.columnLength) || 0,
+    (deck.detonators || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|"),
+    (deck.boosters || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|"),
+  ].join(":")).join("~");
   const detonators = (hole.detonators || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
   const boosters = (hole.boosters || []).map((entry) => `${entry.type}:${entry.quantity}`).join("|");
   return [
@@ -2967,9 +3050,51 @@ function holeLoadProfileGroupKey(hole) {
     Number(hole.stemHeight) || 0,
     Number(hole.columnDepth) || 0,
     Number(hole.diameter) || 0,
+    decks,
     detonators,
     boosters,
   ].join("~");
+}
+
+function holeLoadProfileSegments(hole) {
+  const depth = Math.max(0, Number(hole?.depth) || 0);
+  if (!(depth > 0)) return [];
+  const decks = Array.isArray(hole?.decks) && hole.decks.length ? hole.decks : [];
+  if (!decks.length) {
+    const stemming = Math.max(0, Number(hole?.stemHeight) || 0);
+    const column = Math.max(0, Number(hole?.columnDepth) || 0);
+    return [
+      { kind: "stemming", startFt: 0, lengthFt: stemming },
+      { kind: "emulsion", startFt: stemming, lengthFt: column },
+    ].filter((segment) => segment.lengthFt > 0);
+  }
+  const segments = [];
+  let cursor = 0;
+  decks.forEach((deck, deckIndex) => {
+    const stemmingAbove = Math.max(0, Number(deck?.stemmingAbove) || 0);
+    const columnLength = Math.max(0, Number(deck?.columnLength) || 0);
+    if (stemmingAbove > 0) segments.push({ kind: "stemming", deckIndex, startFt: cursor, lengthFt: stemmingAbove });
+    cursor += stemmingAbove;
+    if (columnLength > 0) segments.push({ kind: "emulsion", deckIndex, startFt: cursor, lengthFt: columnLength });
+    cursor += columnLength;
+  });
+  return segments.filter((segment) => segment.lengthFt > 0);
+}
+
+function buildHoleLoadProfileDeckRects(segments, innerX, innerY, innerWidth, innerHeight, totalDepth) {
+  return segments.map((segment, index) => {
+    const topPx = innerY + ((innerHeight * segment.startFt) / totalDepth);
+    const heightPx = Math.max(0, (innerHeight * segment.lengthFt) / totalDepth);
+    const fill = segment.kind === "emulsion" ? "#f2b5ca" : "#d7dee7";
+    const stroke = segment.kind === "emulsion" ? "rgba(142,72,103,0.42)" : "rgba(96,118,143,0.32)";
+    const divider = index > 0
+      ? `<line x1="${innerX}" y1="${topPx}" x2="${innerX + innerWidth}" y2="${topPx}" stroke="rgba(51,65,85,0.55)" stroke-width="1.4"></line>`
+      : "";
+    const deckLabel = segment.kind === "emulsion" && heightPx >= 18
+      ? `<text x="${innerX + (innerWidth / 2)}" y="${topPx + Math.max(14, Math.min(heightPx - 6, 18))}" text-anchor="middle" font-size="11" font-weight="700" fill="rgba(91,33,60,0.76)">D${Number(segment.deckIndex) + 1}</text>`
+      : "";
+    return `<rect x="${innerX}" y="${topPx}" width="${innerWidth}" height="${heightPx}" fill="${fill}" stroke="${stroke}" stroke-width="${index > 0 ? 1 : 0}"></rect>${divider}${deckLabel}`;
+  }).join("");
 }
 
 function groupedHoleLoadProfiles(page) {
@@ -3000,6 +3125,7 @@ function buildHoleLoadProfileCard(group) {
   const totalDepth = Number.isFinite(depth) && depth > 0 ? depth : 1;
   const stemmingHeight = Math.max(0, Number(hole.stemHeight) || 0);
   const columnDepth = Math.max(0, Number(hole.columnDepth) || 0);
+  const deckSegments = holeLoadProfileSegments(hole);
   const stemmingPercent = clampPercent((stemmingHeight / totalDepth) * 100, 0, 100);
   const emulsionPercent = clampPercent((columnDepth / totalDepth) * 100, 0, 100);
   const detonatorUnits = flatMaterialUnits(hole.detonators);
@@ -3048,6 +3174,9 @@ function buildHoleLoadProfileCard(group) {
     "No boosters assigned",
   );
   const holeList = escapeHtml(group.holeLabels.join(", "));
+  const deckSummary = Array.isArray(hole.decks) && hole.decks.length > 1
+    ? hole.decks.map((deck, index) => `Deck ${index + 1}: stem ${formatLoadingWeight(deck.stemmingAbove || 0)} ft | column ${formatLoadingWeight(deck.columnLength || 0)} ft`).join(" | ")
+    : "Single deck";
 
   return `
     <section class="print-hole-load-profile-card-shell">
@@ -3060,6 +3189,8 @@ function buildHoleLoadProfileCard(group) {
                 emulsionPercent,
                 capItems,
                 boosterPositions,
+                deckSegments,
+                totalDepthFt: totalDepth,
               })}
             </div>
           </div>
@@ -3073,6 +3204,7 @@ function buildHoleLoadProfileCard(group) {
             <div class="print-hole-load-profile-row"><span>Explosive Column</span><strong>${escapeHtml(`${formatLoadingWeight(columnDepth)} ft`)}</strong></div>
             <div class="print-hole-load-profile-row"><span>Emulsion</span><strong>${escapeHtml(`${formatLoadingWeight(hole.explosiveWeightLb)} lb`)}</strong></div>
           </div>
+          <div class="print-hole-load-profile-material-line">${escapeHtml(deckSummary)}</div>
           <div class="print-hole-load-profile-materials">
             <section class="print-hole-load-profile-material-block">
               <h3>Detonators</h3>
@@ -3500,6 +3632,437 @@ function createBlankMaterialEntry(types) {
   };
 }
 
+function holeDeckingEnabled(hole) {
+  return hole?.deckingEnabled === true && Array.isArray(hole.decks) && hole.decks.length > 1;
+}
+
+function deckCountForPreset(preset) {
+  if (preset === "three-equal") return 3;
+  if (preset === "two-equal") return 2;
+  return 1;
+}
+
+function buildDeckingPresetFromHole(hole, deckCount) {
+  const depth = Math.max(0, Math.round(Number(hole?.depth) || 0));
+  const firstStemming = Number.isFinite(Number(hole?.stemHeight)) ? Math.max(0, Math.min(depth, Math.round(Number(hole.stemHeight)))) : 0;
+  const targetCount = Math.max(1, Math.min(3, Math.round(Number(deckCount) || 1)));
+  const explosiveDepth = Math.max(0, depth - firstStemming);
+  if (targetCount > 1 && explosiveDepth < targetCount) {
+    return {
+      valid: false,
+      reason: `Hole ${hole.holeNumber || hole.id} is too short for ${targetCount} decks with positive explosive lengths.`,
+    };
+  }
+  const baseLength = targetCount ? Math.floor(explosiveDepth / targetCount) : explosiveDepth;
+  let remainder = explosiveDepth - (baseLength * targetCount);
+  const decks = [];
+  for (let index = 0; index < targetCount; index += 1) {
+    // When a whole-foot split leaves remainder footage, push the extra feet to lower decks first.
+    const extra = remainder > 0 && index >= targetCount - remainder ? 1 : 0;
+    decks.push({
+      id: `deck-${index + 1}`,
+      index,
+      stemmingAbove: index === 0 ? firstStemming : 0,
+      columnLength: baseLength + extra,
+      detonators: index === 0 ? cloneMaterialEntries(hole?.detonators || []) : [],
+      boosters: index === 0 ? cloneMaterialEntries(hole?.boosters || []) : [],
+    });
+  }
+  return {
+    valid: true,
+    deckingEnabled: targetCount > 1,
+    interdeckTimingMode: "top-first",
+    decks,
+  };
+}
+
+function selectedDeckPresetCount() {
+  return deckCountForPreset(els.diagramDeckPresetSelect.value);
+}
+
+function cloneDeckingDraftState(draft = null) {
+  const source = draft || {};
+  return {
+    interdeckTimingMode: source.interdeckTimingMode === "simultaneous" ? "simultaneous" : "top-first",
+    stemIntervals: Array.isArray(source.stemIntervals)
+      ? source.stemIntervals.map((interval) => ({
+        startDepth: Math.max(0, Math.round(Number(interval.startDepth) || 0)),
+        endDepth: Math.max(0, Math.round(Number(interval.endDepth) || 0)),
+      }))
+      : [],
+    decks: Array.isArray(source.decks)
+      ? source.decks.map((deck, index) => ({
+        id: deck.id || `deck-${index + 1}`,
+        index,
+        stemmingAbove: Math.max(0, Math.round(Number(deck.stemmingAbove) || 0)),
+        columnLength: Math.max(0, Math.round(Number(deck.columnLength) || 0)),
+      }))
+      : [],
+  };
+}
+
+function referenceHoleForDeckingDraft() {
+  return selectedDiagramHoles()[0] || diagramState.holes[0] || null;
+}
+
+function seedDeckingDraftForPreset(deckCount) {
+  if (deckCount <= 1) {
+    return {
+      interdeckTimingMode: "top-first",
+      stemIntervals: [],
+      decks: [{
+        id: "deck-1",
+        index: 0,
+        stemmingAbove: 0,
+        columnLength: 0,
+      }],
+    };
+  }
+  const referenceHole = referenceHoleForDeckingDraft();
+  const seeded = referenceHole ? buildDeckingPresetFromHole(referenceHole, deckCount) : null;
+  if (seeded?.valid) {
+    return {
+      ...cloneDeckingDraftState(seeded),
+      stemIntervals: stemIntervalsFromDecks(seeded.decks || []),
+    };
+  }
+  return {
+    interdeckTimingMode: "top-first",
+    stemIntervals: Array.from({ length: Math.max(0, deckCount - 1) }, () => ({ startDepth: 0, endDepth: 0 })),
+    decks: Array.from({ length: deckCount }, (_, index) => ({
+      id: `deck-${index + 1}`,
+      index,
+      stemmingAbove: 0,
+      columnLength: 0,
+    })),
+  };
+}
+
+function ensureDeckingDraftForPreset({ reset = false } = {}) {
+  const deckCount = selectedDeckPresetCount();
+  const currentCount = Array.isArray(diagramState.ui.deckingDraft?.decks) ? diagramState.ui.deckingDraft.decks.length : 0;
+  if (reset || currentCount !== deckCount) {
+    diagramState.ui.deckingDraft = seedDeckingDraftForPreset(deckCount);
+  } else {
+    diagramState.ui.deckingDraft = cloneDeckingDraftState(diagramState.ui.deckingDraft);
+    if (!Array.isArray(diagramState.ui.deckingDraft.stemIntervals) || diagramState.ui.deckingDraft.stemIntervals.length !== Math.max(0, deckCount - 1)) {
+      diagramState.ui.deckingDraft.stemIntervals = stemIntervalsFromDecks(diagramState.ui.deckingDraft.decks || []);
+    }
+  }
+  return diagramState.ui.deckingDraft;
+}
+
+function deckingDraftTotalFeet(draft = diagramState.ui.deckingDraft) {
+  return (draft?.decks || []).reduce((sum, deck) => sum + (Number(deck.stemmingAbove) || 0) + (Number(deck.columnLength) || 0), 0);
+}
+
+function stemIntervalsFromDecks(decks = []) {
+  const intervals = [];
+  let previousBottom = 0;
+  decks.forEach((deck, index) => {
+    const stemmingAbove = Math.max(0, Math.round(Number(deck?.stemmingAbove) || 0));
+    const columnLength = Math.max(0, Math.round(Number(deck?.columnLength) || 0));
+    const topDepth = previousBottom + stemmingAbove;
+    const bottomDepth = topDepth + columnLength;
+    if (index > 0) {
+      intervals.push({
+        index: index - 1,
+        startDepth: topDepth,
+        endDepth: previousBottom,
+        gapLength: stemmingAbove,
+      });
+    }
+    previousBottom = bottomDepth;
+  });
+  return intervals;
+}
+
+function stemIntervalLength(interval = {}) {
+  const startDepth = Math.max(0, Math.round(Number(interval.startDepth) || 0));
+  const endDepth = Math.max(0, Math.round(Number(interval.endDepth) || 0));
+  return Math.abs(startDepth - endDepth);
+}
+
+function equalDeckColumnLengths(totalExplosiveLength, deckCount) {
+  const safeDeckCount = Math.max(1, Math.round(Number(deckCount) || 1));
+  const baseLength = Math.floor(totalExplosiveLength / safeDeckCount);
+  let remainder = totalExplosiveLength - (baseLength * safeDeckCount);
+  return Array.from({ length: safeDeckCount }, (_, index) => {
+    const extra = remainder > 0 && index >= safeDeckCount - remainder ? 1 : 0;
+    return baseLength + extra;
+  });
+}
+
+function buildDecksFromStemIntervals({ topStemming = 0, intervals = [], deckCount = 1, existingDecks = [], holeDepth = 0 }) {
+  const safeDeckCount = Math.max(1, Math.round(Number(deckCount) || 1));
+  const safeTopStemming = Math.max(0, Math.round(Number(topStemming) || 0));
+  const normalizedIntervals = Array.from({ length: Math.max(0, safeDeckCount - 1) }, (_, index) => ({
+    startDepth: Math.max(0, Math.round(Number(intervals[index]?.startDepth) || 0)),
+    endDepth: Math.max(0, Math.round(Number(intervals[index]?.endDepth) || 0)),
+  }));
+  const interdeckLengths = normalizedIntervals.map((interval) => stemIntervalLength(interval));
+  const totalInertLength = safeTopStemming + interdeckLengths.reduce((sum, length) => sum + length, 0);
+  if (holeDepth > 0 && totalInertLength >= holeDepth) {
+    return { valid: false, reason: `Top stemming plus deck stemming totals ${totalInertLength} ft, which leaves no room for powder in a ${holeDepth} ft hole.` };
+  }
+  const totalExplosiveLength = Math.max(0, Math.round(Number(holeDepth) || 0) - totalInertLength);
+  if (safeDeckCount > 1 && totalExplosiveLength < safeDeckCount) {
+    return { valid: false, reason: `This hole does not have enough remaining footage to split into ${safeDeckCount} whole-foot powder columns.` };
+  }
+  const columnLengths = equalDeckColumnLengths(totalExplosiveLength, safeDeckCount);
+  const invalidColumn = columnLengths.find((length) => !(length > 0));
+  if (invalidColumn !== undefined) {
+    return { valid: false, reason: "Each powder column needs at least 1 ft after stemming is applied." };
+  }
+  const decks = [];
+  for (let index = 0; index < safeDeckCount; index += 1) {
+    decks.push({
+      id: existingDecks[index]?.id || `deck-${index + 1}`,
+      index,
+      stemmingAbove: index === 0 ? safeTopStemming : interdeckLengths[index - 1],
+      columnLength: columnLengths[index],
+      detonators: cloneMaterialEntries(existingDecks[index]?.detonators || []),
+      boosters: cloneMaterialEntries(existingDecks[index]?.boosters || []),
+    });
+  }
+  return { valid: true, decks, totalExplosiveLength, totalInertLength, interdeckLengths, columnLengths };
+}
+
+function derivedDeckingSummary({ topStemming = 0, intervals = [], deckCount = 1, holeDepth = 0 }) {
+  const built = buildDecksFromStemIntervals({ topStemming, intervals, deckCount, holeDepth });
+  if (!built.valid) return built.reason;
+  return `Top stem ${formatLoadingWeight(topStemming)} ft | Deck stems ${built.interdeckLengths.map((length) => `${formatLoadingWeight(length)} ft`).join(" / ")} | Powder columns ${built.columnLengths.map((length) => `${formatLoadingWeight(length)} ft`).join(" / ")}`;
+}
+
+function deckingDraftEditorMarkup(draft = diagramState.ui.deckingDraft) {
+  const deckCount = selectedDeckPresetCount();
+  if (deckCount <= 1) {
+    return `<div class="status-note">Single deck apply clears decking back to a normal hole.</div>`;
+  }
+  const intervals = Array.isArray(draft?.stemIntervals) && draft.stemIntervals.length
+    ? draft.stemIntervals
+    : stemIntervalsFromDecks(draft?.decks || []);
+  return intervals.map((interval, index) => `
+    <div class="decking-entry-row">
+      <div class="decking-entry-head">
+        <strong>Deck Stem ${index + 1}</strong>
+        <span class="status-note">${escapeHtml(`Enter the inert deck-stem interval. Example: 34 to 26 = ${formatLoadingWeight(interval.gapLength || 0)} ft stem.`)}</span>
+      </div>
+      <div class="decking-entry-grid">
+        <label>Deck Stem Start
+          <input type="number" step="1" min="0" data-decking-draft-index="${index}" data-decking-draft-field="startDepth" value="${escapeHtml(String(interval.startDepth ?? 0))}">
+        </label>
+        <label>Deck Stem End
+          <input type="number" step="1" min="0" data-decking-draft-index="${index}" data-decking-draft-field="endDepth" value="${escapeHtml(String(interval.endDepth ?? 0))}">
+        </label>
+      </div>
+    </div>
+  `).join("");
+}
+
+function syncDeckingDraftStatus() {
+  const referenceHole = referenceHoleForDeckingDraft();
+  const topStemming = Math.max(0, Math.round(Number(referenceHole?.stemHeight) || 0));
+  const holeDepth = Math.max(0, Math.round(Number(referenceHole?.depth) || 0));
+  const summary = derivedDeckingSummary({
+    topStemming,
+    intervals: Array.isArray(diagramState.ui.deckingDraft?.stemIntervals) ? diagramState.ui.deckingDraft.stemIntervals : [],
+    deckCount: selectedDeckPresetCount(),
+    holeDepth,
+  });
+  els.diagramDeckingDraftStatus.textContent = selectedDeckPresetCount() <= 1
+    ? "Single deck apply clears decking back to a normal hole."
+    : `Top stem comes from each hole. Enter deck-stem intervals here. ${summary}`;
+}
+
+function buildDeckingDraftForHole(hole) {
+  const deckCount = selectedDeckPresetCount();
+  if (deckCount <= 1) {
+    return { valid: true, clearToSingle: true };
+  }
+  const draft = ensureDeckingDraftForPreset();
+  const depth = Math.max(0, Math.round(Number(hole?.depth) || 0));
+  if (!(depth > 0)) {
+    return { valid: false, reason: `Hole ${hole?.holeNumber || hole?.id || ""} needs a valid depth before applying decking.` };
+  }
+  const topStemming = Math.max(0, Math.round(Number(hole?.stemHeight) || 0));
+  const intervals = Array.isArray(draft.stemIntervals) && draft.stemIntervals.length
+    ? draft.stemIntervals.slice(0, Math.max(0, deckCount - 1))
+    : stemIntervalsFromDecks((draft.decks || []).slice(0, deckCount));
+  const built = buildDecksFromStemIntervals({
+    topStemming,
+    intervals,
+    deckCount,
+    existingDecks: draft.decks || [],
+    holeDepth: depth,
+  });
+  if (!built.valid) {
+    return { valid: false, reason: `Hole ${hole.holeNumber || hole.id}: ${built.reason}` };
+  }
+  const decks = built.decks.map((deck, index) => ({
+    ...deck,
+    detonators: index === 0 ? cloneMaterialEntries(hole?.detonators || []) : [],
+    boosters: index === 0 ? cloneMaterialEntries(hole?.boosters || []) : [],
+  }));
+  return {
+    valid: true,
+    deckingEnabled: true,
+    interdeckTimingMode: draft.interdeckTimingMode === "simultaneous" ? "simultaneous" : "top-first",
+    decks,
+  };
+}
+
+function applyDeckPresetToHole(hole, preset = els.diagramDeckPresetSelect.value) {
+  const deckCount = deckCountForPreset(preset);
+  const next = buildDeckingPresetFromHole(hole, deckCount);
+  if (!next.valid) return next;
+  hole.deckingEnabled = next.deckingEnabled;
+  hole.interdeckTimingMode = next.interdeckTimingMode;
+  hole.decks = next.decks;
+  hole.deckStemIntervals = stemIntervalsFromDecks(next.decks || []);
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  return { valid: true };
+}
+
+function clearDeckingForHole(hole) {
+  const totalInertLength = Math.max(0, Math.round(Number(hole.totalInertLength) || Number(hole.stemHeight) || 0));
+  const fullDepth = Math.max(0, Math.round(Number(hole.depth) || 0));
+  hole.deckingEnabled = false;
+  hole.interdeckTimingMode = "top-first";
+  hole.decks = [{
+    id: "deck-1",
+    index: 0,
+    stemmingAbove: Math.min(fullDepth, totalInertLength),
+    columnLength: Math.max(0, fullDepth - Math.min(fullDepth, totalInertLength)),
+    detonators: cloneMaterialEntries(hole.detonators || []),
+    boosters: cloneMaterialEntries(hole.boosters || []),
+  }];
+  hole.deckStemIntervals = [];
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+}
+
+function deckDelaySummary(hole) {
+  const result = selectedTimingResult();
+  const values = result?.displayTimesByHoleId instanceof Map ? result.displayTimesByHoleId.get(hole.id) : null;
+  if (!values?.length) return "Deck delays: no timing selected";
+  return `Deck delays: ${values.map((value) => `${Math.round(value)} ms`).join(" / ")}`;
+}
+
+function deckEditorMarkup(hole) {
+  const decks = hole?.decks || [];
+  const intervals = stemIntervalsFromDecks(decks);
+  return intervals.map((interval, index) => `
+    <div class="decking-entry-row">
+      <div class="decking-entry-head">
+        <strong>Deck Stem ${index + 1}</strong>
+        <span class="status-note" data-deck-summary="${index}">${escapeHtml(`Stem interval ${formatLoadingWeight(interval.startDepth || 0)}-${formatLoadingWeight(interval.endDepth || 0)} ft | Powder ${formatLoadingWeight(decks[index]?.columnLength || 0)} ft above / ${formatLoadingWeight(decks[index + 1]?.columnLength || 0)} ft below`)}</span>
+      </div>
+      <div class="decking-entry-grid">
+        <label>Deck Stem Start
+          <input type="number" step="1" min="0" data-deck-index="${index}" data-deck-field="startDepth" value="${escapeHtml(String(interval.startDepth ?? 0))}">
+        </label>
+        <label>Deck Stem End
+          <input type="number" step="1" min="0" data-deck-index="${index}" data-deck-field="endDepth" value="${escapeHtml(String(interval.endDepth ?? 0))}">
+        </label>
+      </div>
+    </div>
+  `).join("");
+}
+
+function singleHoleDeckingStatusText(hole) {
+  return hole.deckingError
+    ? hole.deckingError
+    : hole.loadingWarning
+      ? hole.loadingWarning
+      : holeDeckingEnabled(hole)
+        ? `Deck total: ${formatLoadingWeight(hole.totalDeckedLength || hole.depth || 0)} / ${formatLoadingWeight(hole.depth || 0)} ft`
+        : "Single-deck hole. Enable decking to split this hole.";
+}
+
+function syncSingleHoleDeckingEditorSummaries(hole) {
+  const rows = [...els.diagramHoleDeckingEditor.querySelectorAll("[data-deck-summary]")];
+  const decks = hole?.decks || [];
+  const intervals = stemIntervalsFromDecks(decks);
+  if (!rows.length || rows.length !== intervals.length) {
+    els.diagramHoleDeckingEditor.innerHTML = deckEditorMarkup(hole);
+    return;
+  }
+  rows.forEach((node, index) => {
+    const interval = intervals[index] || {};
+    node.textContent = `Stem interval ${formatLoadingWeight(interval.startDepth || 0)}-${formatLoadingWeight(interval.endDepth || 0)} ft | Powder ${formatLoadingWeight(decks[index]?.columnLength || 0)} ft above / ${formatLoadingWeight(decks[index + 1]?.columnLength || 0)} ft below`;
+  });
+}
+
+function singleHoleDeckIntervals(hole) {
+  if (Array.isArray(hole?.deckStemIntervals) && hole.deckStemIntervals.length) {
+    return hole.deckStemIntervals.map((interval) => ({
+      startDepth: Math.max(0, Math.round(Number(interval.startDepth) || 0)),
+      endDepth: Math.max(0, Math.round(Number(interval.endDepth) || 0)),
+    }));
+  }
+  return stemIntervalsFromDecks(hole?.decks || []);
+}
+
+function refreshSingleHoleDeckingUi(hole, { preserveDeckEditor = false } = {}) {
+  if (!hole) return;
+  els.diagramHoleLoadingDepthInput.value = Number.isFinite(Number(hole.depth)) ? String(hole.depth) : "";
+  els.diagramHoleLoadingStemHeightInput.value = Number.isFinite(Number(hole.stemHeight)) ? String(hole.stemHeight) : "";
+  els.diagramHoleLoadingColumnDepthStatus.textContent = `Explosive Column: ${formatLoadingWeight(hole.columnDepth)} ft`;
+  els.diagramHoleLoadingWeightStatus.textContent = `Emulsion Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
+  els.diagramHoleLoadingWarning.textContent = hole.loadingWarning || "";
+  els.diagramDeckingEnabledInput.checked = holeDeckingEnabled(hole);
+  els.diagramDeckCountSelect.value = String(Math.max(1, Math.min(3, hole?.decks?.length || 1)));
+  els.diagramInterdeckTimingModeSelect.value = hole.interdeckTimingMode === "simultaneous" ? "simultaneous" : "top-first";
+  els.diagramHoleDeckingStatus.textContent = singleHoleDeckingStatusText(hole);
+  els.diagramHoleDeckingDelaySummary.textContent = holeDeckingEnabled(hole) ? deckDelaySummary(hole) : "Deck delays: single deck";
+  if (preserveDeckEditor) syncSingleHoleDeckingEditorSummaries(hole);
+  else els.diagramHoleDeckingEditor.innerHTML = deckEditorMarkup(hole);
+  els.diagramInterdeckTimingModeSelect.disabled = !holeDeckingEnabled(hole);
+}
+
+function applyDeckingPresetToTargets(targets) {
+  const deckCount = selectedDeckPresetCount();
+  if (deckCount <= 1) {
+    clearDeckingForTargets(targets);
+    return true;
+  }
+  const validationResults = targets.map((hole) => buildDeckingDraftForHole(hole));
+  const invalidResult = validationResults.find((result) => !result.valid);
+  if (invalidResult) {
+    window.alert(invalidResult.reason || "Could not apply decking preset.");
+    return false;
+  }
+  targets.forEach((hole, index) => {
+    const result = validationResults[index];
+    if (result.clearToSingle) {
+      clearDeckingForHole(hole);
+      return;
+    }
+    hole.deckingEnabled = result.deckingEnabled;
+    hole.interdeckTimingMode = result.interdeckTimingMode;
+    hole.decks = result.decks;
+    hole.deckStemIntervals = Array.isArray(diagramState.ui.deckingDraft?.stemIntervals)
+      ? diagramState.ui.deckingDraft.stemIntervals.map((interval) => ({ ...interval }))
+      : [];
+    recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  });
+  diagramState.ui.pendingDeckingApplyMode = null;
+  fullDiagramRefresh();
+  return true;
+}
+
+function applyDeckingToHoleIds(holeIds) {
+  const targets = holeIds.map((id) => diagramState.holesById.get(id)).filter(Boolean);
+  if (!targets.length) return;
+  applyDeckingPresetToTargets(targets);
+}
+
+function clearDeckingForTargets(targets) {
+  targets.forEach((hole) => clearDeckingForHole(hole));
+  diagramState.ui.pendingDeckingApplyMode = null;
+  fullDiagramRefresh();
+}
+
 function refreshDiagramLoadingDerivedState() {
   const density = normalizeLoadingDensity(diagramState.metadata.loadingDensityGcc);
   diagramState.metadata.loadingDensityGcc = density;
@@ -3550,6 +4113,7 @@ function materialEntryEditorMarkup(entries, types, { scope }) {
 }
 
 function renderDiagramLoadingPanel() {
+  ensureDeckingDraftForPreset();
   const density = normalizeLoadingDensity(diagramState.metadata.loadingDensityGcc);
   diagramState.metadata.loadingDensityGcc = density;
   const summary = summarizeDiagramLoading();
@@ -3565,6 +4129,13 @@ function renderDiagramLoadingPanel() {
   els.diagramLoadingSelectionStatus.textContent = selectedCount
     ? `${selectedCount} selected hole${selectedCount === 1 ? "" : "s"} ready for assignment`
     : "Select one or more holes to assign detonators and boosters.";
+  syncDeckingDraftStatus();
+  els.diagramDeckingDraftEditor.innerHTML = deckingDraftEditorMarkup();
+  els.diagramDeckingApplyStatus.textContent = diagramState.ui.pendingDeckingApplyMode === "box"
+    ? "Decking apply armed for box selection."
+    : diagramState.ui.pendingDeckingApplyMode === "polygon"
+      ? "Decking apply armed for polygon selection."
+      : "Choose a preset, then apply it to the current selection or arm box/polygon apply.";
   els.diagramLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.detonators, DETONATOR_TYPES, { scope: "draft-detonator" });
   els.diagramLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES, { scope: "draft-booster" });
   els.diagramLoadingApplyBtn.disabled = !diagramState.selection.size;
@@ -3623,8 +4194,17 @@ function applyLoadingDraftToSelection() {
   const detonators = normalizeMaterialEntries(diagramState.ui.loadingDraft.detonators, DETONATOR_TYPES);
   const boosters = normalizeMaterialEntries(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES);
   selected.forEach((hole) => {
-    hole.detonators = cloneMaterialEntries(detonators);
-    hole.boosters = cloneMaterialEntries(boosters);
+    if (holeDeckingEnabled(hole) && hole.decks?.length) {
+      hole.decks[0].detonators = cloneMaterialEntries(detonators);
+      hole.decks[0].boosters = cloneMaterialEntries(boosters);
+      for (let index = 1; index < hole.decks.length; index += 1) {
+        hole.decks[index].detonators = [];
+        hole.decks[index].boosters = [];
+      }
+    } else {
+      hole.detonators = cloneMaterialEntries(detonators);
+      hole.boosters = cloneMaterialEntries(boosters);
+    }
     recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
   });
   fullDiagramRefresh();
@@ -3633,6 +4213,7 @@ function applyLoadingDraftToSelection() {
 function renderSingleHoleLoadingEditor(hole) {
   if (!hole) {
     els.diagramHoleLoadingSection.classList.add("hidden");
+    els.diagramHoleDeckingSection.classList.add("hidden");
     els.diagramHoleLoadingDepthInput.value = "";
     els.diagramHoleLoadingStemHeightInput.value = "";
     els.diagramHoleLoadingDetonatorEditor.innerHTML = "";
@@ -3640,17 +4221,18 @@ function renderSingleHoleLoadingEditor(hole) {
     els.diagramHoleLoadingColumnDepthStatus.textContent = "Explosive Column: -";
     els.diagramHoleLoadingWeightStatus.textContent = "Emulsion Weight: -";
     els.diagramHoleLoadingWarning.textContent = "";
+    els.diagramHoleDeckingStatus.textContent = "Select a single hole to edit decking.";
+    els.diagramHoleDeckingDelaySummary.textContent = "Deck delays: -";
+    els.diagramHoleDeckingEditor.innerHTML = "";
     return;
   }
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
   els.diagramHoleLoadingSection.classList.remove("hidden");
-  els.diagramHoleLoadingDepthInput.value = Number.isFinite(Number(hole.depth)) ? String(hole.depth) : "";
-  els.diagramHoleLoadingStemHeightInput.value = Number.isFinite(Number(hole.stemHeight)) ? String(hole.stemHeight) : "";
-  els.diagramHoleLoadingColumnDepthStatus.textContent = `Explosive Column: ${formatLoadingWeight(hole.columnDepth)} ft`;
-  els.diagramHoleLoadingWeightStatus.textContent = `Emulsion Weight: ${formatLoadingWeight(hole.explosiveWeightLb)} lb`;
-  els.diagramHoleLoadingWarning.textContent = hole.loadingWarning || "";
-  els.diagramHoleLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(hole.detonators || [], DETONATOR_TYPES, { scope: "hole-detonator" });
-  els.diagramHoleLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(hole.boosters || [], BOOSTER_TYPES, { scope: "hole-booster" });
+  els.diagramHoleDeckingSection.classList.remove("hidden");
+  const materialSource = holeDeckingEnabled(hole) && hole.decks?.length ? hole.decks[0] : hole;
+  els.diagramHoleLoadingDetonatorEditor.innerHTML = materialEntryEditorMarkup(materialSource.detonators || [], DETONATOR_TYPES, { scope: "hole-detonator" });
+  els.diagramHoleLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(materialSource.boosters || [], BOOSTER_TYPES, { scope: "hole-booster" });
+  refreshSingleHoleDeckingUi(hole);
 }
 
 function updateHoleMaterialEntry(kind, index, field, rawValue) {
@@ -3658,7 +4240,8 @@ function updateHoleMaterialEntry(kind, index, field, rawValue) {
   if (!hole) return;
   const key = kind === "booster" ? "boosters" : "detonators";
   const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
-  const entry = hole[key]?.[index];
+  const source = holeDeckingEnabled(hole) && hole.decks?.length ? hole.decks[0] : hole;
+  const entry = source[key]?.[index];
   if (!entry) return;
   if (field === "type") entry.type = types.includes(rawValue) ? rawValue : types[0];
   if (field === "quantity") entry.quantity = Math.max(1, Math.round(Number(rawValue) || 1));
@@ -3670,7 +4253,8 @@ function stepHoleMaterialEntry(kind, index, delta) {
   const hole = selectedDiagramHoles()[0];
   if (!hole) return;
   const key = kind === "booster" ? "boosters" : "detonators";
-  const entry = hole[key]?.[index];
+  const source = holeDeckingEnabled(hole) && hole.decks?.length ? hole.decks[0] : hole;
+  const entry = source[key]?.[index];
   if (!entry) return;
   entry.quantity = Math.max(1, Math.round(Number(entry.quantity) || 1) + delta);
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
@@ -3682,7 +4266,8 @@ function addHoleMaterialEntry(kind) {
   if (!hole) return;
   const key = kind === "booster" ? "boosters" : "detonators";
   const types = kind === "booster" ? BOOSTER_TYPES : DETONATOR_TYPES;
-  hole[key].push(createBlankMaterialEntry(types));
+  const source = holeDeckingEnabled(hole) && hole.decks?.length ? hole.decks[0] : hole;
+  source[key].push(createBlankMaterialEntry(types));
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
   fullDiagramRefresh();
 }
@@ -3691,7 +4276,8 @@ function removeHoleMaterialEntry(kind, index) {
   const hole = selectedDiagramHoles()[0];
   if (!hole) return;
   const key = kind === "booster" ? "boosters" : "detonators";
-  hole[key].splice(index, 1);
+  const source = holeDeckingEnabled(hole) && hole.decks?.length ? hole.decks[0] : hole;
+  source[key].splice(index, 1);
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
   fullDiagramRefresh();
 }
@@ -3753,6 +4339,9 @@ function normalizeDiagramHoleFields(hole, options = {}) {
     const numericStemHeight = Number(hole.stemHeight);
     hole.stemHeight = Number.isFinite(numericStemHeight) ? numericStemHeight : null;
   }
+  hole.deckingEnabled = hole.deckingEnabled === true;
+  hole.interdeckTimingMode = hole.interdeckTimingMode === "simultaneous" ? "simultaneous" : "top-first";
+  if (!Array.isArray(hole.decks) || !hole.decks.length) hole.decks = null;
   hole.detonators = normalizeMaterialEntries(hole.detonators, DETONATOR_TYPES);
   hole.boosters = normalizeMaterialEntries(hole.boosters, BOOSTER_TYPES);
   recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
@@ -3775,10 +4364,17 @@ function exportSelectedTimingCsv() {
     const originalX = hole.collar?.original?.x ?? hole.original?.x ?? "";
     const originalY = hole.collar?.original?.y ?? hole.original?.y ?? "";
     const delayTime = selectedTiming.holeTimes instanceof Map ? selectedTiming.holeTimes.get(hole.id) : undefined;
-    return [hole.holeNumber || hole.id, originalX, originalY, Number.isFinite(delayTime) ? delayTime : ""];
+    const deckTimes = selectedTiming.displayTimesByHoleId instanceof Map ? selectedTiming.displayTimesByHoleId.get(hole.id) : null;
+    return [
+      hole.holeNumber || hole.id,
+      originalX,
+      originalY,
+      Number.isFinite(delayTime) ? delayTime : "",
+      Array.isArray(deckTimes) ? deckTimes.map((value) => Math.round(value)).join(" / ") : "",
+    ];
   });
 
-  const csvText = [["hole_number", "x", "y", "delay_time_ms"], ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
+  const csvText = [["hole_number", "x", "y", "delay_time_ms", "deck_delay_times_ms"], ...rows].map((row) => row.map(csvEscape).join(",")).join("\r\n");
   const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -4076,6 +4672,9 @@ function ensureDiagramHoleFields(hole) {
   });
   if (!Array.isArray(hole.detonators)) hole.detonators = [];
   if (!Array.isArray(hole.boosters)) hole.boosters = [];
+  if (!Object.hasOwn(hole, "deckingEnabled")) hole.deckingEnabled = false;
+  if (!Object.hasOwn(hole, "interdeckTimingMode")) hole.interdeckTimingMode = "top-first";
+  if (!Array.isArray(hole.decks) || !hole.decks.length) hole.decks = null;
   if (!Object.hasOwn(hole, "columnDepth")) hole.columnDepth = calculateColumnDepthFeet(hole);
   if (!Object.hasOwn(hole, "explosiveWeightLb")) hole.explosiveWeightLb = 0;
   if (!Object.hasOwn(hole, "loadingWarning")) hole.loadingWarning = null;
@@ -4445,6 +5044,10 @@ function clearShotCornerFromPopup() {
 
 function setDiagramToolMode(mode) {
   const nextMode = normalizeAnnotationTool(mode);
+  if (!["box", "polygon"].includes(nextMode) && diagramState.ui.pendingDeckingApplyMode) {
+    diagramState.ui.pendingDeckingApplyMode = null;
+    renderDiagramLoadingPanel();
+  }
   diagramState.ui.activeTool = nextMode;
   diagramState.ui.selectionBoxDraft = null;
   diagramState.ui.selectionPolygonDraft = null;
@@ -4507,6 +5110,11 @@ function finalizeDiagramBoxSelection(draft) {
   const holeIds = diagramState.holes
     .filter((hole) => pointInRect(diagramScreenPoint(hole), rect))
     .map((hole) => hole.id);
+  if (diagramState.ui.pendingDeckingApplyMode === "box") {
+    applyDeckingToHoleIds(holeIds);
+    setDiagramToolMode("single");
+    return;
+  }
   applyDiagramSelection(holeIds, { add: draft.addMode });
 }
 
@@ -4525,6 +5133,9 @@ function finalizeDiagramPolygonSelection() {
     applyDiagramSelection(holeIds, { add: false });
     setDiagramToolMode(diagramState.ui.faceDesignationReturnTool || "single");
     renderDiagramShotPanel();
+  } else if (diagramState.ui.pendingDeckingApplyMode === "polygon") {
+    applyDeckingToHoleIds(holeIds);
+    setDiagramToolMode("single");
   } else {
     applyDiagramSelection(holeIds, { add: draft.addMode });
   }
@@ -5200,9 +5811,89 @@ els.diagramClearTextBtn.addEventListener("click", () => {
   fullDiagramRefresh();
 });
 els.diagramLoadingDensityInput.addEventListener("input", () => applyDiagramMetadataPatch("loadingDensityGcc", els.diagramLoadingDensityInput.value));
+els.diagramDeckPresetSelect.addEventListener("change", () => {
+  ensureDeckingDraftForPreset({ reset: true });
+  renderDiagramLoadingPanel();
+});
+els.diagramDeckingDraftEditor.addEventListener("input", (event) => {
+  const target = event.target.closest("[data-decking-draft-index]");
+  if (!target) return;
+  const draft = ensureDeckingDraftForPreset();
+  const intervals = stemIntervalsFromDecks(draft.decks || []);
+  const interval = intervals[Number(target.getAttribute("data-decking-draft-index"))];
+  if (!interval) return;
+  const field = target.getAttribute("data-decking-draft-field");
+  interval[field] = Math.max(0, Math.round(Number(target.value) || 0));
+  const referenceHole = referenceHoleForDeckingDraft();
+  const built = buildDecksFromStemIntervals({
+    topStemming: Math.max(0, Math.round(Number(referenceHole?.stemHeight) || 0)),
+    intervals,
+    deckCount: selectedDeckPresetCount(),
+    existingDecks: draft.decks || [],
+    holeDepth: Math.max(0, Math.round(Number(referenceHole?.depth) || 0)),
+  });
+  if (built.valid) {
+    draft.decks = built.decks;
+    draft.stemIntervals = intervals.map((item) => ({ ...item }));
+  }
+  syncDeckingDraftStatus();
+});
+els.diagramDeckingDraftEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-decking-draft-index]");
+  if (!target) return;
+  const draft = ensureDeckingDraftForPreset();
+  const intervals = stemIntervalsFromDecks(draft.decks || []);
+  const interval = intervals[Number(target.getAttribute("data-decking-draft-index"))];
+  if (!interval) return;
+  const field = target.getAttribute("data-decking-draft-field");
+  interval[field] = Math.max(0, Math.round(Number(target.value) || 0));
+  const referenceHole = referenceHoleForDeckingDraft();
+  const built = buildDecksFromStemIntervals({
+    topStemming: Math.max(0, Math.round(Number(referenceHole?.stemHeight) || 0)),
+    intervals,
+    deckCount: selectedDeckPresetCount(),
+    existingDecks: draft.decks || [],
+    holeDepth: Math.max(0, Math.round(Number(referenceHole?.depth) || 0)),
+  });
+  if (!built.valid) {
+    window.alert(built.reason || "Invalid deck stem interval.");
+    renderDiagramLoadingPanel();
+    return;
+  }
+  draft.decks = built.decks;
+  draft.stemIntervals = intervals.map((item) => ({ ...item }));
+  renderDiagramLoadingPanel();
+});
 els.diagramLoadingAddDetonatorBtn.addEventListener("click", () => addDraftMaterialEntry("detonator"));
 els.diagramLoadingAddBoosterBtn.addEventListener("click", () => addDraftMaterialEntry("booster"));
 els.diagramLoadingApplyBtn.addEventListener("click", () => applyLoadingDraftToSelection());
+els.diagramApplyDeckingToSelectionBtn.addEventListener("click", () => {
+  const selected = selectedDiagramHoles();
+  if (!selected.length) {
+    window.alert("Select one or more holes before applying decking.");
+    return;
+  }
+  applyDeckingPresetToTargets(selected);
+});
+els.diagramApplyDeckingToBoxBtn.addEventListener("click", () => {
+  diagramState.ui.pendingDeckingApplyMode = "box";
+  setDiagramToolMode("box");
+  renderDiagramLoadingPanel();
+});
+els.diagramApplyDeckingToPolygonBtn.addEventListener("click", () => {
+  diagramState.ui.pendingDeckingApplyMode = "polygon";
+  setDiagramToolMode("polygon");
+  renderDiagramLoadingPanel();
+});
+els.diagramClearDeckingBtn.addEventListener("click", () => {
+  const selected = selectedDiagramHoles();
+  const targets = selected.length ? selected : diagramState.holes;
+  if (!targets.length) {
+    window.alert("Import holes first.");
+    return;
+  }
+  clearDeckingForTargets(targets);
+});
 els.diagramLoadingDetonatorEditor.addEventListener("change", (event) => {
   const target = event.target.closest("[data-loading-scope='draft-detonator']");
   if (!target) return;
@@ -5278,6 +5969,96 @@ els.diagramHoleLoadingBoosterEditor.addEventListener("click", (event) => {
     return;
   }
   if (button.hasAttribute("data-loading-step")) stepHoleMaterialEntry("booster", Number(button.getAttribute("data-loading-index")), Number(button.getAttribute("data-loading-step")) || 0);
+});
+els.diagramDeckingEnabledInput.addEventListener("change", () => {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  if (els.diagramDeckingEnabledInput.checked) {
+    const result = applyDeckPresetToHole(hole, Number(els.diagramDeckCountSelect.value) >= 3 ? "three-equal" : Number(els.diagramDeckCountSelect.value) === 2 ? "two-equal" : "single");
+    if (!result?.valid) {
+      els.diagramDeckingEnabledInput.checked = false;
+      window.alert(result?.reason || "Could not enable decking.");
+      return;
+    }
+  } else {
+    clearDeckingForHole(hole);
+  }
+  fullDiagramRefresh();
+});
+els.diagramDeckCountSelect.addEventListener("change", () => {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  const result = applyDeckPresetToHole(hole, Number(els.diagramDeckCountSelect.value) >= 3 ? "three-equal" : Number(els.diagramDeckCountSelect.value) === 2 ? "two-equal" : "single");
+  if (!result?.valid) {
+    els.diagramDeckCountSelect.value = String(Math.max(1, Math.min(3, hole?.decks?.length || 1)));
+    window.alert(result?.reason || "Could not change deck count.");
+    return;
+  }
+  fullDiagramRefresh();
+});
+els.diagramInterdeckTimingModeSelect.addEventListener("change", () => {
+  const hole = selectedDiagramHoles()[0];
+  if (!hole) return;
+  hole.interdeckTimingMode = els.diagramInterdeckTimingModeSelect.value === "simultaneous" ? "simultaneous" : "top-first";
+  fullDiagramRefresh();
+});
+els.diagramHoleDeckingEditor.addEventListener("input", (event) => {
+  const target = event.target.closest("[data-deck-index]");
+  const hole = selectedDiagramHoles()[0];
+  if (!target || !hole) return;
+  const intervals = singleHoleDeckIntervals(hole);
+  const interval = intervals[Number(target.getAttribute("data-deck-index"))];
+  if (!interval) return;
+  const field = target.getAttribute("data-deck-field");
+  interval[field] = Math.max(0, Math.round(Number(target.value) || 0));
+  const built = buildDecksFromStemIntervals({
+    topStemming: Math.max(0, Math.round(Number(hole?.stemHeight) || 0)),
+    intervals,
+    deckCount: hole.decks?.length || 1,
+    existingDecks: hole.decks || [],
+    holeDepth: Math.max(0, Math.round(Number(hole?.depth) || 0)),
+  });
+  if (built.valid) {
+    hole.decks = built.decks;
+    hole.deckStemIntervals = intervals.map((item) => ({ ...item }));
+    hole.deckingEnabled = hole.decks.length > 1;
+    recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  } else {
+    hole.deckingError = built.reason;
+  }
+  refreshDiagramLoadingDerivedState();
+  persistDiagramStateToProject();
+  renderDiagramShotPanel();
+  renderDiagramLoadingPanel();
+  refreshSingleHoleDeckingUi(hole, { preserveDeckEditor: true });
+  diagramRenderer.render();
+});
+els.diagramHoleDeckingEditor.addEventListener("change", (event) => {
+  const target = event.target.closest("[data-deck-index]");
+  const hole = selectedDiagramHoles()[0];
+  if (!target || !hole) return;
+  const intervals = singleHoleDeckIntervals(hole);
+  const interval = intervals[Number(target.getAttribute("data-deck-index"))];
+  if (!interval) return;
+  const field = target.getAttribute("data-deck-field");
+  interval[field] = Math.max(0, Math.round(Number(target.value) || 0));
+  const built = buildDecksFromStemIntervals({
+    topStemming: Math.max(0, Math.round(Number(hole?.stemHeight) || 0)),
+    intervals,
+    deckCount: hole.decks?.length || 1,
+    existingDecks: hole.decks || [],
+    holeDepth: Math.max(0, Math.round(Number(hole.depth) || 0)),
+  });
+  if (!built.valid) {
+    window.alert(built.reason || "Invalid deck stem interval.");
+    fullDiagramRefresh();
+    return;
+  }
+  hole.decks = built.decks;
+  hole.deckStemIntervals = intervals.map((item) => ({ ...item }));
+  hole.deckingEnabled = hole.decks.length > 1;
+  recalculateHoleLoading(hole, diagramState.metadata.loadingDensityGcc);
+  fullDiagramRefresh();
 });
 
 els.authSignInBtn.addEventListener("click", async () => {
@@ -5423,6 +6204,7 @@ els.timingManualModeBtn.addEventListener("click", () => setTimingMode("manual"))
   els.manualHoleDelayInput,
   els.manualRowDelayInput,
   els.manualOffsetDelayInput,
+  els.manualInterdeckDelayInput,
 ].forEach((input) => {
   input.addEventListener("input", () => syncManualTimingFromInputs());
 });
