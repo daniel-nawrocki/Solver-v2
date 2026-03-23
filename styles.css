@@ -2177,7 +2177,8 @@ button:active {
 
 body.print-preview-active .topbar,
 body.print-preview-active .workspace,
-body.print-preview-active .help-workspace {
+body.print-preview-active .help-workspace,
+body.print-preview-active .timing-solve-floating {
   display: none;
 }
 
@@ -2551,6 +2552,7 @@ body.help-active .print-workspace {
   .topbar,
   .workspace,
   .help-workspace,
+  .timing-solve-floating,
   .corner-dock,
   .print-page-strip,
   .print-toolbar {
