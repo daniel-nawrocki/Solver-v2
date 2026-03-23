@@ -3342,7 +3342,7 @@ function preparePrintablePages() {
 function handlePrintPointerDown(payload) {
   const page = activePrintPage();
   if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram") return false;
-  if (!isDiagramPrintEditing() && payload.event.shiftKey) {
+  if (!isDiagramPrintEditing() && payload.event.shiftKey && !payload.hole) {
     page.ui.selectionBoxDraft = {
       start: { x: payload.x, y: payload.y },
       current: { x: payload.x, y: payload.y },
@@ -3422,6 +3422,17 @@ function handlePrintPointerUp() {
     renderPrintPageTabs();
     printRenderer.render();
     return true;
+  }
+  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && !isDiagramPrintEditing() && page.selection?.size) {
+    const pointer = printRenderer.pointerScreen || null;
+    if (!pointer) return false;
+    const hole = printRenderer.findHoleAtScreen(pointer.x, pointer.y);
+    if (!hole) {
+      page.selection = new Set();
+      renderPrintPageTabs();
+      printRenderer.render();
+      return true;
+    }
   }
   if (!page || !page.dragLabelHoleId) return false;
   page.dragLabelHoleId = null;
