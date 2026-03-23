@@ -424,6 +424,7 @@ const els = {
   importMappedBtn: document.getElementById("importMappedBtn"),
   gridToggle: document.getElementById("gridToggle"),
   relationshipVisibilityToggle: document.getElementById("relationshipVisibilityToggle"),
+  timingVisibilityToggle: document.getElementById("timingVisibilityToggle"),
   relationshipVisibilityToggleSecondary: document.getElementById("relationshipVisibilityToggleSecondary"),
   fitViewBtn: document.getElementById("fitViewBtn"),
   coordViewSelect: document.getElementById("coordViewSelect"),
@@ -4722,6 +4723,7 @@ function renderRelationshipList() {
 function syncRelationshipVisibilityUi() {
   els.relationshipVisibilityToggle.checked = solverState.ui.showRelationships;
   els.relationshipVisibilityToggleSecondary.checked = solverState.ui.showRelationships;
+  els.timingVisibilityToggle.checked = solverState.ui.showOverlayText !== false;
 }
 
 function renderTimingResults() {
@@ -5747,6 +5749,11 @@ els.relationshipVisibilityToggle.addEventListener("change", () => {
 });
 els.relationshipVisibilityToggleSecondary.addEventListener("change", () => {
   solverState.ui.showRelationships = els.relationshipVisibilityToggleSecondary.checked;
+  syncRelationshipVisibilityUi();
+  solverRenderer.render();
+});
+els.timingVisibilityToggle.addEventListener("change", () => {
+  solverState.ui.showOverlayText = els.timingVisibilityToggle.checked;
   syncRelationshipVisibilityUi();
   solverRenderer.render();
 });

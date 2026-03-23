@@ -906,12 +906,16 @@ export class DiagramRenderer {
             this.ctx.fillText(line.text, point.x + 8, point.y + 9 + (index * 12));
           });
         }
-      } else if (!diagramMode && preview && Number.isFinite(time)) {
+      } else if (!diagramMode && preview && Number.isFinite(time) && this.stateRef.ui.showOverlayText !== false) {
         this.ctx.fillStyle = "#334155";
         this.ctx.font = canvasUiFont(Math.max(8, Math.round(10 * this.textScale())), 600);
         const displayTimes = preview.displayTimesByHoleId?.get?.(hole.id) || [time];
         const timingText = displayTimes.map((value) => `${value.toFixed(0)}`);
-        if (timingText.join(" / ").length > 10 || timingText.length > 2) {
+        if (timingText.length > 1) {
+          timingText.forEach((line, index) => {
+            this.ctx.fillText(`${line}ms`, point.x + 8, point.y + 8 + (index * 11));
+          });
+        } else if (timingText.join(" / ").length > 10) {
           timingText.forEach((line, index) => {
             this.ctx.fillText(`${line}ms`, point.x + 8, point.y + 8 + (index * 11));
           });

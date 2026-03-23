@@ -1,6 +1,6 @@
 const RELATIONSHIP_COLORS = {
-  holeToHole: "#0f766e",
-  rowToRow: "#1d4ed8",
+  holeToHole: "#dc2626",
+  rowToRow: "#eab308",
   offset: "#b45309",
 };
 
