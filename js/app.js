@@ -424,7 +424,6 @@ const els = {
   importMappedBtn: document.getElementById("importMappedBtn"),
   gridToggle: document.getElementById("gridToggle"),
   relationshipVisibilityToggle: document.getElementById("relationshipVisibilityToggle"),
-  timingVisibilityToggle: document.getElementById("timingVisibilityToggle"),
   relationshipVisibilityToggleSecondary: document.getElementById("relationshipVisibilityToggleSecondary"),
   fitViewBtn: document.getElementById("fitViewBtn"),
   coordViewSelect: document.getElementById("coordViewSelect"),
@@ -628,6 +627,8 @@ const els = {
   printColorModeToggle: document.getElementById("printColorModeToggle"),
   printRelationshipToggleWrap: document.getElementById("printRelationshipToggleWrap"),
   printRelationshipToggle: document.getElementById("printRelationshipToggle"),
+  printTimingToggleWrap: document.getElementById("printTimingToggleWrap"),
+  printTimingToggle: document.getElementById("printTimingToggle"),
   printAngleToggleWrap: document.getElementById("printAngleToggleWrap"),
   printAngleToggle: document.getElementById("printAngleToggle"),
   printBearingToggleWrap: document.getElementById("printBearingToggleWrap"),
@@ -2587,6 +2588,7 @@ function syncPrintControls() {
   els.printAddShotOrderPageBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printAddHoleLoadProfilePageBtn.classList.toggle("hidden", !showAdditionalPages);
   els.printRelationshipToggleWrap.classList.toggle("hidden", diagramMode || staticSheetMode);
+  els.printTimingToggleWrap.classList.toggle("hidden", diagramMode || staticSheetMode);
   els.printAngleToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printBearingArrowWeightWrap.classList.toggle("hidden", !diagramMode);
@@ -2598,6 +2600,7 @@ function syncPrintControls() {
   els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !labelModeEnabled);
   els.printEditLabelsBtn.classList.toggle("active", diagramMode && labelModeEnabled);
   els.printRelationshipToggle.checked = page.ui.showRelationships !== false;
+  els.printTimingToggle.checked = page.ui.showOverlayText !== false;
   els.printAngleToggle.checked = page.ui.showAngleLabels !== false;
   els.printBearingToggle.checked = page.ui.showBearingLabels !== false;
   els.printBearingArrowWeightInput.value = String(page.ui.bearingArrowWeight || 1);
@@ -2748,6 +2751,7 @@ function applyPrintSettings() {
   if (!page) return;
   page.ui.textScale = Number(els.printTextScaleInput.value) || 1;
   page.ui.showRelationships = els.printRelationshipToggle.checked;
+  page.ui.showOverlayText = els.printTimingToggle.checked;
   page.ui.showAngleLabels = els.printAngleToggle.checked;
   page.ui.showBearingLabels = els.printBearingToggle.checked;
   page.ui.bearingArrowWeight = Number(els.printBearingArrowWeightInput.value) || 1;
@@ -4723,7 +4727,6 @@ function renderRelationshipList() {
 function syncRelationshipVisibilityUi() {
   els.relationshipVisibilityToggle.checked = solverState.ui.showRelationships;
   els.relationshipVisibilityToggleSecondary.checked = solverState.ui.showRelationships;
-  els.timingVisibilityToggle.checked = solverState.ui.showOverlayText !== false;
 }
 
 function renderTimingResults() {
@@ -5752,11 +5755,6 @@ els.relationshipVisibilityToggleSecondary.addEventListener("change", () => {
   syncRelationshipVisibilityUi();
   solverRenderer.render();
 });
-els.timingVisibilityToggle.addEventListener("change", () => {
-  solverState.ui.showOverlayText = els.timingVisibilityToggle.checked;
-  syncRelationshipVisibilityUi();
-  solverRenderer.render();
-});
 els.fitViewBtn.addEventListener("click", () => solverRenderer.fitToData());
 els.coordViewSelect.addEventListener("change", () => applyCoordinateView(solverState, els.coordViewSelect, solverRenderer, els.coordViewSelect.value, { fit: true }));
 els.rotateLeftBtn.addEventListener("click", () => solverRenderer.rotateBy(-15));
@@ -6372,6 +6370,7 @@ els.printResetLabelsBtn.addEventListener("click", () => resetPrintLabelLayouts()
 els.printTextScaleInput.addEventListener("input", () => applyPrintSettings());
 els.printColorModeToggle.addEventListener("change", () => applyPrintSettings());
 els.printRelationshipToggle.addEventListener("change", () => applyPrintSettings());
+els.printTimingToggle.addEventListener("change", () => applyPrintSettings());
 els.printAngleToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingToggle.addEventListener("change", () => applyPrintSettings());
 els.printBearingArrowWeightInput.addEventListener("input", () => applyPrintSettings());
