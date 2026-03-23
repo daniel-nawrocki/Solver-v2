@@ -1,5 +1,5 @@
 const RELATIONSHIP_COLORS = {
-  holeToHole: "#dc2626",
+  holeToHole: "#2563eb",
   rowToRow: "#eab308",
   offset: "#b45309",
 };
@@ -16,6 +16,27 @@ export function relationshipColor(type) {
 
 export function relationshipLabel(type) {
   return RELATIONSHIP_LABELS[type] || "Relationship";
+}
+
+export function findRelationshipLimitConflict(state, input, excludeRelationshipId = null) {
+  if (!input?.type || input.type === "offset") return null;
+  const relationships = ensureRelationshipState(state);
+  const edges = relationships.edges.filter((edge) => edge.id !== excludeRelationshipId && edge.type === input.type);
+  const fromConflict = edges.find((edge) => edge.fromHoleId === input.fromHoleId || edge.toHoleId === input.fromHoleId);
+  if (fromConflict) {
+    return {
+      holeId: input.fromHoleId,
+      edge: fromConflict,
+    };
+  }
+  const toConflict = edges.find((edge) => edge.fromHoleId === input.toHoleId || edge.toHoleId === input.toHoleId);
+  if (toConflict) {
+    return {
+      holeId: input.toHoleId,
+      edge: toConflict,
+    };
+  }
+  return null;
 }
 
 export function ensureRelationshipState(state) {

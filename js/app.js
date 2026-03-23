@@ -44,7 +44,9 @@ import {
   deleteRelationship,
   describeRelationship,
   ensureRelationshipState,
+  findRelationshipLimitConflict,
   relationToolLabel,
+  relationshipLabel,
   setOriginHole,
   updateRelationship,
 } from "./relationshipManager.js";
@@ -4814,12 +4816,26 @@ function finalizeRelationshipPath(holeIds, relationshipType, sign) {
     uniquePath.push(holeId);
   });
   if (uniquePath.length < 2) return false;
+  const pendingEdges = [];
   for (let index = 0; index < uniquePath.length - 1; index += 1) {
     const fromHoleId = uniquePath[index];
     const toHoleId = uniquePath[index + 1];
     if (fromHoleId === toHoleId) continue;
-    addRelationship(solverState, { type: relationshipType, fromHoleId, toHoleId, sign });
+    const pendingState = {
+      relationships: {
+        ...solverState.relationships,
+        edges: [...solverState.relationships.edges, ...pendingEdges],
+      },
+    };
+    const conflict = findRelationshipLimitConflict(pendingState, { type: relationshipType, fromHoleId, toHoleId });
+    if (conflict) {
+      const hole = solverState.holesById.get(conflict.holeId);
+      window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has a ${relationshipLabel(relationshipType)} assignment.`);
+      return false;
+    }
+    pendingEdges.push({ type: relationshipType, fromHoleId, toHoleId, sign });
   }
+  pendingEdges.forEach((edge) => addRelationship(solverState, edge));
   return true;
 }
 
@@ -4835,6 +4851,14 @@ function finalizeOffsetRelationship(toHoleId) {
   addRelationship(solverState, { type: draft.type, fromHoleId, toHoleId });
   resetTimingResults();
   fullSolverRefresh();
+}
+
+function validateRelationshipAssignmentLimit(input, excludeRelationshipId = null) {
+  const conflict = findRelationshipLimitConflict(solverState, input, excludeRelationshipId);
+  if (!conflict) return true;
+  const hole = solverState.holesById.get(conflict.holeId);
+  window.alert(`${hole?.holeNumber || hole?.id || conflict.holeId} already has a ${relationshipLabel(input.type)} assignment.`);
+  return false;
 }
 
 function handleSolverHoleClick(hole, event) {
@@ -4904,6 +4928,7 @@ function editRelationship(edge) {
   if (edge.type === "offset") return;
   const config = promptRelationshipConfig(edge);
   if (!config) return;
+  if (!validateRelationshipAssignmentLimit({ ...edge, ...config }, edge.id)) return;
   updateRelationship(solverState, edge.id, config);
   resetTimingResults();
   fullSolverRefresh();
