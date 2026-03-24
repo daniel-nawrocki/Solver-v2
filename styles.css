@@ -1837,21 +1837,38 @@ button:active {
 .print-hole-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
   font-size: calc(11px * var(--hole-table-scale));
+}
+
+.print-hole-table col.print-hole-table-col-hole {
+  width: 13%;
+}
+
+.print-hole-table col.print-hole-table-col-short {
+  width: 8%;
+}
+
+.print-hole-table col.print-hole-table-col-med {
+  width: 10%;
+}
+
+.print-hole-table col.print-hole-table-col-long {
+  width: 15%;
 }
 
 .print-hole-table th,
 .print-hole-table td {
   border: 1px solid rgba(159, 179, 201, 0.6);
-  padding: calc(5px * var(--hole-table-scale)) calc(7px * var(--hole-table-scale));
+  padding: calc(4px * var(--hole-table-scale)) calc(5px * var(--hole-table-scale));
   text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .print-hole-table th {
   background: rgba(232, 239, 247, 0.95);
-  font-size: calc(10px * var(--hole-table-scale));
+  font-size: calc(9px * var(--hole-table-scale));
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;

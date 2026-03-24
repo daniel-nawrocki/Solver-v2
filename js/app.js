@@ -2808,6 +2808,22 @@ function formatHoleTableFeet(value) {
   return Number.isFinite(Number(value)) ? `${Math.round(Number(value))} ft` : "";
 }
 
+function formatHoleTableCompactNumber(value, maximumFractionDigits = 1) {
+  if (!Number.isFinite(Number(value))) return "";
+  return Number(value).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  });
+}
+
+function formatHoleTableInches(value) {
+  if (!Number.isFinite(Number(value))) return "";
+  const numeric = Number(value);
+  const whole = Math.trunc(numeric);
+  if (Math.abs(numeric - whole) >= 0.49 && Math.abs(numeric - whole) <= 0.51) return `${whole} 1/2"`;
+  return `${formatHoleTableCompactNumber(numeric, 2)}"`;
+}
+
 function formatHoleTableDegrees(value) {
   if (!Number.isFinite(Number(value))) return "";
   const rounded = Math.round(Number(value));
@@ -2850,7 +2866,12 @@ function buildHoleTableMarkup(page, holes, options = {}) {
   const rows = (holes || []).map((hole) => `
     <tr>
       <td>${escapeHtml(holeTableHoleLabel(hole))}</td>
+      <td>${escapeHtml(formatHoleTableCompactNumber(hole?.burden, 1))}</td>
+      <td>${escapeHtml(formatHoleTableCompactNumber(hole?.spacing, 1))}</td>
+      <td>${escapeHtml(formatHoleTableInches(hole?.diameter))}</td>
       <td>${escapeHtml(formatHoleTableFeet(hole?.depth))}</td>
+      <td>${escapeHtml(formatHoleTableFeet(hole?.subdrill))}</td>
+      <td>${escapeHtml(formatHoleTableFeet(hole?.stemHeight))}</td>
       <td>${escapeHtml(formatHoleTableDegrees(hole?.angle))}</td>
       <td>${escapeHtml(formatHoleTableAzimuth(hole?.bearing, hole?.angle))}</td>
       <td>${escapeHtml(`${formatLoadingWeight(hole?.explosiveWeightLb)} lb`)}</td>
@@ -2884,12 +2905,29 @@ function buildHoleTableMarkup(page, holes, options = {}) {
         <span>${escapeHtml(`Page ${pageNumber} of ${pageCount}`)}</span>
       </header>
       <table class="print-hole-table">
+        <colgroup>
+          <col class="print-hole-table-col-hole">
+          <col class="print-hole-table-col-short">
+          <col class="print-hole-table-col-short">
+          <col class="print-hole-table-col-short">
+          <col class="print-hole-table-col-med">
+          <col class="print-hole-table-col-med">
+          <col class="print-hole-table-col-med">
+          <col class="print-hole-table-col-short">
+          <col class="print-hole-table-col-long">
+          <col class="print-hole-table-col-med">
+        </colgroup>
         <thead>
           <tr>
             <th>Hole ID</th>
+            <th>Burden</th>
+            <th>Spacing</th>
+            <th>Dia</th>
             <th>Depth</th>
+            <th>Subdrill</th>
+            <th>Stem</th>
             <th>Angle</th>
-            <th>Azimuth (True North)</th>
+            <th>Azimuth</th>
             <th>Emulsion</th>
           </tr>
         </thead>
