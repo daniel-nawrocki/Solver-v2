@@ -827,9 +827,7 @@ export class DiagramRenderer {
     const activeOverlapKey = !diagramMode ? this.stateRef?.ui?.activeOverlapBinKey || null : null;
     const activeOverlapHoleIds = !diagramMode && preview && activeOverlapKey
       ? new Set(
-        (preview.overlapBins || []).find((bin) => bin.key === activeOverlapKey)?.holeIds
-        || (preview.overlapGroups || []).find((group) => group.key === activeOverlapKey)?.holeIds
-        || []
+        (preview.overlapGroups || []).find((group) => group.key === activeOverlapKey)?.holeIds || []
       )
       : null;
 

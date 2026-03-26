@@ -1184,14 +1184,8 @@ function cloneSelectedTiming(selectedTiming) {
     timingAdjustments: Array.isArray(selectedTiming.timingAdjustments) ? selectedTiming.timingAdjustments.map((entry) => ({ ...entry })) : [],
     delayCounts: Array.isArray(selectedTiming.delayCounts) ? selectedTiming.delayCounts.map((entry) => ({ ...entry })) : [],
     peakBinCount: Number.isFinite(selectedTiming.peakBinCount) ? selectedTiming.peakBinCount : derived.peakBinCount,
+    peakBinWeightLb: Number.isFinite(selectedTiming.peakBinWeightLb) ? selectedTiming.peakBinWeightLb : derived.peakBinWeightLb,
     overlapGroupCount: Number.isFinite(selectedTiming.overlapGroupCount) ? selectedTiming.overlapGroupCount : derived.overlapGroupCount,
-    fixedPeakBinCount: Number.isFinite(selectedTiming.fixedPeakBinCount) ? selectedTiming.fixedPeakBinCount : derived.fixedPeakBinCount,
-    fixedOverlapGroupCount: Number.isFinite(selectedTiming.fixedOverlapGroupCount)
-      ? selectedTiming.fixedOverlapGroupCount
-      : derived.fixedOverlapGroupCount,
-    overlapBins: Array.isArray(selectedTiming.overlapBins) && selectedTiming.overlapBins.length
-      ? selectedTiming.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
-      : derived.overlapBins,
     overlapGroups: Array.isArray(selectedTiming.overlapGroups) && selectedTiming.overlapGroups.length
       ? selectedTiming.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
       : derived.overlapGroups,
@@ -1353,14 +1347,8 @@ function cloneTimingResults(results = []) {
       timingAdjustments: Array.isArray(result.timingAdjustments) ? result.timingAdjustments.map((entry) => ({ ...entry })) : [],
       delayCounts: Array.isArray(result.delayCounts) ? result.delayCounts.map((entry) => ({ ...entry })) : [],
       peakBinCount: Number.isFinite(result.peakBinCount) ? result.peakBinCount : derived.peakBinCount,
+      peakBinWeightLb: Number.isFinite(result.peakBinWeightLb) ? result.peakBinWeightLb : derived.peakBinWeightLb,
       overlapGroupCount: Number.isFinite(result.overlapGroupCount) ? result.overlapGroupCount : derived.overlapGroupCount,
-      fixedPeakBinCount: Number.isFinite(result.fixedPeakBinCount) ? result.fixedPeakBinCount : derived.fixedPeakBinCount,
-      fixedOverlapGroupCount: Number.isFinite(result.fixedOverlapGroupCount)
-        ? result.fixedOverlapGroupCount
-        : derived.fixedOverlapGroupCount,
-      overlapBins: Array.isArray(result.overlapBins) && result.overlapBins.length
-        ? result.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
-        : derived.overlapBins,
       overlapGroups: Array.isArray(result.overlapGroups) && result.overlapGroups.length
         ? result.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
         : derived.overlapGroups,
@@ -1931,9 +1919,7 @@ function manualDelayCountsMarkup(result) {
 function currentTimingOverlapBin() {
   const result = selectedTimingResult();
   if (!result || !solverState.ui.activeOverlapBinKey) return null;
-  return (result.overlapBins || []).find((bin) => bin.key === solverState.ui.activeOverlapBinKey)
-    || (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey)
-    || null;
+  return (result.overlapGroups || []).find((group) => group.key === solverState.ui.activeOverlapBinKey) || null;
 }
 
 function overlapHoleLabel(holeId) {
@@ -1945,13 +1931,13 @@ function renderTimingOverlapAnalysis() {
   const result = selectedTimingResult();
   const hasResult = Boolean(result);
   const showPanel = hasResult && solverState.ui.showOverlapAnalysis === true;
-  const overlapBins = (result?.overlapBins || []).filter((bin) => bin.isOverlapGroup && (bin.deckCount || bin.count) > 1);
-  const activeBin = currentTimingOverlapBin();
+  const overlapGroups = (result?.overlapGroups || []).filter((group) => group.isOverlapGroup && (group.deckCount || group.count) > 1);
+  const activeWindow = currentTimingOverlapBin();
 
   els.timingOverlapAnalysisBtn.classList.toggle("hidden", !hasResult);
   els.timingOverlapClearBtn.classList.toggle("hidden", !hasResult);
   els.timingOverlapAnalysisBtn.textContent = showPanel ? "Hide Analysis" : "Overlap Analysis";
-  els.timingOverlapClearBtn.disabled = !activeBin;
+  els.timingOverlapClearBtn.disabled = !activeWindow;
   els.timingOverlapAnalysisPanel.classList.toggle("hidden", !showPanel);
   if (!showPanel) {
     els.timingOverlapSummary.textContent = "Select a timing result to inspect 8 ms overlap windows.";
@@ -1959,22 +1945,22 @@ function renderTimingOverlapAnalysis() {
     return;
   }
 
-  if (!overlapBins.length) {
+  if (!overlapGroups.length) {
     els.timingOverlapSummary.textContent = result.hasDecking
-      ? `No decks are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} deck${result.peakBinCount === 1 ? "" : "s"} | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb.`
-      : `No holes are firing within the same 8 ms period for the active timing result. Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"}.`;
+      ? `No decks are firing within the same sliding 8 ms overlap window for the active timing result. Peak 8 ms window: ${result.peakBinCount} deck${result.peakBinCount === 1 ? "" : "s"} | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb.`
+      : `No holes are firing within the same sliding 8 ms overlap window for the active timing result. Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"}.`;
     els.timingOverlapChart.innerHTML = "";
     return;
   }
 
-  const sortedGroups = [...overlapBins].sort((a, b) => (b.deckCount || b.count) - (a.deckCount || a.count) || a.startMs - b.startMs);
+  const sortedGroups = [...overlapGroups].sort((a, b) => (b.deckCount || b.count) - (a.deckCount || a.count) || a.startMs - b.startMs);
   els.timingOverlapSummary.textContent = result.hasDecking
-    ? `Peak 8 ms window: ${result.peakBinCount} decks | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`
-    : `Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`;
+    ? `Peak 8 ms window: ${result.peakBinCount} decks | ${formatLoadingWeight(result.peakBinWeightLb || 0)} lb | Sliding overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`
+    : `Peak 8 ms window: ${result.peakBinCount} hole${result.peakBinCount === 1 ? "" : "s"} | Sliding overlap windows: ${sortedGroups.length}. Click a window to highlight its holes.`;
   els.timingOverlapChart.innerHTML = `
     <div class="timing-overlap-list">
       ${sortedGroups.map((group) => {
-        const active = activeBin?.key === group.key ? "active" : "";
+        const active = activeWindow?.key === group.key ? "active" : "";
         const durationMs = Math.max(0, group.endMs - group.startMs);
         const holeMarkup = [...new Set(group.holeIds || [])]
           .map((holeId) => `<span class="timing-overlap-hole">${escapeHtml(String(overlapHoleLabel(holeId)))}</span>`)
@@ -1982,7 +1968,7 @@ function renderTimingOverlapAnalysis() {
         return `
           <button class="timing-overlap-card ${active}" type="button" data-overlap-bin="${escapeHtml(group.key)}" aria-pressed="${active ? "true" : "false"}">
             <span class="timing-overlap-card-head">
-              <span class="timing-overlap-card-title">${escapeHtml(result.hasDecking ? `${group.deckCount || group.count} decks | ${formatLoadingWeight(group.totalExplosiveWeightLb || 0)} lb` : `${group.count} holes within 8 ms`)}</span>
+              <span class="timing-overlap-card-title">${escapeHtml(result.hasDecking ? `${group.deckCount || group.count} decks | ${formatLoadingWeight(group.totalExplosiveWeightLb || 0)} lb` : `${group.count} holes within sliding 8 ms`)}</span>
               <span class="timing-overlap-card-window">${escapeHtml(`${group.startMs.toFixed(1)}-${group.endMs.toFixed(1)} ms`)}</span>
             </span>
             <span class="timing-overlap-card-meta">${escapeHtml(`Spread: ${durationMs.toFixed(1)} ms`)}</span>
@@ -1990,7 +1976,7 @@ function renderTimingOverlapAnalysis() {
           </button>
         `;
       }).join("")}
-      <div class="timing-overlap-note">${escapeHtml(result.hasDecking ? "Each row lists the holes contributing decks that fire within the same 8 ms period." : "Each row lists the holes whose firing times land within the same 8 ms period.")}</div>
+      <div class="timing-overlap-note">${escapeHtml(result.hasDecking ? "Each row lists the holes contributing decks that fire within the same sliding 8 ms overlap window." : "Each row lists the holes whose firing times land within the same sliding 8 ms overlap window.")}</div>
     </div>
   `;
 }
@@ -2162,9 +2148,6 @@ function clonePrintPage(page) {
       offsetAssignments: timing.offsetAssignments ? new Map(timing.offsetAssignments) : new Map(),
       timingAdjustments: Array.isArray(timing.timingAdjustments) ? timing.timingAdjustments.map((entry) => ({ ...entry })) : [],
       delayCounts: Array.isArray(timing.delayCounts) ? timing.delayCounts.map((entry) => ({ ...entry })) : [],
-      overlapBins: Array.isArray(timing.overlapBins)
-        ? timing.overlapBins.map((bin) => ({ ...bin, holeIds: [...(bin.holeIds || [])], deckIds: [...(bin.deckIds || [])] }))
-        : [],
       overlapGroups: Array.isArray(timing.overlapGroups)
         ? timing.overlapGroups.map((group) => ({ ...group, holeIds: [...(group.holeIds || [])], deckIds: [...(group.deckIds || [])] }))
         : [],

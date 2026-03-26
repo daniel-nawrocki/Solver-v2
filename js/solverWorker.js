@@ -6,14 +6,14 @@ function enumerateIntegerRange(min, max) {
   return values;
 }
 
-function formatBinNumber(value) {
+function formatWindowNumber(value) {
   if (!Number.isFinite(value)) return "0";
   const rounded = Math.round(value * 1000) / 1000;
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
-function binLabel(startMs, endMs) {
-  return `${formatBinNumber(startMs)}-${formatBinNumber(endMs)}ms`;
+function overlapWindowLabel(startMs, endMs) {
+  return `${formatWindowNumber(startMs)}-${formatWindowNumber(endMs)}ms`;
 }
 
 function summarizeDelayCounts(holeTimes) {
@@ -40,56 +40,6 @@ function sortedTimingEntries(holeTimes, holes) {
   return entries;
 }
 
-function buildOverlapBinsFromArray(holeTimes, holes, windowMs = 8) {
-  const entries = sortedTimingEntries(holeTimes, holes);
-  if (!entries.length) return [];
-  const bins = new Map();
-  let minValue = Infinity;
-  let maxValue = -Infinity;
-  for (let index = 0; index < entries.length; index += 1) {
-    const { holeId, time: value } = entries[index];
-    minValue = Math.min(minValue, value);
-    maxValue = Math.max(maxValue, value);
-    const startMs = Math.floor(value / windowMs) * windowMs;
-    let existing = bins.get(startMs);
-    if (!existing) {
-      existing = {
-        key: String(startMs),
-        startMs,
-        endMs: startMs + windowMs,
-        label: binLabel(startMs, startMs + windowMs),
-        holeIds: [],
-        count: 0,
-        isOverlapGroup: false,
-      };
-      bins.set(startMs, existing);
-    }
-    existing.holeIds.push(holeId);
-    existing.count += 1;
-  }
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return [];
-  const minStart = Math.floor(minValue / windowMs) * windowMs;
-  const maxStart = Math.floor(maxValue / windowMs) * windowMs;
-  const normalized = [];
-  for (let startMs = minStart; startMs <= maxStart; startMs += windowMs) {
-    const existing = bins.get(startMs) || {
-      key: String(startMs),
-      startMs,
-      endMs: startMs + windowMs,
-      label: binLabel(startMs, startMs + windowMs),
-      holeIds: [],
-      count: 0,
-      isOverlapGroup: false,
-    };
-    normalized.push({
-      ...existing,
-      holeIds: [...existing.holeIds],
-      isOverlapGroup: existing.count > 1,
-    });
-  }
-  return normalized;
-}
-
 function peakSlidingWindowCountFromArray(holeTimes, holes, windowMs = 8) {
   const entries = sortedTimingEntries(holeTimes, holes);
   if (!entries.length) return 0;
@@ -97,7 +47,7 @@ function peakSlidingWindowCountFromArray(holeTimes, holes, windowMs = 8) {
   let startIndex = 0;
   const epsilon = 0.0001;
   for (let endIndex = 0; endIndex < entries.length; endIndex += 1) {
-    while (entries[endIndex].time - entries[startIndex].time > windowMs + epsilon) startIndex += 1;
+    while (entries[endIndex].time - entries[startIndex].time >= windowMs - epsilon) startIndex += 1;
     maxCount = Math.max(maxCount, endIndex - startIndex + 1);
   }
   return maxCount;
@@ -111,6 +61,7 @@ function buildOverlapGroupsFromArray(holeTimes, holes, windowMs = 8) {
     key: "0",
     startMs: entries[0].time,
     endMs: entries[0].time,
+    label: overlapWindowLabel(entries[0].time, entries[0].time),
     holeIds: [entries[0].holeId],
     count: 1,
     isOverlapGroup: false,
@@ -120,18 +71,20 @@ function buildOverlapGroupsFromArray(holeTimes, holes, windowMs = 8) {
   for (let index = 1; index < entries.length; index += 1) {
     const entry = entries[index];
     const previous = entries[index - 1];
-    if (entry.time - previous.time <= windowMs + epsilon) {
+    if (entry.time - previous.time < windowMs - epsilon) {
       currentGroup.endMs = entry.time;
       currentGroup.holeIds.push(entry.holeId);
       currentGroup.count += 1;
       continue;
     }
     currentGroup.isOverlapGroup = currentGroup.count > 1;
+    currentGroup.label = overlapWindowLabel(currentGroup.startMs, currentGroup.endMs);
     groups.push(currentGroup);
     currentGroup = {
       key: String(groups.length),
       startMs: entry.time,
       endMs: entry.time,
+      label: overlapWindowLabel(entry.time, entry.time),
       holeIds: [entry.holeId],
       count: 1,
       isOverlapGroup: false,
@@ -139,24 +92,19 @@ function buildOverlapGroupsFromArray(holeTimes, holes, windowMs = 8) {
   }
 
   currentGroup.isOverlapGroup = currentGroup.count > 1;
+  currentGroup.label = overlapWindowLabel(currentGroup.startMs, currentGroup.endMs);
   groups.push(currentGroup);
   return groups;
 }
 
 function deriveTimingAnalysisFromArray(holeTimes, holes, windowMs = 8) {
-  const overlapBins = buildOverlapBinsFromArray(holeTimes, holes, windowMs);
   const overlapGroups = buildOverlapGroupsFromArray(holeTimes, holes, windowMs);
-  const fixedPeakBinCount = overlapBins.reduce((max, bin) => Math.max(max, bin.count), 0);
-  const fixedOverlapGroupCount = overlapBins.filter((bin) => bin.isOverlapGroup).length;
   const peakBinCount = peakSlidingWindowCountFromArray(holeTimes, holes, windowMs);
   const overlapGroupCount = overlapGroups.filter((group) => group.isOverlapGroup).length;
   return {
-    overlapBins,
     overlapGroups,
     peakBinCount,
     overlapGroupCount,
-    fixedPeakBinCount,
-    fixedOverlapGroupCount,
   };
 }
 
@@ -346,9 +294,6 @@ function evaluateSchedule(context, graph, holeDelay, rowDelay, offsetValues, scr
     density8ms: analysis.peakBinCount,
     peakBinCount: analysis.peakBinCount,
     overlapGroupCount: analysis.overlapGroupCount,
-    fixedPeakBinCount: analysis.fixedPeakBinCount,
-    fixedOverlapGroupCount: analysis.fixedOverlapGroupCount,
-    overlapBins: analysis.overlapBins,
     overlapGroups: analysis.overlapGroups,
     delayCounts: summarizeDelayCounts(scratchTimes),
   };

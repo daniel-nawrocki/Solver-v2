@@ -12,14 +12,14 @@ function generateValues(min, max, maxSamples = 15) {
   return values;
 }
 
-function formatBinNumber(value) {
+function formatWindowNumber(value) {
   if (!Number.isFinite(value)) return "0";
   const rounded = Math.round(value * 1000) / 1000;
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
-function binLabel(startMs, endMs) {
-  return `${formatBinNumber(startMs)}-${formatBinNumber(endMs)}ms`;
+function overlapWindowLabel(startMs, endMs) {
+  return `${formatWindowNumber(startMs)}-${formatWindowNumber(endMs)}ms`;
 }
 
 function normalizeDeckingMode(hole = {}) {
@@ -80,62 +80,6 @@ function summarizeDelayCounts(holeTimes) {
     .map(([time, count]) => ({ time, count }));
 }
 
-function buildOverlapBins(nodeTimes, windowMs = 8, options = {}) {
-  const entries = sortedTimingEntries(nodeTimes, options);
-  if (!entries.length) return [];
-  const bins = new Map();
-  let minValue = Infinity;
-  let maxValue = -Infinity;
-  for (const entry of entries) {
-    minValue = Math.min(minValue, entry.time);
-    maxValue = Math.max(maxValue, entry.time);
-    const startMs = Math.floor(entry.time / windowMs) * windowMs;
-    const existing = bins.get(startMs) || {
-      key: String(startMs),
-      startMs,
-      endMs: startMs + windowMs,
-      label: binLabel(startMs, startMs + windowMs),
-      holeIds: [],
-      deckIds: [],
-      count: 0,
-      deckCount: 0,
-      totalExplosiveWeightLb: 0,
-      isOverlapGroup: false,
-    };
-    existing.deckIds.push(entry.nodeId);
-    existing.holeIds.push(entry.holeId);
-    existing.count += 1;
-    existing.deckCount += 1;
-    existing.totalExplosiveWeightLb += entry.weightLb;
-    bins.set(startMs, existing);
-  }
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return [];
-  const minStart = Math.floor(minValue / windowMs) * windowMs;
-  const maxStart = Math.floor(maxValue / windowMs) * windowMs;
-  const normalized = [];
-  for (let startMs = minStart; startMs <= maxStart; startMs += windowMs) {
-    const existing = bins.get(startMs) || {
-      key: String(startMs),
-      startMs,
-      endMs: startMs + windowMs,
-      label: binLabel(startMs, startMs + windowMs),
-      holeIds: [],
-      deckIds: [],
-      count: 0,
-      deckCount: 0,
-      totalExplosiveWeightLb: 0,
-      isOverlapGroup: false,
-    };
-    normalized.push({
-      ...existing,
-      holeIds: [...new Set(existing.holeIds)],
-      deckIds: [...existing.deckIds],
-      isOverlapGroup: existing.deckCount > 1,
-    });
-  }
-  return normalized;
-}
-
 function buildOverlapGroups(nodeTimes, windowMs = 8, options = {}) {
   const entries = sortedTimingEntries(nodeTimes, options);
   if (!entries.length) return [];
@@ -144,6 +88,7 @@ function buildOverlapGroups(nodeTimes, windowMs = 8, options = {}) {
     key: "0",
     startMs: entries[0].time,
     endMs: entries[0].time,
+    label: overlapWindowLabel(entries[0].time, entries[0].time),
     holeIds: [entries[0].holeId],
     deckIds: [entries[0].nodeId],
     count: 1,
@@ -156,7 +101,7 @@ function buildOverlapGroups(nodeTimes, windowMs = 8, options = {}) {
   for (let index = 1; index < entries.length; index += 1) {
     const entry = entries[index];
     const previous = entries[index - 1];
-    if (entry.time - previous.time <= windowMs + epsilon) {
+    if (entry.time - previous.time < windowMs - epsilon) {
       currentGroup.endMs = entry.time;
       currentGroup.holeIds.push(entry.holeId);
       currentGroup.deckIds.push(entry.nodeId);
@@ -167,11 +112,13 @@ function buildOverlapGroups(nodeTimes, windowMs = 8, options = {}) {
     }
     currentGroup.isOverlapGroup = currentGroup.deckCount > 1;
     currentGroup.holeIds = [...new Set(currentGroup.holeIds)];
+    currentGroup.label = overlapWindowLabel(currentGroup.startMs, currentGroup.endMs);
     groups.push(currentGroup);
     currentGroup = {
       key: String(groups.length),
       startMs: entry.time,
       endMs: entry.time,
+      label: overlapWindowLabel(entry.time, entry.time),
       holeIds: [entry.holeId],
       deckIds: [entry.nodeId],
       count: 1,
@@ -183,6 +130,7 @@ function buildOverlapGroups(nodeTimes, windowMs = 8, options = {}) {
 
   currentGroup.isOverlapGroup = currentGroup.deckCount > 1;
   currentGroup.holeIds = [...new Set(currentGroup.holeIds)];
+  currentGroup.label = overlapWindowLabel(currentGroup.startMs, currentGroup.endMs);
   groups.push(currentGroup);
   return groups;
 }
@@ -194,7 +142,7 @@ function peakSlidingWindowCount(nodeTimes, windowMs = 8, options = {}) {
   let startIndex = 0;
   const epsilon = 0.0001;
   for (let endIndex = 0; endIndex < entries.length; endIndex += 1) {
-    while (entries[endIndex].time - entries[startIndex].time > windowMs + epsilon) startIndex += 1;
+    while (entries[endIndex].time - entries[startIndex].time >= windowMs - epsilon) startIndex += 1;
     maxCount = Math.max(maxCount, endIndex - startIndex + 1);
   }
   return maxCount;
@@ -209,7 +157,7 @@ function peakSlidingWindowWeight(nodeTimes, windowMs = 8, options = {}) {
   const epsilon = 0.0001;
   for (let endIndex = 0; endIndex < entries.length; endIndex += 1) {
     currentWeight += entries[endIndex].weightLb;
-    while (entries[endIndex].time - entries[startIndex].time > windowMs + epsilon) {
+    while (entries[endIndex].time - entries[startIndex].time >= windowMs - epsilon) {
       currentWeight -= entries[startIndex].weightLb;
       startIndex += 1;
     }
@@ -219,23 +167,15 @@ function peakSlidingWindowWeight(nodeTimes, windowMs = 8, options = {}) {
 }
 
 export function deriveTimingAnalysis(nodeTimes, windowMs = 8, options = {}) {
-  const overlapBins = buildOverlapBins(nodeTimes, windowMs, options);
   const overlapGroups = buildOverlapGroups(nodeTimes, windowMs, options);
-  const fixedPeakBinCount = overlapBins.reduce((max, bin) => Math.max(max, bin.deckCount ?? bin.count ?? 0), 0);
-  const fixedPeakBinWeightLb = overlapBins.reduce((max, bin) => Math.max(max, Number(bin.totalExplosiveWeightLb) || 0), 0);
-  const fixedOverlapGroupCount = overlapBins.filter((bin) => bin.isOverlapGroup).length;
   const peakBinCount = peakSlidingWindowCount(nodeTimes, windowMs, options);
   const peakBinWeightLb = peakSlidingWindowWeight(nodeTimes, windowMs, options);
   const overlapGroupCount = overlapGroups.filter((group) => group.isOverlapGroup).length;
   return {
-    overlapBins,
     overlapGroups,
     peakBinCount,
     peakBinWeightLb,
     overlapGroupCount,
-    fixedPeakBinCount,
-    fixedPeakBinWeightLb,
-    fixedOverlapGroupCount,
   };
 }
 
@@ -420,10 +360,6 @@ function buildSchedule(state, graph, holeDelay, rowDelay, offsetAssignments = ne
     peakBinCount: analysis.peakBinCount,
     peakBinWeightLb: analysis.peakBinWeightLb,
     overlapGroupCount: analysis.overlapGroupCount,
-    fixedPeakBinCount: analysis.fixedPeakBinCount,
-    fixedPeakBinWeightLb: analysis.fixedPeakBinWeightLb,
-    fixedOverlapGroupCount: analysis.fixedOverlapGroupCount,
-    overlapBins: analysis.overlapBins,
     overlapGroups: analysis.overlapGroups,
     delayCounts: summarizeDelayCounts(holeTimes),
     hasDecking: deckTiming.hasDecking,
