@@ -24,9 +24,11 @@
       <div id="plannerModeToggle" class="planner-mode-toggle hidden" aria-label="Planner Mode">
         <button id="plannerDiagramModeBtn" class="planner-mode-btn" type="button">Diagram</button>
         <button id="plannerTimingModeBtn" class="planner-mode-btn" type="button">Timing</button>
+        <button id="plannerLoadingModeBtn" class="planner-mode-btn" type="button">Loading</button>
       </div>
     </div>
     <div class="topbar-actions">
+      <div id="plannerStatusIndicator" class="planner-status-indicator hidden" aria-live="polite"></div>
       <button id="homeNavBtn" class="topbar-nav-btn hidden" type="button">Home</button>
       <div id="timingVisualizationControls" class="timing-visualization-controls hidden">
         <div class="timing-visualization-row">
@@ -759,6 +761,20 @@
         <button id="diagramHolePopupSaveBtn" type="button">Apply</button>
         <button id="diagramHolePopupCancelBtn" type="button">Cancel</button>
       </div>
+    </section>
+  </div>
+
+  <div id="plannerMappingOverlay" class="dialog-backdrop hidden" aria-hidden="true">
+    <section id="plannerMappingDialog" class="dialog-panel panel planner-mapping-dialog" role="dialog" aria-modal="true"
+      aria-labelledby="plannerMappingTitle">
+      <div class="planner-mapping-head">
+        <div>
+          <h2 id="plannerMappingTitle">CSV Mapping</h2>
+          <div id="plannerMappingSummary" class="status-note">Choose columns, then import.</div>
+        </div>
+        <button id="plannerMappingCloseBtn" type="button">Close</button>
+      </div>
+      <div id="plannerMappingBody" class="planner-mapping-body"></div>
     </section>
   </div>
 

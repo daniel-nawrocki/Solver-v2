@@ -118,6 +118,22 @@ body {
   min-width: 0;
 }
 
+.planner-status-indicator {
+  min-width: 0;
+  max-width: 190px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(159, 179, 201, 0.34);
+  background: rgba(10, 18, 31, 0.18);
+  color: rgba(247, 251, 255, 0.92);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .planner-mode-toggle {
   display: inline-flex;
   align-items: center;
@@ -166,12 +182,12 @@ body {
 
 .corner-dock {
   position: fixed;
-  left: var(--space-4);
+  right: var(--space-4);
   bottom: var(--space-4);
   z-index: 90;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 10px;
   max-width: min(360px, calc(100vw - 32px));
 }
@@ -223,8 +239,8 @@ body {
 .corner-dock-menu .menu-panel {
   top: auto;
   bottom: calc(100% + var(--space-2));
-  left: 0;
-  right: auto;
+  left: auto;
+  right: 0;
   min-width: 340px;
 }
 
@@ -967,6 +983,258 @@ button:active {
   background-size: 20px 20px, 20px 20px, auto;
 }
 
+.planner-workspace {
+  display: grid;
+  grid-template-columns: minmax(216px, 244px) minmax(0, 1fr) minmax(212px, 244px);
+  gap: 12px;
+  align-items: stretch;
+  min-height: calc(100vh - 62px);
+  padding: 12px;
+}
+
+.planner-workspace > .canvas-wrap {
+  height: calc(100vh - 86px);
+  margin: 0;
+  border: 1px solid rgba(159, 179, 201, 0.4);
+  border-radius: 18px;
+  box-shadow: var(--shadow-1);
+}
+
+.planner-workspace > .canvas-wrap .menu-bar {
+  display: none !important;
+}
+
+.planner-sidebar {
+  height: calc(100vh - 86px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  padding-right: 2px;
+}
+
+.planner-sidebar-section {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.planner-sidebar-header {
+  display: grid;
+  gap: 10px;
+}
+
+.planner-sidebar .menu-panel {
+  position: static;
+  inset: auto;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.planner-sidebar .menu-panel.planner-docked-panel {
+  display: block;
+}
+
+.planner-center-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.planner-center-overlay > * {
+  pointer-events: auto;
+}
+
+.planner-center-overlay .floating-toolkit {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  margin: 0 auto;
+  gap: 14px;
+  padding: 8px 14px;
+  max-width: calc(100% - 20px);
+}
+
+.planner-mode-hidden {
+  display: none !important;
+}
+
+.planner-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.planner-card-header {
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.planner-card-header:hover,
+.planner-card-header:focus-visible {
+  transform: none;
+  border: none;
+  box-shadow: none;
+  background: rgba(229, 238, 248, 0.28);
+}
+
+.planner-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.planner-card-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #39506c;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.planner-card-chevron {
+  color: #627790;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.planner-card-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.planner-card-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+  border-top: 1px solid rgba(159, 179, 201, 0.26);
+}
+
+.planner-card.collapsed .planner-card-body {
+  display: none;
+}
+
+.planner-card.collapsed .planner-card-header {
+  padding-bottom: 14px;
+}
+
+.planner-card.compact-import .file-btn {
+  margin-bottom: 0;
+}
+
+.planner-sidebar-right .planner-card-header {
+  padding: 9px 11px;
+}
+
+.planner-sidebar-right .planner-card-body {
+  gap: 8px;
+  padding: 0 11px 11px;
+}
+
+.planner-sidebar-right .panel h2 {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.planner-sidebar-right label {
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.planner-sidebar-right input,
+.planner-sidebar-right select,
+.planner-sidebar-right button {
+  padding: 8px 10px;
+  font-size: 11px;
+}
+
+.planner-sidebar-right .row-actions {
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.planner-sidebar-right .status-chip,
+.planner-sidebar-right .status-note {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.planner-sidebar-right .list {
+  max-height: 120px;
+  padding: 8px;
+  font-size: 10px;
+}
+
+.planner-import-summary {
+  margin: 0;
+}
+
+.planner-import-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.planner-import-actions button {
+  min-width: 0;
+}
+
+.planner-mapping-dialog {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.planner-mapping-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.planner-mapping-head h2 {
+  margin-bottom: 8px;
+}
+
+.planner-mapping-head button {
+  width: auto;
+  min-width: 88px;
+  margin: 0;
+}
+
+.planner-mapping-body {
+  display: grid;
+  gap: 10px;
+}
+
+.planner-mapping-body .mapping-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.planner-mapping-body .mapping-panel.hidden {
+  display: none;
+}
+
 #diagramCanvas,
 #diagramMakerCanvas {
   width: 100%;
@@ -1174,6 +1442,28 @@ button:active {
   background: linear-gradient(180deg, #dfe7f1 0%, #eef3f8 100%);
 }
 
+.print-workspace.print-layout {
+  display: grid;
+  grid-template-columns: minmax(228px, 260px) minmax(0, 1fr) minmax(250px, 300px);
+  gap: 12px;
+  padding: 12px;
+  align-items: stretch;
+}
+
+.print-sidebar {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+.print-workspace.print-layout .print-stage {
+  margin: 0;
+  min-height: 0;
+  height: calc(100vh - 28px);
+}
+
 .help-workspace {
   position: fixed;
   inset: 0;
@@ -1349,19 +1639,23 @@ button:active {
 
 .print-page-strip {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 8px 4px;
-  border-bottom: 1px solid rgba(159, 179, 201, 0.42);
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(159, 179, 201, 0.42);
+  border-radius: 16px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 246, 252, 0.92) 100%);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-1);
+  min-height: 0;
 }
 
 .print-page-actions {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 6px;
 }
 
@@ -1370,10 +1664,11 @@ button:active {
 }
 
 .print-page-actions .menu-panel {
-  top: calc(100% + 4px);
-  left: auto;
-  right: 0;
-  width: 180px;
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  width: calc(100% + 16px);
+  min-width: 0;
   max-height: none;
   padding: 8px;
 }
@@ -1388,16 +1683,20 @@ button:active {
 
 .print-page-tabs {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
 }
 
 .print-page-tab {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   padding: 2px;
   border-radius: 12px;
@@ -1424,19 +1723,21 @@ button:active {
 }
 
 .print-page-tab-main {
-  width: auto;
+  width: 100%;
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 5px 8px;
+  padding: 8px 10px;
   border: none;
   border-radius: 9px;
   background: transparent;
   box-shadow: none;
   color: inherit;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
 }
 
 .print-page-tab-main:hover,
@@ -1447,18 +1748,19 @@ button:active {
 }
 
 .print-page-tab-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .print-page-tab-meta {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   color: #60758c;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: right;
 }
 
 .print-page-remove-btn {
@@ -1483,10 +1785,10 @@ button:active {
 }
 
 .print-add-page-btn {
-  width: auto;
-  min-width: 92px;
+  width: 100%;
+  min-width: 0;
   margin: 0;
-  padding: 5px 10px;
+  padding: 8px 10px;
   font-size: 11px;
   border-color: rgba(22, 101, 52, 0.24);
   background: linear-gradient(180deg, #f7fff8 0%, #dcfce7 100%);
@@ -1514,12 +1816,23 @@ button:active {
   overflow-y: hidden;
 }
 
+.print-workspace.print-layout .print-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  overflow: visible;
+}
+
 .print-toolbar-group {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-wrap: nowrap;
   flex: 0 0 auto;
+}
+
+.print-workspace.print-layout .print-toolbar-group {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .print-toolbar-controls {
@@ -1530,6 +1843,10 @@ button:active {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 1px;
+}
+
+.print-workspace.print-layout .print-toolbar-controls {
+  overflow: visible;
 }
 
 .print-toolbar-group button {
@@ -2351,6 +2668,17 @@ body.help-active .print-workspace {
   .workspace-home,
   .workspace-diagram {
     padding: var(--space-4);
+  }
+
+  .planner-workspace,
+  .print-workspace.print-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-workspace > .canvas-wrap,
+  .print-workspace.print-layout .print-stage {
+    height: auto;
+    min-height: 56vh;
   }
 
   .home-tool-grid,

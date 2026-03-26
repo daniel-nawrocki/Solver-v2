@@ -93,6 +93,10 @@ const DIAGRAM_ANNOTATION_SIZE_MAP = {
 
 const appUi = {
   activeWorkspace: "home",
+  plannerMode: "diagram",
+  plannerPanelCards: new Map(),
+  plannerImportUi: {},
+  activeMappingTarget: null,
   currentProjectId: null,
   currentProjectName: "",
   cloudProjects: [],
@@ -401,6 +405,8 @@ const els = {
   plannerModeToggle: document.getElementById("plannerModeToggle"),
   plannerDiagramModeBtn: document.getElementById("plannerDiagramModeBtn"),
   plannerTimingModeBtn: document.getElementById("plannerTimingModeBtn"),
+  plannerLoadingModeBtn: document.getElementById("plannerLoadingModeBtn"),
+  plannerStatusIndicator: document.getElementById("plannerStatusIndicator"),
   openDelaySolverBtn: document.getElementById("openDelaySolverBtn"),
   openDiagramMakerBtn: document.getElementById("openDiagramMakerBtn"),
   helpBtn: document.getElementById("helpBtn"),
@@ -412,6 +418,11 @@ const els = {
   timingVisualizationStatus: document.getElementById("timingVisualizationStatus"),
   menuToggles: [...document.querySelectorAll("[data-menu-toggle]")],
   menuPanels: [...document.querySelectorAll(".menu-panel")],
+  importMenu: document.getElementById("importMenu"),
+  viewMenu: document.getElementById("viewMenu"),
+  relationshipMenu: document.getElementById("relationshipMenu"),
+  timingMenu: document.getElementById("timingMenu"),
+  timingResultsMenu: document.getElementById("timingResultsMenu"),
   csvInput: document.getElementById("csvInput"),
   mappingPanel: document.getElementById("mappingPanel"),
   coordTypeSelect: document.getElementById("coordTypeSelect"),
@@ -491,6 +502,13 @@ const els = {
   rowRelationNegativeToolBtn: document.getElementById("rowRelationNegativeToolBtn"),
   offsetRelationToolBtn: document.getElementById("offsetRelationToolBtn"),
   diagramCsvInput: document.getElementById("diagramCsvInput"),
+  diagramShotMenu: document.getElementById("diagramShotMenu"),
+  diagramImportMenu: document.getElementById("diagramImportMenu"),
+  diagramPatternMenu: document.getElementById("diagramPatternMenu"),
+  diagramViewMenu: document.getElementById("diagramViewMenu"),
+  diagramPropertiesMenu: document.getElementById("diagramPropertiesMenu"),
+  diagramLoadingMenu: document.getElementById("diagramLoadingMenu"),
+  diagramVolumeMenu: document.getElementById("diagramVolumeMenu"),
   diagramMappingPanel: document.getElementById("diagramMappingPanel"),
   diagramCoordTypeSelect: document.getElementById("diagramCoordTypeSelect"),
   diagramXColumnSelect: document.getElementById("diagramXColumnSelect"),
@@ -609,7 +627,14 @@ const els = {
   diagramHolePopupClearCornerBtn: document.getElementById("diagramHolePopupClearCornerBtn"),
   diagramHolePopupSaveBtn: document.getElementById("diagramHolePopupSaveBtn"),
   diagramHolePopupCancelBtn: document.getElementById("diagramHolePopupCancelBtn"),
+  plannerMappingOverlay: document.getElementById("plannerMappingOverlay"),
+  plannerMappingDialog: document.getElementById("plannerMappingDialog"),
+  plannerMappingTitle: document.getElementById("plannerMappingTitle"),
+  plannerMappingSummary: document.getElementById("plannerMappingSummary"),
+  plannerMappingBody: document.getElementById("plannerMappingBody"),
+  plannerMappingCloseBtn: document.getElementById("plannerMappingCloseBtn"),
   printWorkspace: document.getElementById("printWorkspace"),
+  printToolbar: document.querySelector(".print-toolbar"),
   printPageStrip: document.getElementById("printPageStrip"),
   printPageTabs: document.getElementById("printPageTabs"),
   printAddPageBreakBtn: document.getElementById("printAddPageBreakBtn"),
@@ -695,6 +720,8 @@ function isDiagramWorkspaceActive() {
 }
 
 function activePlannerMode() {
+  if (appUi.activeWorkspace === "delaySolver") return "timing";
+  if (appUi.activeWorkspace === "diagramMaker") return appUi.plannerMode === "loading" ? "loading" : "diagram";
   return WORKSPACE_TO_MODE[appUi.activeWorkspace] || null;
 }
 
@@ -704,33 +731,81 @@ function activeRenderer() {
 
 function closeAllMenus() {
   const stickyMenuId = isDiagramWorkspaceActive() && diagramState.ui.pendingFaceDesignation ? "diagramPatternMenu" : null;
-  els.menuPanels.forEach((panel) => panel.classList.toggle("hidden", panel.id !== stickyMenuId));
-  els.menuToggles.forEach((button) => button.classList.toggle("active", button.dataset.menuToggle === stickyMenuId));
+  els.menuPanels.forEach((panel) => {
+    if (panel.classList.contains("planner-docked-panel")) {
+      panel.classList.remove("hidden");
+      return;
+    }
+    panel.classList.toggle("hidden", panel.id !== stickyMenuId);
+  });
+  els.menuToggles.forEach((button) => {
+    const panel = document.getElementById(button.dataset.menuToggle || "");
+    if (panel?.classList.contains("planner-docked-panel")) {
+      button.classList.remove("active");
+      return;
+    }
+    button.classList.toggle("active", button.dataset.menuToggle === stickyMenuId);
+  });
+}
+
+function renderPlannerStatusIndicator() {
+  const mode = activePlannerMode();
+  if (!mode) {
+    els.plannerStatusIndicator.classList.add("hidden");
+    els.plannerStatusIndicator.textContent = "";
+    return;
+  }
+  const totalHoles = projectState.holes.length;
+  const selectedCount = diagramState.selection.size;
+  const loadedSummary = summarizeShotLoading(diagramState.holes, diagramState.metadata.loadingDensityGcc);
+  const hasTiming = solverState.timingResults.length > 0;
+  let text = "Shot status unavailable";
+  if (mode === "timing") {
+    const readiness = analyzeSolverReadiness();
+    text = totalHoles
+      ? `${totalHoles} holes | ${hasTiming ? `${solverState.timingResults.length} timing` : (readiness.originSelected ? "ready" : "set origin")}`
+      : "No shot loaded";
+  } else if (mode === "loading") {
+    text = totalHoles
+      ? `${totalHoles} holes | ${loadedSummary.includedHoleCount ? `${loadedSummary.includedHoleCount} loaded` : "no loading"}`
+      : "No shot loaded";
+  } else {
+    text = totalHoles
+      ? `${totalHoles} holes | ${selectedCount || 0} selected`
+      : "No shot loaded";
+  }
+  els.plannerStatusIndicator.textContent = text;
+  els.plannerStatusIndicator.classList.remove("hidden");
 }
 
 function renderWorkspaceChrome() {
   const workspace = appUi.activeWorkspace;
   const solverActive = workspace === "delaySolver";
   const diagramActive = workspace === "diagramMaker";
+  const plannerMode = activePlannerMode();
 
   els.homeWorkspace.classList.toggle("hidden", workspace !== "home");
   els.delaySolverWorkspace.classList.toggle("hidden", !solverActive);
   els.diagramMakerWorkspace.classList.toggle("hidden", !diagramActive);
   els.homeNavBtn.classList.toggle("hidden", workspace === "home");
   els.plannerModeToggle.classList.toggle("hidden", workspace === "home");
-  els.helpBtn.classList.toggle("hidden", !solverActive);
+  els.helpBtn.classList.toggle("hidden", !(solverActive || diagramActive));
   els.csvExportBtn.classList.toggle("hidden", !solverActive);
   els.exportPdfBtn.classList.toggle("hidden", !(solverActive || diagramActive));
-  els.workspaceTitle.textContent = WORKSPACE_TITLES[workspace] || "Workspace";
-  els.plannerDiagramModeBtn.classList.toggle("active", activePlannerMode() === "diagram");
-  els.plannerTimingModeBtn.classList.toggle("active", activePlannerMode() === "timing");
+  els.workspaceTitle.textContent = plannerMode ? plannerMode.charAt(0).toUpperCase() + plannerMode.slice(1) : (WORKSPACE_TITLES[workspace] || "Workspace");
+  els.plannerDiagramModeBtn.classList.toggle("active", plannerMode === "diagram");
+  els.plannerTimingModeBtn.classList.toggle("active", plannerMode === "timing");
+  if (els.plannerLoadingModeBtn) els.plannerLoadingModeBtn.classList.toggle("active", plannerMode === "loading");
 
   if (!solverActive) {
     els.timingVisualizationControls.classList.add("hidden");
   } else {
     renderTimingVisualizationControls();
   }
+  syncPlannerModePanels();
   syncTimingSolveFloating();
+  renderPlannerStatusIndicator();
+  refreshPlannerCardSummaries();
 }
 
 function setActiveWorkspace(workspaceId) {
@@ -741,6 +816,7 @@ function setActiveWorkspace(workspaceId) {
     diagramState.ui.selectionPolygonDraft = null;
   }
   if (workspaceId !== "diagramMaker") closeDiagramHolePopup();
+  closeMappingOverlay();
   closeAllMenus();
   closeHelpWorkspace();
   closePrintWorkspace();
@@ -754,11 +830,12 @@ function setActiveWorkspace(workspaceId) {
 }
 
 function switchPlannerMode(nextMode) {
-  if (!["diagram", "timing"].includes(nextMode)) return;
-  const nextWorkspace = nextMode === "diagram" ? "diagramMaker" : "delaySolver";
-  if (appUi.activeWorkspace === nextWorkspace) return;
+  if (!["diagram", "timing", "loading"].includes(nextMode)) return;
+  const nextWorkspace = nextMode === "timing" ? "delaySolver" : "diagramMaker";
+  if (appUi.activeWorkspace === nextWorkspace && activePlannerMode() === nextMode) return;
   syncCurrentWorkspaceToProject();
-  if (nextMode === "diagram") {
+  appUi.plannerMode = nextMode;
+  if (nextMode === "diagram" || nextMode === "loading") {
     hydrateDiagramFromProject();
     setActiveWorkspace("diagramMaker");
     requestAnimationFrame(() => {
@@ -781,6 +858,7 @@ function toggleMenu(menuId) {
   const panel = document.getElementById(menuId);
   const button = els.menuToggles.find((item) => item.dataset.menuToggle === menuId);
   if (!panel || !button) return;
+  if (panel.classList.contains("planner-docked-panel")) return;
   const opening = panel.classList.contains("hidden");
   closeAllMenus();
   if (!opening) return;
@@ -810,6 +888,8 @@ els.diagramHolePopupBackdrop.addEventListener("contextmenu", (event) => {
   event.preventDefault();
   event.stopPropagation();
 });
+els.plannerMappingDialog?.addEventListener("click", (event) => event.stopPropagation());
+els.plannerMappingOverlay?.addEventListener("click", () => closeMappingOverlay());
 
   document.addEventListener("click", () => closeAllMenus());
   document.addEventListener("keydown", (event) => {
@@ -822,9 +902,348 @@ function openMenu(menuId) {
   const panel = document.getElementById(menuId);
   const button = els.menuToggles.find((item) => item.dataset.menuToggle === menuId);
   if (!panel || !button) return;
+  if (panel.classList.contains("planner-docked-panel")) return;
   closeAllMenus();
   panel.classList.remove("hidden");
   button.classList.add("active");
+}
+
+function createPlannerSidebar(className) {
+  const sidebar = document.createElement("aside");
+  sidebar.className = `planner-sidebar ${className}`;
+  return sidebar;
+}
+
+function createPlannerSection(className = "") {
+  const section = document.createElement("div");
+  section.className = `planner-sidebar-section ${className}`.trim();
+  return section;
+}
+
+function dockPlannerPanel(container, panel, modes) {
+  if (!container || !panel) return;
+  panel.classList.add("planner-docked-panel");
+  panel.classList.remove("hidden");
+  if (modes) panel.dataset.plannerModes = modes;
+  container.appendChild(panel);
+}
+
+function dockPlannerNode(container, node, modes, extraClass = "") {
+  if (!container || !node) return;
+  if (extraClass) node.classList.add(extraClass);
+  if (modes) node.dataset.plannerModes = modes;
+  container.appendChild(node);
+}
+
+function initTimingPlannerLayout() {
+  if (els.delaySolverWorkspace.querySelector(".planner-sidebar-left")) return;
+  els.delaySolverWorkspace.classList.add("planner-workspace");
+  const canvasWrap = els.delaySolverWorkspace.querySelector(".canvas-wrap");
+  const left = createPlannerSidebar("planner-sidebar-left");
+  const right = createPlannerSidebar("planner-sidebar-right");
+  const leftHeader = createPlannerSection("planner-sidebar-header");
+  const leftMain = createPlannerSection();
+  const rightMain = createPlannerSection();
+  const timingModeToggle = canvasWrap.querySelector(".timing-mode-toggle");
+  const timingActions = canvasWrap.querySelector(".timing-toolbar-actions");
+  const toolkit = els.delaySolverWorkspace.querySelector(".floating-toolkit");
+  const centerOverlay = document.createElement("div");
+  centerOverlay.className = "planner-center-overlay";
+  left.append(leftHeader, leftMain);
+  right.append(rightMain);
+  els.delaySolverWorkspace.insertBefore(left, canvasWrap);
+  els.delaySolverWorkspace.insertBefore(right, canvasWrap.nextSibling);
+  dockPlannerNode(leftHeader, timingModeToggle, "timing");
+  dockPlannerNode(leftHeader, timingActions, "timing");
+  dockPlannerPanel(leftMain, els.viewMenu, "timing");
+  dockPlannerPanel(leftMain, els.relationshipMenu, "timing");
+  dockPlannerPanel(leftMain, els.timingMenu, "timing");
+  dockPlannerPanel(rightMain, els.timingResultsMenu, "timing");
+  if (toolkit) {
+    centerOverlay.appendChild(toolkit);
+    canvasWrap.appendChild(centerOverlay);
+  }
+}
+
+function initDiagramPlannerLayout() {
+  if (els.diagramMakerWorkspace.querySelector(".planner-sidebar-left")) return;
+  els.diagramMakerWorkspace.classList.add("planner-workspace");
+  const canvasWrap = els.diagramMakerWorkspace.querySelector(".canvas-wrap");
+  const left = createPlannerSidebar("planner-sidebar-left");
+  const right = createPlannerSidebar("planner-sidebar-right");
+  const leftMain = createPlannerSection();
+  const rightMain = createPlannerSection();
+  const toolkit = els.diagramMakerWorkspace.querySelector(".floating-toolkit");
+  const centerOverlay = document.createElement("div");
+  centerOverlay.className = "planner-center-overlay";
+  left.append(leftMain);
+  right.append(rightMain);
+  els.diagramMakerWorkspace.insertBefore(left, canvasWrap);
+  els.diagramMakerWorkspace.insertBefore(right, canvasWrap.nextSibling);
+  dockPlannerPanel(leftMain, els.diagramShotMenu, "diagram");
+  dockPlannerPanel(leftMain, els.diagramImportMenu, "diagram");
+  dockPlannerPanel(leftMain, els.diagramPatternMenu, "diagram");
+  dockPlannerPanel(leftMain, els.diagramViewMenu, "diagram");
+  dockPlannerPanel(leftMain, els.diagramLoadingMenu, "loading");
+  dockPlannerPanel(rightMain, els.diagramPropertiesMenu, "diagram,loading");
+  dockPlannerPanel(rightMain, els.diagramVolumeMenu, "diagram,loading");
+  if (toolkit) {
+    centerOverlay.appendChild(toolkit);
+    canvasWrap.appendChild(centerOverlay);
+  }
+}
+
+function initPrintLayout() {
+  if (els.printWorkspace.querySelector(".print-sidebar-left")) return;
+  els.printWorkspace.classList.add("print-layout");
+  const left = document.createElement("aside");
+  left.className = "print-sidebar print-sidebar-left";
+  const right = document.createElement("aside");
+  right.className = "print-sidebar print-sidebar-right";
+  els.printWorkspace.insertBefore(left, els.printPageStrip);
+  left.appendChild(els.printPageStrip);
+  els.printWorkspace.insertBefore(right, els.printStage);
+  right.appendChild(els.printToolbar);
+}
+
+function syncPlannerModePanels() {
+  const mode = activePlannerMode();
+  document.querySelectorAll("[data-planner-modes]").forEach((node) => {
+    const modes = String(node.dataset.plannerModes || "").split(",").map((item) => item.trim()).filter(Boolean);
+    const visible = mode && modes.includes(mode);
+    node.classList.toggle("planner-mode-hidden", !visible);
+  });
+  if (!mode) return;
+  const annotationControls = els.diagramAnnotationColorInput?.closest(".toolkit-inline-controls");
+  els.diagramMarkupToolBtn?.classList.toggle("planner-mode-hidden", mode === "loading");
+  els.diagramTextToolBtn?.classList.toggle("planner-mode-hidden", mode === "loading");
+  annotationControls?.classList.toggle("planner-mode-hidden", mode === "loading");
+}
+
+function initPlannerLayouts() {
+  initTimingPlannerLayout();
+  initDiagramPlannerLayout();
+  initPrintLayout();
+}
+
+function plannerCardSummaryText(panelId) {
+  if (panelId === "importMenu") {
+    if (solverState.csvCache?.headers?.length) return `${solverState.csvCache.records.length} rows loaded. Map columns to import.`;
+    return projectState.holes.length ? `${projectState.holes.length} holes currently in project.` : "Choose a CSV to start timing import.";
+  }
+  if (panelId === "diagramImportMenu") {
+    if (diagramState.csvCache?.headers?.length) return `${diagramState.csvCache.records.length} rows loaded. Map columns to import.`;
+    return diagramState.holes.length ? `${diagramState.holes.length} holes currently in diagram.` : "Choose a CSV to start diagram import.";
+  }
+  if (panelId === "diagramShotMenu") {
+    const shot = diagramState.metadata.shotNumber || "No shot number";
+    const location = diagramState.metadata.location || "No location";
+    return `${shot} | ${location}`;
+  }
+  if (panelId === "diagramPatternMenu") {
+    return `${faceHoleCount()} face holes designated`;
+  }
+  if (panelId === "diagramViewMenu") {
+    return `Coord view: ${diagramState.ui.coordView || "collar"}`;
+  }
+  if (panelId === "diagramPropertiesMenu") {
+    return diagramState.selection.size
+      ? `${diagramState.selection.size} hole${diagramState.selection.size === 1 ? "" : "s"} selected`
+      : "No holes selected";
+  }
+  if (panelId === "diagramLoadingMenu") {
+    const summary = summarizeDiagramLoading();
+    return summary.includedHoleCount
+      ? `${summary.includedHoleCount} loaded hole${summary.includedHoleCount === 1 ? "" : "s"}`
+      : "No loading assigned yet";
+  }
+  if (panelId === "diagramVolumeMenu") {
+    const summary = summarizeDiagramVolume();
+    return summary.includedHoleCount
+      ? `${summary.includedHoleCount} holes | ${formatVolumeNumber(summary.tons)} tons`
+      : "Volume unavailable";
+  }
+  if (panelId === "relationshipMenu") {
+    const readiness = analyzeSolverReadiness();
+    return readiness.relationshipsCount
+      ? `${readiness.relationshipsCount} relationships | origin ${readiness.originSelected ? "set" : "missing"}`
+      : "No timing pathing defined";
+  }
+  if (panelId === "viewMenu") {
+    return `Coord view: ${solverState.ui.coordView || "collar"}`;
+  }
+  if (panelId === "timingMenu") {
+    return activeTimingMode() === "manual" ? "Manual timing values ready" : "Solver ranges ready";
+  }
+  if (panelId === "timingResultsMenu") {
+    return solverState.timingResults.length
+      ? `${solverState.timingResults.length} timing result${solverState.timingResults.length === 1 ? "" : "s"}`
+      : (solverState.solverMessage || defaultTimingMessage());
+  }
+  return "";
+}
+
+function setPlannerCardSummary(panelId, text) {
+  const card = appUi.plannerPanelCards.get(panelId);
+  if (!card?.summary) return;
+  card.summary.textContent = text || "";
+}
+
+function collapsePlannerCard(card, collapsed) {
+  if (!card) return;
+  card.panel.classList.toggle("collapsed", collapsed);
+  card.header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  if (card.chevron) card.chevron.textContent = collapsed ? "+" : "-";
+}
+
+function setPlannerCardExpanded(panelId, expanded, { exclusive = true } = {}) {
+  const card = appUi.plannerPanelCards.get(panelId);
+  if (!card) return;
+  if (expanded && exclusive) {
+    appUi.plannerPanelCards.forEach((other) => {
+      if (other === card || other.rail !== card.rail) return;
+      collapsePlannerCard(other, true);
+    });
+  }
+  collapsePlannerCard(card, !expanded);
+}
+
+function initPlannerCard(panel, { defaultExpanded = false, compactImport = false } = {}) {
+  if (!panel || appUi.plannerPanelCards.has(panel.id)) return;
+  const titleNode = panel.querySelector("h2");
+  const title = titleNode?.textContent?.trim() || "Panel";
+  const header = document.createElement("button");
+  header.type = "button";
+  header.className = "planner-card-header";
+  header.setAttribute("aria-expanded", defaultExpanded ? "true" : "false");
+  const titleRow = document.createElement("span");
+  titleRow.className = "planner-card-title-row";
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "planner-card-title";
+  titleSpan.textContent = title;
+  const chevron = document.createElement("span");
+  chevron.className = "planner-card-chevron";
+  chevron.textContent = defaultExpanded ? "-" : "+";
+  titleRow.append(titleSpan, chevron);
+  const summary = document.createElement("span");
+  summary.className = "planner-card-summary";
+  header.append(titleRow, summary);
+  const body = document.createElement("div");
+  body.className = "planner-card-body";
+  const nodes = [...panel.childNodes];
+  nodes.forEach((node) => {
+    if (node === titleNode) return;
+    body.appendChild(node);
+  });
+  if (titleNode) titleNode.remove();
+  panel.prepend(body);
+  panel.prepend(header);
+  panel.classList.add("planner-card");
+  if (compactImport) panel.classList.add("compact-import");
+  const rail = panel.closest(".planner-sidebar");
+  const card = { panel, header, summary, body, chevron, rail };
+  appUi.plannerPanelCards.set(panel.id, card);
+  collapsePlannerCard(card, !defaultExpanded);
+  header.addEventListener("click", () => {
+    const currentlyExpanded = header.getAttribute("aria-expanded") === "true";
+    setPlannerCardExpanded(panel.id, !currentlyExpanded);
+  });
+  setPlannerCardSummary(panel.id, plannerCardSummaryText(panel.id));
+}
+
+function refreshPlannerCardSummaries() {
+  appUi.plannerPanelCards.forEach((_, panelId) => setPlannerCardSummary(panelId, plannerCardSummaryText(panelId)));
+  syncImportPanelUi("solver");
+  syncImportPanelUi("diagram");
+}
+
+function ensureImportPanelUi(mode) {
+  const key = mode === "diagram" ? "diagram" : "solver";
+  if (appUi.plannerImportUi[key]) return appUi.plannerImportUi[key];
+  const panel = key === "diagram" ? els.diagramImportMenu : els.importMenu;
+  const body = panel?.querySelector(".planner-card-body");
+  if (!panel || !body) return null;
+  const summary = document.createElement("div");
+  summary.className = "status-note planner-import-summary";
+  const actions = document.createElement("div");
+  actions.className = "planner-import-actions";
+  const mapBtn = document.createElement("button");
+  mapBtn.type = "button";
+  mapBtn.textContent = "Map Columns";
+  actions.appendChild(mapBtn);
+  body.append(summary, actions);
+  mapBtn.addEventListener("click", () => openMappingOverlay(key));
+  appUi.plannerImportUi[key] = { summary, mapBtn };
+  return appUi.plannerImportUi[key];
+}
+
+function syncImportPanelUi(mode) {
+  const ui = ensureImportPanelUi(mode);
+  if (!ui) return;
+  const isDiagram = mode === "diagram";
+  const cache = isDiagram ? diagramState.csvCache : solverState.csvCache;
+  const importedCount = isDiagram ? diagramState.holes.length : projectState.holes.length;
+  if (cache?.headers?.length && importedCount) {
+    ui.summary.textContent = `${importedCount} holes imported. Open mapping to remap this CSV or choose a new file.`;
+    ui.mapBtn.disabled = false;
+    ui.mapBtn.textContent = "Remap Columns";
+    return;
+  }
+  if (cache?.headers?.length) {
+    ui.summary.textContent = `${cache.records.length} rows ready. Open mapping to choose columns.`;
+    ui.mapBtn.disabled = false;
+    ui.mapBtn.textContent = "Map Columns";
+    return;
+  }
+  if (importedCount) {
+    ui.summary.textContent = `${importedCount} holes imported. Choose a new CSV or remap if you load one.`;
+    ui.mapBtn.disabled = true;
+    ui.mapBtn.textContent = "Map Columns";
+    return;
+  }
+  ui.summary.textContent = "No CSV selected yet.";
+  ui.mapBtn.disabled = true;
+  ui.mapBtn.textContent = "Map Columns";
+}
+
+function initPlannerCards() {
+  initPlannerCard(els.importMenu, { compactImport: true });
+  initPlannerCard(els.viewMenu);
+  initPlannerCard(els.relationshipMenu, { defaultExpanded: true });
+  initPlannerCard(els.timingMenu);
+  initPlannerCard(els.timingResultsMenu, { defaultExpanded: true });
+  initPlannerCard(els.diagramShotMenu, { defaultExpanded: true });
+  initPlannerCard(els.diagramImportMenu, { compactImport: true });
+  initPlannerCard(els.diagramPatternMenu);
+  initPlannerCard(els.diagramViewMenu);
+  initPlannerCard(els.diagramLoadingMenu, { defaultExpanded: true });
+  initPlannerCard(els.diagramPropertiesMenu, { defaultExpanded: true });
+  initPlannerCard(els.diagramVolumeMenu);
+  refreshPlannerCardSummaries();
+}
+
+function closeMappingOverlay() {
+  appUi.activeMappingTarget = null;
+  els.plannerMappingOverlay.classList.add("hidden");
+  els.plannerMappingOverlay.setAttribute("aria-hidden", "true");
+  els.mappingPanel.classList.add("hidden");
+  els.diagramMappingPanel.classList.add("hidden");
+}
+
+function openMappingOverlay(target) {
+  const isDiagram = target === "diagram";
+  const panel = isDiagram ? els.diagramMappingPanel : els.mappingPanel;
+  const cache = isDiagram ? diagramState.csvCache : solverState.csvCache;
+  if (!panel || !cache?.headers?.length) return;
+  appUi.activeMappingTarget = isDiagram ? "diagram" : "solver";
+  els.plannerMappingTitle.textContent = isDiagram ? "Diagram CSV Mapping" : "Timing CSV Mapping";
+  els.plannerMappingSummary.textContent = `${cache.records.length} rows loaded. Choose columns, then import.`;
+  if (!panel.parentElement || panel.parentElement !== els.plannerMappingBody) els.plannerMappingBody.appendChild(panel);
+  els.mappingPanel.classList.toggle("hidden", isDiagram);
+  els.diagramMappingPanel.classList.toggle("hidden", !isDiagram);
+  panel.classList.remove("hidden");
+  els.plannerMappingOverlay.classList.remove("hidden");
+  els.plannerMappingOverlay.setAttribute("aria-hidden", "false");
 }
 
 function isSignedIn() {
@@ -1646,7 +2065,10 @@ function startTimingSolveFloatingDrag(event) {
 }
 
 function shouldShowTimingSolveFloating() {
-  return isSolverWorkspaceActive() && activeTimingMode() === "solver" && solverState.ui.readinessDismissed !== true;
+  return isSolverWorkspaceActive()
+    && !els.delaySolverWorkspace.classList.contains("planner-workspace")
+    && activeTimingMode() === "solver"
+    && solverState.ui.readinessDismissed !== true;
 }
 
 function showTimingSolveFloating() {
@@ -3659,6 +4081,18 @@ function renderDiagramVolumePanel() {
   const summary = summarizeDiagramVolume();
   els.diagramRockDensityInput.value = String(density);
   els.diagramVolumeRuleStatus.textContent = "Volume uses burden x spacing x (depth - subdrill). Subdrill is excluded from tonnage.";
+  if (!diagramState.holes.length) {
+    els.diagramVolumeIncludedStatus.textContent = "No holes imported yet.";
+    els.diagramVolumeCubicYardsStatus.textContent = "Volume will appear after import.";
+    els.diagramVolumeTonsStatus.textContent = "Tonnage will appear after import.";
+    return;
+  }
+  if (!summary.includedHoleCount) {
+    els.diagramVolumeIncludedStatus.textContent = "No holes have enough burden, spacing, and depth yet.";
+    els.diagramVolumeCubicYardsStatus.textContent = "Volume unavailable until required fields are filled.";
+    els.diagramVolumeTonsStatus.textContent = "Tonnage unavailable until required fields are filled.";
+    return;
+  }
   els.diagramVolumeIncludedStatus.textContent = `Included Holes: ${summary.includedHoleCount}`;
   els.diagramVolumeCubicYardsStatus.textContent = `Total Cubic Yards: ${formatVolumeNumber(summary.cubicYards)}`;
   els.diagramVolumeTonsStatus.textContent = `Total Tons: ${formatVolumeNumber(summary.tons)}`;
@@ -4162,9 +4596,17 @@ function renderDiagramLoadingPanel() {
     : "";
 
   els.diagramLoadingDensityInput.value = String(density);
-  els.diagramLoadingTotalWeightStatus.textContent = `Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`;
-  els.diagramLoadingIncludedCountStatus.textContent = `Holes Included: ${summary.includedHoleCount} of ${summary.totalHoleCount}${warningText}`;
-  els.diagramLoadingAverageStatus.textContent = `Average: ${formatLoadingWeight(summary.averageExplosiveWeightLb)} lb/hole`;
+  els.diagramLoadingTotalWeightStatus.textContent = summary.includedHoleCount
+    ? `Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`
+    : "No loading assigned yet.";
+  els.diagramLoadingIncludedCountStatus.textContent = summary.totalHoleCount
+    ? (summary.includedHoleCount
+      ? `Holes Included: ${summary.includedHoleCount} of ${summary.totalHoleCount}${warningText}`
+      : "No holes currently contribute to loading totals.")
+    : "Import holes to start building loading totals.";
+  els.diagramLoadingAverageStatus.textContent = summary.includedHoleCount
+    ? `Average: ${formatLoadingWeight(summary.averageExplosiveWeightLb)} lb/hole`
+    : "Average will appear after loading is assigned.";
   els.diagramLoadingSelectionStatus.textContent = selectedCount
     ? `${selectedCount} selected hole${selectedCount === 1 ? "" : "s"} ready for assignment`
     : "Select one or more holes to assign detonators and boosters.";
@@ -4179,8 +4621,8 @@ function renderDiagramLoadingPanel() {
   els.diagramLoadingBoosterEditor.innerHTML = materialEntryEditorMarkup(diagramState.ui.loadingDraft.boosters, BOOSTER_TYPES, { scope: "draft-booster" });
   els.diagramLoadingApplyBtn.disabled = !diagramState.selection.size;
   els.diagramLoadingSummary.innerHTML = `
-    <div><strong>${escapeHtml(`Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb`)}</strong></div>
-    <div>${escapeHtml(`${summary.totalHoleCount} holes`)}</div>
+    <div><strong>${escapeHtml(summary.includedHoleCount ? `Total Emulsion: ${formatLoadingWeight(summary.totalExplosiveWeightLb)} lb` : "No loading assigned yet.")}</strong></div>
+    <div>${escapeHtml(summary.totalHoleCount ? `${summary.totalHoleCount} holes in shot` : "Import holes to begin loading.")}</div>
     <div class="loading-summary-block">
       <div><strong>Detonators</strong></div>
       ${materialCountsMarkup(summary.detonatorCounts, "No detonators assigned")}
@@ -4793,6 +5235,8 @@ function fullSolverRefresh({ fit = false } = {}) {
   renderRelationshipList();
   syncTimingSolveFloating();
   renderTimingResults();
+  renderPlannerStatusIndicator();
+  refreshPlannerCardSummaries();
   solverRenderer.render();
   if (fit) solverRenderer.fitToData();
 }
@@ -5406,6 +5850,8 @@ function fullDiagramRefresh({ fit = false } = {}) {
   renderDiagramLoadingPanel();
   renderDiagramVolumePanel();
   renderDiagramPropertiesPanel();
+  renderPlannerStatusIndicator();
+  refreshPlannerCardSummaries();
   diagramRenderer.render();
   if (fit) diagramRenderer.fitToData();
 }
@@ -5649,7 +6095,8 @@ els.csvInput.addEventListener("change", async () => {
   const parsed = parseCsvText(await file.text());
   solverState.csvCache = parsed;
   setSolverColumnOptions(parsed.headers);
-  els.mappingPanel.classList.remove("hidden");
+  syncImportPanelUi("solver");
+  openMappingOverlay("solver");
 });
 
 els.importMappedBtn.addEventListener("click", () => {
@@ -5702,6 +6149,7 @@ els.importMappedBtn.addEventListener("click", () => {
   uniqueHoleIds(holes, records, idColumn);
   initializeProjectFromHoles(holes, solverState.csvCache);
   applyImportedHoles(holes);
+  closeMappingOverlay();
   hydrateDiagramFromProject();
   fullSolverRefresh({ fit: true });
 });
@@ -5712,7 +6160,8 @@ els.diagramCsvInput.addEventListener("change", async () => {
   const parsed = parseCsvText(await file.text());
   diagramState.csvCache = parsed;
   setDiagramColumnOptions(parsed.headers);
-  els.diagramMappingPanel.classList.remove("hidden");
+  syncImportPanelUi("diagram");
+  openMappingOverlay("diagram");
 });
 
 els.diagramImportMappedBtn.addEventListener("click", () => {
@@ -5765,6 +6214,7 @@ els.diagramImportMappedBtn.addEventListener("click", () => {
   uniqueHoleIds(holes, records, idColumn);
   initializeProjectFromHoles(holes, diagramState.csvCache);
   applyDiagramImportedHoles(holes);
+  closeMappingOverlay();
   hydrateSolverFromProject();
 });
 
@@ -6242,6 +6692,7 @@ els.homeNavBtn.addEventListener("click", () => {
   setActiveWorkspace("home");
 });
 els.openDelaySolverBtn.addEventListener("click", () => {
+  appUi.plannerMode = "diagram";
   if (projectState.holes.length) hydrateDiagramFromProject();
   else persistDiagramStateToProject();
   setActiveWorkspace("diagramMaker");
@@ -6252,6 +6703,7 @@ els.openDelaySolverBtn.addEventListener("click", () => {
 });
 if (els.openDiagramMakerBtn) {
   els.openDiagramMakerBtn.addEventListener("click", () => {
+    appUi.plannerMode = "diagram";
     if (projectState.holes.length) hydrateDiagramFromProject();
     setActiveWorkspace("diagramMaker");
     requestAnimationFrame(() => {
@@ -6262,6 +6714,7 @@ if (els.openDiagramMakerBtn) {
 }
 els.plannerDiagramModeBtn.addEventListener("click", () => switchPlannerMode("diagram"));
 els.plannerTimingModeBtn.addEventListener("click", () => switchPlannerMode("timing"));
+if (els.plannerLoadingModeBtn) els.plannerLoadingModeBtn.addEventListener("click", () => switchPlannerMode("loading"));
 els.timingSolverModeBtn.addEventListener("click", () => setTimingMode("solver"));
 els.timingManualModeBtn.addEventListener("click", () => setTimingMode("manual"));
 [
@@ -6384,6 +6837,7 @@ els.exportPdfBtn.addEventListener("click", () => openPrintWorkspace());
 els.helpBtn.addEventListener("click", () => openHelpWorkspace());
 els.csvExportBtn.addEventListener("click", () => exportSelectedTimingCsv());
 els.helpBackBtn.addEventListener("click", () => closeHelpWorkspace());
+els.plannerMappingCloseBtn?.addEventListener("click", () => closeMappingOverlay());
 els.printBackBtn.addEventListener("click", () => closePrintWorkspace());
 els.printAddPageBreakBtn.addEventListener("click", () => {
   startPrintPageBreakDraft();
@@ -6479,6 +6933,10 @@ window.addEventListener("beforeprint", () => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !els.plannerMappingOverlay.classList.contains("hidden")) {
+    closeMappingOverlay();
+    return;
+  }
   if (event.key === "Escape" && !els.diagramHolePopupBackdrop.classList.contains("hidden")) {
     closeDiagramHolePopup();
     return;
@@ -6535,7 +6993,13 @@ syncDiagramDefaultDiameterStatus();
 renderDiagramPropertiesPanel();
 persistDiagramStateToProject();
 persistTimingStateToProject();
+initPlannerLayouts();
+initPlannerCards();
 initMenuToggles();
+setPlannerCardExpanded("relationshipMenu", true, { exclusive: true });
+setPlannerCardExpanded("timingResultsMenu", true, { exclusive: true });
+setPlannerCardExpanded("diagramShotMenu", true, { exclusive: true });
+setPlannerCardExpanded("diagramPropertiesMenu", true, { exclusive: true });
 renderWorkspaceChrome();
 renderAuthUi();
 renderCloudProjectUi();
