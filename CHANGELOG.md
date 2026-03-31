@@ -25,6 +25,16 @@ All notable project changes are tracked here.
   - grouped-hole profile cards based on matching load definitions
 
 ### Changed
+- Print preview now uses a shared sheet-size contract across live preview, generated print output, and browser print CSS so diagram/timing canvases render to the same printable page box.
+- Print output canvases now render at a fixed printable-sheet size instead of inheriting the live preview viewport size, reducing preview-to-PDF drift and page-size mismatch.
+- Print media CSS now isolates `.print-pages-output` as the only printable DOM path and reuses shared sheet dimensions, preventing the print-preview shell from contributing extra blank pages.
+- Diagram print page-break selection is now limited to explicit draft pages, and label-edit controls are hidden/disabled during page-break drafting so split-page workflows and label dragging no longer compete.
+- Diagram print labels and corner-coordinate panels now clamp inside the printable sheet area below the reserved header space, reducing accidental overflow without shrinking the fitted diagram.
+- Diagram print labels and corner-coordinate panels now disappear when their source hole is off the printed sheet, preventing orphaned off-page references from remaining visible.
+- Diagram depth labels now use a darker neutral tone so they stay distinct from hole numbers without introducing accent color.
+- Hole Table print pagination now reserves extra space on the final page for totals/loading summaries so long tables continue onto additional pages instead of clipping.
+- Hole Table print pagination now uses fuller per-page row counts so table pages waste less whitespace before continuing.
+- Hole Table print pagination was tuned again to carry rows slightly farther down each page before breaking.
 - Hole objects now persist loading-related fields including detonators, boosters, derived column depth, derived explosive weight, and warning state.
 - Project document serialization version increased to `3` so loading data is carried through save/load flows.
 - Diagram state refresh now recalculates loading-derived values whenever density, depth, stemming, or loading materials change.

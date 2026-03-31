@@ -80,6 +80,26 @@ function printHeaderMetaFont(sizePx, weight = 600) {
   return `${weight} ${sizePx}px "Trebuchet MS", "Segoe UI", sans-serif`;
 }
 
+const DIAGRAM_DEPTH_LABEL_COLOR = "#2f3744";
+
+const DIAGRAM_PRINT_LAYOUT = {
+  headerTop: 24,
+  headerBottom: 108,
+  titleX: 28,
+  titleY: 44,
+  ruleY: 54,
+  leftTextX: 30,
+  leftTextStartY: 72,
+  leftTextLineGap: 19,
+  rightBoxPaddingX: 13,
+  rightBoxPaddingY: 9,
+  rightBoxLineGap: 5,
+  rightBoxLineHeight: 13,
+  rightBoxRightInset: 30,
+  northArrowY: 150,
+  labelInset: 8,
+};
+
 const TIMING_VISUALIZATION_DECK_COLORS = [
   { fill: "#f59e0b", stroke: "#f97316" },
   { fill: "#22c55e", stroke: "#0f766e" },
@@ -292,7 +312,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = this.isPrintRenderer && this.isDiagramMode() ? 150 : 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? DIAGRAM_PRINT_LAYOUT.northArrowY : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);
@@ -409,7 +429,7 @@ export class DiagramRenderer {
     }
     if (settings.showDepthLabels) {
       const depthText = formatWholeNumber(hole.depth, " ft");
-      if (depthText) lines.push({ text: depthText, color: "#52657c" });
+      if (depthText) lines.push({ text: depthText, color: DIAGRAM_DEPTH_LABEL_COLOR });
     }
     return lines;
   }
@@ -617,7 +637,7 @@ export class DiagramRenderer {
     }
     if (settings.showDepthLabels) {
       const depthText = formatWholeNumber(hole.depth, " ft");
-      if (depthText) lines.push({ text: depthText, color: "#52657c", weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
+      if (depthText) lines.push({ text: depthText, color: DIAGRAM_DEPTH_LABEL_COLOR, weight: 700, size: Math.max(8, Math.round(10 * this.textScale())) });
     }
     return lines;
   }
@@ -661,8 +681,31 @@ export class DiagramRenderer {
     ];
   }
 
+  clampDiagramPrintLabelRect(rect, kind = "hole") {
+    const inset = DIAGRAM_PRINT_LAYOUT.labelInset;
+    const topInset = Math.max(inset, kind === "corner" ? DIAGRAM_PRINT_LAYOUT.headerBottom : DIAGRAM_PRINT_LAYOUT.headerBottom + 4);
+    const maxLeft = this.canvas.width - inset - rect.width;
+    const maxTop = this.canvas.height - inset - rect.height;
+    return {
+      ...rect,
+      left: clamp(rect.left, inset, Math.max(inset, maxLeft)),
+      top: clamp(rect.top, topInset, Math.max(topInset, maxTop)),
+    };
+  }
+
+  isDiagramPrintPointOnSheet(point) {
+    if (!point) return false;
+    return (
+      point.x >= 0
+      && point.x <= this.canvas.width
+      && point.y >= 0
+      && point.y <= this.canvas.height
+    );
+  }
+
   getDiagramPrintLabelLayout(hole, { ignoreOffset = false } = {}) {
     const point = this.worldToScreen(hole.x, hole.y);
+    if (!this.isDiagramPrintPointOnSheet(point)) return null;
     const lines = this.diagramPrintLabelLines(hole);
     const metrics = this.measureDiagramPrintLabel(lines);
     const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
@@ -696,12 +739,13 @@ export class DiagramRenderer {
       lines,
       metrics,
       defaultRect,
-      rect,
+      rect: this.clampDiagramPrintLabelRect(rect, "hole"),
     };
   }
 
   getDiagramPrintCornerLabelLayout(hole, { ignoreOffset = false } = {}) {
     const point = this.worldToScreen(hole.x, hole.y);
+    if (!this.isDiagramPrintPointOnSheet(point)) return null;
     const lines = this.diagramPrintCornerCoordinateLines(hole);
     const metrics = this.measureDiagramPrintLabel(lines);
     const configuredAngle = Number(this.stateRef?.ui?.labelAngleDeg);
@@ -735,7 +779,7 @@ export class DiagramRenderer {
       lines,
       metrics,
       defaultRect,
-      rect,
+      rect: this.clampDiagramPrintLabelRect(rect, "corner"),
     };
   }
 
@@ -744,11 +788,12 @@ export class DiagramRenderer {
     for (let index = this.stateRef.holes.length - 1; index >= 0; index -= 1) {
       const hole = this.stateRef.holes[index];
       const cornerLayout = this.getDiagramPrintCornerLabelLayout(hole);
-      if (cornerLayout.lines.length) {
+      if (cornerLayout?.lines?.length) {
         const { rect } = cornerLayout;
         if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) return cornerLayout;
       }
       const layout = this.getDiagramPrintLabelLayout(hole);
+      if (!layout?.lines?.length) continue;
       const { rect } = layout;
       if (x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height) return layout;
     }
@@ -811,9 +856,9 @@ export class DiagramRenderer {
     if (!this.isDiagramPrintMode()) return;
     this.stateRef.holes.forEach((hole) => {
       const layout = this.getDiagramPrintLabelLayout(hole);
-      if (layout.lines.length) this.drawDiagramPrintLabelBox(layout);
+      if (layout?.lines?.length) this.drawDiagramPrintLabelBox(layout);
       const cornerLayout = this.getDiagramPrintCornerLabelLayout(hole);
-      if (cornerLayout.lines.length) this.drawDiagramPrintLabelBox(cornerLayout);
+      if (cornerLayout?.lines?.length) this.drawDiagramPrintLabelBox(cornerLayout);
     });
   }
 
@@ -1027,30 +1072,34 @@ export class DiagramRenderer {
     this.ctx.save();
     this.ctx.fillStyle = "#0f172a";
     this.ctx.font = printHeaderTitleFont(34);
-    this.ctx.fillText(shotNumber, 28, 44);
+    this.ctx.fillText(shotNumber, DIAGRAM_PRINT_LAYOUT.titleX, DIAGRAM_PRINT_LAYOUT.titleY);
     this.ctx.strokeStyle = "rgba(51, 65, 85, 0.30)";
     this.ctx.lineWidth = 1.5;
     this.ctx.beginPath();
-    this.ctx.moveTo(28, 54);
-    this.ctx.lineTo(170, 54);
+    this.ctx.moveTo(DIAGRAM_PRINT_LAYOUT.titleX, DIAGRAM_PRINT_LAYOUT.ruleY);
+    this.ctx.lineTo(170, DIAGRAM_PRINT_LAYOUT.ruleY);
     this.ctx.stroke();
 
     this.ctx.font = printHeaderMetaFont(13, 600);
     leftLines.forEach((line, index) => {
-      this.ctx.fillText(line, 30, 72 + (index * 19));
+      this.ctx.fillText(
+        line,
+        DIAGRAM_PRINT_LAYOUT.leftTextX,
+        DIAGRAM_PRINT_LAYOUT.leftTextStartY + (index * DIAGRAM_PRINT_LAYOUT.leftTextLineGap),
+      );
     });
 
     if (rightLines.length) {
       this.ctx.font = printHeaderMetaFont(13, 600);
-      const boxPaddingX = 13;
-      const boxPaddingY = 9;
-      const lineGap = 5;
-      const lineHeight = 13;
+      const boxPaddingX = DIAGRAM_PRINT_LAYOUT.rightBoxPaddingX;
+      const boxPaddingY = DIAGRAM_PRINT_LAYOUT.rightBoxPaddingY;
+      const lineGap = DIAGRAM_PRINT_LAYOUT.rightBoxLineGap;
+      const lineHeight = DIAGRAM_PRINT_LAYOUT.rightBoxLineHeight;
       const textWidths = rightLines.map((line) => this.ctx.measureText(line).width);
       const boxWidth = Math.max(...textWidths) + (boxPaddingX * 2);
       const boxHeight = (rightLines.length * lineHeight) + ((rightLines.length - 1) * lineGap) + (boxPaddingY * 2);
-      const boxLeft = this.canvas.width - 30 - boxWidth;
-      const boxTop = 24;
+      const boxLeft = this.canvas.width - DIAGRAM_PRINT_LAYOUT.rightBoxRightInset - boxWidth;
+      const boxTop = DIAGRAM_PRINT_LAYOUT.headerTop;
 
       this.ctx.save();
       this.ctx.fillStyle = "rgba(255, 255, 255, 0.98)";
@@ -1068,7 +1117,7 @@ export class DiagramRenderer {
       this.ctx.textAlign = "right";
       rightLines.forEach((line, index) => {
         const y = boxTop + boxPaddingY + lineHeight + (index * (lineHeight + lineGap));
-        this.ctx.fillText(line, this.canvas.width - 30 - boxPaddingX, y);
+        this.ctx.fillText(line, this.canvas.width - DIAGRAM_PRINT_LAYOUT.rightBoxRightInset - boxPaddingX, y);
       });
     }
     this.ctx.textAlign = "left";

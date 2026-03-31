@@ -79,8 +79,19 @@ const WORKSPACE_TO_MODE = {
 };
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "subdrill", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
-const PRINT_FIT_MARGINS = { marginTop: 96, marginRight: 36, marginBottom: 36, marginLeft: 36 };
-const PRINT_DIAGRAM_FIT_MARGINS = { marginTop: 132, marginRight: 36, marginBottom: 36, marginLeft: 36 };
+const PRINT_PAGE_SIZE_IN = { width: 11, height: 8.5, margin: 0.25 };
+const PRINT_SHEET_SIZE_IN = {
+  width: PRINT_PAGE_SIZE_IN.width - (PRINT_PAGE_SIZE_IN.margin * 2),
+  height: PRINT_PAGE_SIZE_IN.height - (PRINT_PAGE_SIZE_IN.margin * 2),
+};
+const PRINT_RENDER_SIZE = {
+  width: Math.round(PRINT_SHEET_SIZE_IN.width * 96),
+  height: Math.round(PRINT_SHEET_SIZE_IN.height * 96),
+};
+const PRINT_FIT_PROFILES = {
+  solver: { marginTop: 92, marginRight: 34, marginBottom: 34, marginLeft: 34 },
+  diagram: { marginTop: 124, marginRight: 34, marginBottom: 34, marginLeft: 34 },
+};
 const PRINT_LABEL_DISTANCE_MIN = -15;
 const PRINT_LABEL_DISTANCE_MAX = 20;
 const PRINT_LABEL_DISTANCE_DEFAULT_TICK = 3;
@@ -2535,13 +2546,13 @@ function clonePrintPage(page) {
   return {
     pageType: page.pageType || (page?.ui?.workspaceMode === "diagram" ? "diagram" : "solver"),
     pageLabel: page?.pageLabel || null,
-    pageBreakDraft: page?.pageBreakDraft === true,
+    pageBreakDraft: false,
     pageBreakSourcePage: null,
     profileHoleId: page.profileHoleId || null,
     holes,
     holesById: new Map(holes.map((hole) => [hole.id, hole])),
     fullShotHoles,
-    selection: new Set(page.selection || []),
+    selection: new Set(),
     ui: {
       ...page.ui,
       relationshipDraft: null,
@@ -3004,9 +3015,9 @@ function syncPrintControls() {
   els.printLabelAngleWrap.classList.toggle("hidden", !diagramMode);
   els.printDepthToggleWrap.classList.toggle("hidden", !diagramMode);
   els.printCornerCoordsToggleWrap.classList.toggle("hidden", !diagramMode);
-  els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode);
-  els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || !labelModeEnabled);
-  els.printEditLabelsBtn.classList.toggle("active", diagramMode && labelModeEnabled);
+  els.printEditLabelsBtn.classList.toggle("hidden", !diagramMode || draftMode);
+  els.printResetLabelsBtn.classList.toggle("hidden", !diagramMode || draftMode || !labelModeEnabled);
+  els.printEditLabelsBtn.classList.toggle("active", diagramMode && !draftMode && labelModeEnabled);
   els.printRelationshipToggle.checked = page.ui.showRelationships !== false;
   els.printTimingToggle.checked = page.ui.showOverlayText !== false;
   els.printAngleToggle.checked = page.ui.showAngleLabels !== false;
@@ -3022,6 +3033,8 @@ function syncPrintControls() {
 
 function activatePrintPage(index, options = {}) {
   if (!Number.isInteger(index) || index < 0 || index >= printSession.pages.length) return;
+  const previousPage = activePrintPage();
+  if (previousPage) clearPrintInteractionState(previousPage);
   printSession.activePageIndex = index;
   const page = activePrintPage();
   renderPrintPageTabs();
@@ -3029,9 +3042,31 @@ function activatePrintPage(index, options = {}) {
   setPrintRendererPage(page, { render: options.render !== false });
 }
 
-function printFitMarginsForPage(page) {
-  if (page?.ui?.workspaceMode === "diagram") return PRINT_DIAGRAM_FIT_MARGINS;
-  return PRINT_FIT_MARGINS;
+function printFitProfileForPage(page) {
+  return page?.ui?.workspaceMode === "diagram" ? PRINT_FIT_PROFILES.diagram : PRINT_FIT_PROFILES.solver;
+}
+
+function printFitMarginsForPage(page, renderer = printRenderer) {
+  const profile = printFitProfileForPage(page);
+  const width = Number(renderer?.canvas?.width) || PRINT_RENDER_SIZE.width;
+  const height = Number(renderer?.canvas?.height) || PRINT_RENDER_SIZE.height;
+  const widthScale = width / PRINT_RENDER_SIZE.width;
+  const heightScale = height / PRINT_RENDER_SIZE.height;
+  return {
+    marginTop: Math.round(profile.marginTop * heightScale),
+    marginRight: Math.round(profile.marginRight * widthScale),
+    marginBottom: Math.round(profile.marginBottom * heightScale),
+    marginLeft: Math.round(profile.marginLeft * widthScale),
+  };
+}
+
+function clearPrintInteractionState(page) {
+  if (!page?.ui) return;
+  page.ui.hoverLabelHoleId = null;
+  page.ui.selectionBoxDraft = null;
+  page.dragLabelHoleId = null;
+  page.dragLabelKind = null;
+  page.dragPointerDelta = null;
 }
 
 function addPrintPage() {
@@ -3189,7 +3224,7 @@ function isDiagramPrintEditing() {
 
 function setPrintEditMode(enabled) {
   const page = activePrintPage();
-  if (!page) return;
+  if (!page || page.pageBreakDraft) return;
   page.ui.labelEditMode = enabled === true;
   page.ui.hoverLabelHoleId = null;
   page.dragLabelHoleId = null;
@@ -3201,7 +3236,7 @@ function setPrintEditMode(enabled) {
 
 function resetPrintLabelLayouts() {
   const page = activePrintPage();
-  if (!page) return;
+  if (!page || page.pageBreakDraft) return;
   page.labelLayoutByHoleId = new Map();
   page.cornerLabelLayoutByHoleId = new Map();
   page.dragLabelHoleId = null;
@@ -3249,16 +3284,26 @@ function formatHoleTableAzimuth(value, angle) {
 
 function holeTableRowsPerPage(page) {
   const scale = Math.max(0.4, Math.min(1.8, Number(page?.ui?.textScale) || 1));
-  return Math.max(8, Math.floor(23 / scale));
+  return Math.max(10, Math.floor(22 / scale));
+}
+
+function holeTableRowsPerSummaryPage(page) {
+  const scale = Math.max(0.4, Math.min(1.8, Number(page?.ui?.textScale) || 1));
+  return Math.max(8, Math.floor(18 / scale));
 }
 
 function chunkHoleTableRows(page) {
   const rowsPerPage = holeTableRowsPerPage(page);
+  const summaryRowsPerPage = holeTableRowsPerSummaryPage(page);
   const holes = Array.isArray(page?.holes) ? page.holes : [];
   if (!holes.length) return [[]];
   const chunks = [];
-  for (let index = 0; index < holes.length; index += rowsPerPage) {
-    chunks.push(holes.slice(index, index + rowsPerPage));
+  let index = 0;
+  while (index < holes.length) {
+    const remaining = holes.length - index;
+    const chunkSize = remaining <= summaryRowsPerPage ? summaryRowsPerPage : rowsPerPage;
+    chunks.push(holes.slice(index, index + chunkSize));
+    index += chunkSize;
   }
   return chunks;
 }
@@ -3721,13 +3766,19 @@ function renderStaticPrintPreview(page, container) {
 function renderPrintPageToCanvas(page, canvas) {
   if (!page || !canvas) return;
   const context = canvas.getContext("2d");
-  canvas.width = printRenderer.canvas.width;
-  canvas.height = printRenderer.canvas.height;
+  canvas.width = PRINT_RENDER_SIZE.width;
+  canvas.height = PRINT_RENDER_SIZE.height;
+  const previousWidth = printRenderer.canvas.width;
+  const previousHeight = printRenderer.canvas.height;
+  printRenderer.canvas.width = PRINT_RENDER_SIZE.width;
+  printRenderer.canvas.height = PRINT_RENDER_SIZE.height;
   printRenderer.stateRef = page;
   printRenderer.applyViewState(page.viewport, { render: false });
   printRenderer.render();
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(printRenderer.canvas, 0, 0);
+  printRenderer.canvas.width = previousWidth;
+  printRenderer.canvas.height = previousHeight;
 }
 
 function preparePrintablePages() {
@@ -3740,8 +3791,10 @@ function preparePrintablePages() {
       chunks.forEach((holes, chunkIndex) => {
         const wrapper = document.createElement("section");
         wrapper.className = "print-output-page";
+        wrapper.dataset.pageType = page.pageType;
         const frame = document.createElement("div");
         frame.className = "print-paper-frame";
+        frame.classList.add(`print-paper-frame--${page.pageType}`);
         if (page.colorMode === "greyscale") frame.classList.add("greyscale");
         frame.innerHTML = buildHoleTableMarkup(page, holes, { pageNumber: chunkIndex + 1, pageCount: chunks.length, showSummary: chunkIndex === chunks.length - 1 });
         wrapper.appendChild(frame);
@@ -3750,8 +3803,10 @@ function preparePrintablePages() {
     } else if (page.pageType === "shotOrder") {
       const wrapper = document.createElement("section");
       wrapper.className = "print-output-page";
+      wrapper.dataset.pageType = page.pageType;
       const frame = document.createElement("div");
       frame.className = "print-paper-frame";
+      frame.classList.add(`print-paper-frame--${page.pageType}`);
       if (page.colorMode === "greyscale") frame.classList.add("greyscale");
       frame.innerHTML = buildShotOrderMarkup(page);
       wrapper.appendChild(frame);
@@ -3762,8 +3817,10 @@ function preparePrintablePages() {
       chunks.forEach((groupChunk, chunkIndex) => {
         const wrapper = document.createElement("section");
         wrapper.className = "print-output-page";
+        wrapper.dataset.pageType = page.pageType;
         const frame = document.createElement("div");
         frame.className = "print-paper-frame";
+        frame.classList.add(`print-paper-frame--${page.pageType}`);
         if (page.colorMode === "greyscale") frame.classList.add("greyscale");
         frame.innerHTML = buildHoleLoadProfileMarkup(page, groupChunk, { pageNumber: chunkIndex + 1, pageCount: chunks.length });
         wrapper.appendChild(frame);
@@ -3772,12 +3829,14 @@ function preparePrintablePages() {
     } else {
       const wrapper = document.createElement("section");
       wrapper.className = "print-output-page";
+      wrapper.dataset.pageType = page.pageType;
       const frame = document.createElement("div");
       frame.className = "print-paper-frame";
+      frame.classList.add(`print-paper-frame--${page.pageType}`);
       if (page.colorMode === "greyscale") frame.classList.add("greyscale");
       const canvas = document.createElement("canvas");
-      canvas.width = printRenderer.canvas.width;
-      canvas.height = printRenderer.canvas.height;
+      canvas.width = PRINT_RENDER_SIZE.width;
+      canvas.height = PRINT_RENDER_SIZE.height;
       canvas.setAttribute("aria-label", `Print Page ${index + 1}`);
       frame.appendChild(canvas);
       renderPrintPageToCanvas(page, canvas);
@@ -3791,7 +3850,7 @@ function preparePrintablePages() {
 function handlePrintPointerDown(payload) {
   const page = activePrintPage();
   if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram") return false;
-  if (!isDiagramPrintEditing() && payload.event.shiftKey && !payload.hole) {
+  if (page.pageBreakDraft && !isDiagramPrintEditing() && payload.event.shiftKey && !payload.hole) {
     page.ui.selectionBoxDraft = {
       start: { x: payload.x, y: payload.y },
       current: { x: payload.x, y: payload.y },
@@ -3816,7 +3875,7 @@ function handlePrintPointerDown(payload) {
 
 function handlePrintHoleClick(hole, event) {
   const page = activePrintPage();
-  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram" || isDiagramPrintEditing()) return;
+  if (!page || page.pageType !== "diagram" || page.ui.workspaceMode !== "diagram" || isDiagramPrintEditing() || !page.pageBreakDraft) return;
   if (!event.shiftKey) page.selection = new Set([hole.id]);
   else if (page.selection.has(hole.id)) page.selection.delete(hole.id);
   else page.selection.add(hole.id);
@@ -3827,7 +3886,7 @@ function handlePrintHoleClick(hole, event) {
 function handlePrintPointerMove(payload) {
   const page = activePrintPage();
   if (!page || page.ui.workspaceMode !== "diagram") return false;
-  if (!isDiagramPrintEditing() && page.ui.selectionBoxDraft) {
+  if (page.pageBreakDraft && !isDiagramPrintEditing() && page.ui.selectionBoxDraft) {
     page.ui.selectionBoxDraft.current = { x: payload.x, y: payload.y };
     printRenderer.render();
     return true;
@@ -3844,6 +3903,7 @@ function handlePrintPointerMove(payload) {
   const defaultLayout = page.dragLabelKind === "corner"
     ? printRenderer.getDiagramPrintCornerLabelLayout(hole, { ignoreOffset: true })
     : printRenderer.getDiagramPrintLabelLayout(hole, { ignoreOffset: true });
+  if (!defaultLayout) return false;
   const layoutMap = page.dragLabelKind === "corner" ? page.cornerLabelLayoutByHoleId : page.labelLayoutByHoleId;
   layoutMap.set(hole.id, {
     offsetX: payload.x - page.dragPointerDelta.x - defaultLayout.rect.left,
@@ -3855,7 +3915,7 @@ function handlePrintPointerMove(payload) {
 
 function handlePrintPointerUp() {
   const page = activePrintPage();
-  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && page.ui.selectionBoxDraft) {
+  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && page.pageBreakDraft && page.ui.selectionBoxDraft) {
     const draft = page.ui.selectionBoxDraft;
     page.ui.selectionBoxDraft = null;
     const rect = {
@@ -3872,7 +3932,7 @@ function handlePrintPointerUp() {
     printRenderer.render();
     return true;
   }
-  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && !isDiagramPrintEditing() && page.selection?.size) {
+  if (page?.pageType === "diagram" && page.ui.workspaceMode === "diagram" && page.pageBreakDraft && !isDiagramPrintEditing() && page.selection?.size) {
     const pointer = printRenderer.pointerScreen || null;
     if (!pointer) return false;
     const hole = printRenderer.findHoleAtScreen(pointer.x, pointer.y);
@@ -3893,7 +3953,7 @@ function handlePrintPointerUp() {
 
 function startPrintLabelDialInteraction(event) {
   const page = activePrintPage();
-  if (!page || page.ui.workspaceMode !== "diagram") return;
+  if (!page || page.ui.workspaceMode !== "diagram" || page.pageBreakDraft) return;
   printLabelDialState.dragging = true;
   event.preventDefault();
   setActivePrintLabelAngle(pointerDialAngle(event.clientX, event.clientY));

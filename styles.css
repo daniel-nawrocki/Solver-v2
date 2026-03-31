@@ -19,6 +19,13 @@
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
+  --print-page-width-in: 11;
+  --print-page-height-in: 8.5;
+  --print-page-margin-in: 0.25;
+  --print-sheet-width-in: 10.5;
+  --print-sheet-height-in: 8;
+  --print-sheet-ratio: 1.3125;
+  --print-sheet-width-px: 1008px;
 }
 
 * { box-sizing: border-box; }
@@ -2074,13 +2081,14 @@ button:active {
 }
 
 .print-paper-frame {
-  width: min(980px, calc(100vw - 28px));
-  aspect-ratio: 11 / 8.5;
+  width: min(var(--print-sheet-width-px), calc(100vw - 28px));
+  aspect-ratio: var(--print-sheet-ratio);
   background: #ffffff;
   border: 2px solid rgba(43, 61, 82, 0.35);
   box-shadow: 0 20px 38px rgba(15, 32, 56, 0.16);
-  padding: 16px;
+  padding: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .print-paper-frame::before {
@@ -2747,7 +2755,6 @@ body.help-active .print-workspace {
 
   .print-paper-frame {
     width: calc(100vw - 32px);
-    padding: 14px;
   }
 
   .help-layout {
@@ -2874,7 +2881,7 @@ body.help-active .print-workspace {
 @media print {
   @page print-landscape {
     size: landscape;
-    margin: 0.25in;
+    margin: calc(var(--print-page-margin-in) * 1in);
   }
 
   html,
@@ -2930,8 +2937,8 @@ body.help-active .print-workspace {
   .print-output-page {
     display: block;
     box-sizing: border-box;
-    width: 10.5in;
-    height: 8in;
+    width: calc(var(--print-sheet-width-in) * 1in);
+    height: calc(var(--print-sheet-height-in) * 1in);
     margin: 0 auto;
     padding: 0;
     overflow: hidden;
@@ -2948,8 +2955,8 @@ body.help-active .print-workspace {
 
   .print-paper-frame {
     box-sizing: border-box;
-    width: 10.5in;
-    height: 8in;
+    width: calc(var(--print-sheet-width-in) * 1in);
+    height: calc(var(--print-sheet-height-in) * 1in);
     border: none;
     box-shadow: none;
     padding: 0;
@@ -2964,8 +2971,8 @@ body.help-active .print-workspace {
 
   #printCanvas,
   .print-output-page canvas {
-    width: 10.5in;
-    height: 8in;
+    width: calc(var(--print-sheet-width-in) * 1in);
+    height: calc(var(--print-sheet-height-in) * 1in);
     max-width: none;
     max-height: none;
     display: block;

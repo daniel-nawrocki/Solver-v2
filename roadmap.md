@@ -91,6 +91,13 @@ Code-level status:
 - Diagram print preview now has a separate `Show Corner Coords` toggle that renders saved shot-corner lat/long boxes independently from normal hole labels
 - shot-corner print coordinate boxes are draggable in print label-edit mode and keep their own independent layout offsets
 - Hole Load Profile print output now targets a dedicated compact `2 x 2` quarter-page card layout instead of compressing the original large-format card into four-up output
+- print preview now uses a shared sheet-size contract between live preview, generated output canvases, and print CSS so preview sizing matches printed page sizing more closely
+- browser print now isolates `.print-pages-output` as the only printable DOM path so the print-preview shell should no longer contribute blank leading/trailing sheets
+- print output canvases now render at a fixed printable-sheet size instead of inheriting the current live preview viewport size
+- diagram print page-break selection now only activates on explicit page-break draft pages, while label-edit controls are hidden during draft mode so the two workflows do not compete
+- diagram print labels and corner-coordinate boxes now clamp inside the printable sheet area below the reserved header band to reduce accidental overflow on dense shots
+- diagram print labels and corner-coordinate boxes now disappear entirely when their source hole is off the printed sheet
+- hole-table print pagination now uses a more conservative final-page row limit so totals/loading summaries do not clip off the page
 - `js/app.js` and `js/diagramRenderer.js` parse successfully in local inline JS checks, but browser interaction still needs manual verification
 - `js/app.js` DOM lookups were checked against `index.html`, and all referenced IDs were found.
 
@@ -546,6 +553,24 @@ Current rule:
 - holes only contribute to volume when burden, spacing, and depth are valid and the effective depth remains greater than zero
 - subdrill remains editable per hole after pattern assignment, so hole-specific overrides are allowed
 
+### 26. Print Hardening Pass
+Implemented in code.
+
+What was added:
+- shared print-sheet constants now drive preview sizing, generated canvas output sizing, and print CSS sheet dimensions
+- diagram/timing print canvases now render to a fixed printable-sheet output size during `preparePrintablePages()`
+- print media now hides all preview-shell children except `.print-pages-output`
+- page-break selection in print preview is now limited to explicit draft pages
+- label-edit controls are hidden/disabled while a page-break draft is active
+- diagram print labels and corner-coordinate panels now clamp within the printable sheet bounds below the reserved header area
+- off-sheet holes no longer keep printable labels or corner-coordinate boxes visible on the page
+- hole-table final pages reserve extra room for summary blocks, so longer hole tables should continue onto additional pages instead of truncating
+
+Current rule:
+- `Fit Page` still operates per page, but now uses the same fit profile family as the printable sheet contract
+- duplicating a print page preserves page-specific print settings and label offsets, but no longer carries transient draft-selection state forward
+- page-break draft interaction and label-edit interaction are intentionally mutually exclusive inside print preview
+
 ### 7. Recovery / Stability Note
 Important recent context:
 - a previous large replacement of `js/app.js` failed mid-edit and temporarily removed the file
@@ -568,7 +593,7 @@ Important recent context:
 - Delay Solver and Diagram Maker now share more app-level wiring than before, so regressions are possible until manually exercised.
 - the unified planner still relies on the legacy separate workspace DOM internally, so cleanup remains to be done later
 - Print preview behavior for both workspaces has been refactored and should be manually checked in both modes.
-- The new print-fit behavior is syntax-validated but still needs visual confirmation with real print preview usage.
+- The new print-fit behavior and fixed print-sheet rendering still need visual confirmation with real print preview/PDF usage.
 - Diagram Maker bearing arrows and color-coded labels are implemented but still need manual clutter/readability review on dense layouts.
 - Diagram Maker box/polygon selection is implemented in code but still needs manual interaction testing with real layouts.
 - Polygon selection UX may still need polish, but completion now uses right-click instead of double-click.
@@ -579,6 +604,7 @@ Important recent context:
 - centered mode-toggle layout still needs manual responsive/browser verification
 - Timing overlap chart interactions and overlap-based result ordering still need manual browser verification with real timing graphs
 - print label dial interaction, true circular orbit behavior, distance stepper behavior, and dial-plus-distance-plus-drag placement still need manual browser verification
+- page-break draft selection should be rechecked after the draft-only interaction restriction to confirm the workflow still feels obvious in browser use
 - world-space polygon drafting still needs manual browser verification across zoom/pan/rotation
 
 ## High-Priority Next Steps
