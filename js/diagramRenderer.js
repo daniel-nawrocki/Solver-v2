@@ -292,7 +292,7 @@ export class DiagramRenderer {
 
   drawNorthArrow() {
     const x = this.canvas.width - 50;
-    const y = this.isPrintRenderer && this.isDiagramMode() ? 196 : 65;
+    const y = this.isPrintRenderer && this.isDiagramMode() ? 150 : 65;
     const theta = (this.rotationDeg * Math.PI) / 180;
     const ux = Math.sin(theta);
     const uy = -Math.cos(theta);

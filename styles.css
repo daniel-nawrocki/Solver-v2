@@ -2884,14 +2884,25 @@ body.help-active .print-workspace {
   }
 
   .print-workspace {
-    position: static;
-    inset: auto;
-    display: block;
-    background: #ffffff;
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
   }
 
   .print-workspace {
     page: print-landscape;
+  }
+
+  .print-workspace > :not(.print-pages-output) {
+    display: none !important;
   }
 
   .topbar,

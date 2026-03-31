@@ -79,7 +79,8 @@ const WORKSPACE_TO_MODE = {
 };
 const DIAGRAM_FIELDS = ["burden", "spacing", "diameter", "angle", "bearing", "depth", "subdrill", "stemHeight"];
 const ALLOWED_ANGLES = new Set([5, 10, 15, 20, 25, 30]);
-const PRINT_FIT_MARGINS = { marginTop: 180, marginRight: 80, marginBottom: 80, marginLeft: 80 };
+const PRINT_FIT_MARGINS = { marginTop: 96, marginRight: 36, marginBottom: 36, marginLeft: 36 };
+const PRINT_DIAGRAM_FIT_MARGINS = { marginTop: 132, marginRight: 36, marginBottom: 36, marginLeft: 36 };
 const PRINT_LABEL_DISTANCE_MIN = -15;
 const PRINT_LABEL_DISTANCE_MAX = 20;
 const PRINT_LABEL_DISTANCE_DEFAULT_TICK = 3;
@@ -3028,6 +3029,11 @@ function activatePrintPage(index, options = {}) {
   setPrintRendererPage(page, { render: options.render !== false });
 }
 
+function printFitMarginsForPage(page) {
+  if (page?.ui?.workspaceMode === "diagram") return PRINT_DIAGRAM_FIT_MARGINS;
+  return PRINT_FIT_MARGINS;
+}
+
 function addPrintPage() {
   const page = activePrintPage();
   if (!page) return;
@@ -3047,7 +3053,7 @@ function addTimingPrintPage() {
     if (activePrintPage() !== page) return;
     printRenderer.resize();
     setPrintRendererPage(page, { render: false });
-    printRenderer.fitToData(PRINT_FIT_MARGINS);
+    printRenderer.fitToData(printFitMarginsForPage(page));
     syncPrintControls();
   });
 }
@@ -3118,7 +3124,7 @@ function openPrintWorkspace() {
     printRenderer.resize();
     page.viewport.rotationDeg = activeRenderer().rotationDeg;
     setPrintRendererPage(page, { render: false });
-    printRenderer.fitToData(PRINT_FIT_MARGINS);
+    printRenderer.fitToData(printFitMarginsForPage(page));
     syncPrintControls();
   });
 }
@@ -6873,7 +6879,11 @@ els.printPageTabs.addEventListener("click", (event) => {
   if (!tab) return;
   activatePrintPage(Number(tab.getAttribute("data-print-page")));
 });
-els.printFitBtn.addEventListener("click", () => printRenderer.fitToData(PRINT_FIT_MARGINS));
+els.printFitBtn.addEventListener("click", () => {
+  const page = activePrintPage();
+  if (!page) return;
+  printRenderer.fitToData(printFitMarginsForPage(page));
+});
 els.printEditLabelsBtn.addEventListener("click", () => {
   const page = activePrintPage();
   if (!page) return;
